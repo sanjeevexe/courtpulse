@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: courtpulse-queue-replay
+  main:
+    banner-mode: "off"
+    web-application-type: none
+  datasource:
+    url: ${COURTPULSE_DB_URL:jdbc:postgresql://localhost:5432/courtpulse}
+    username: ${COURTPULSE_DB_USERNAME:courtpulse}
+    password: ${COURTPULSE_DB_PASSWORD:}
+  flyway:
+    enabled: true
+
+courtpulse:
+  sqs:
+    endpoint: ${COURTPULSE_SQS_ENDPOINT:http://localhost:4566}
+    region: ${AWS_REGION:us-east-1}
+    local-access-key: ${COURTPULSE_LOCAL_AWS_ACCESS_KEY:test}
+    local-secret-key: ${COURTPULSE_LOCAL_AWS_SECRET_KEY:test}
+    game-events-queue: ${COURTPULSE_GAME_EVENTS_QUEUE:game-events.fifo}
+    game-events-dlq: ${COURTPULSE_GAME_EVENTS_DLQ:game-events-dlq.fifo}
+  publisher:
+    batch-size: ${COURTPULSE_PUBLISHER_BATCH_SIZE:10}
+    lease-duration: ${COURTPULSE_PUBLISHER_LEASE_DURATION:30s}
+    retry-initial: ${COURTPULSE_PUBLISHER_RETRY_INITIAL:1s}
+    retry-maximum: ${COURTPULSE_PUBLISHER_RETRY_MAXIMUM:30s}
+    maximum-attempts: ${COURTPULSE_PUBLISHER_MAX_ATTEMPTS:5}
+  consumer:
+    batch-size: ${COURTPULSE_CONSUMER_BATCH_SIZE:10}
+    long-poll-wait: ${COURTPULSE_CONSUMER_LONG_POLL:2s}
+    worker-concurrency: ${COURTPULSE_CONSUMER_WORKERS:1}
+  demo:
+    drain-timeout: ${COURTPULSE_DRAIN_TIMEOUT:60s}
+
+logging:
+  level:
+    root: WARN

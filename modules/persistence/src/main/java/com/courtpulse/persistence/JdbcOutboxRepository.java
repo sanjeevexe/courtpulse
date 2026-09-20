@@ -21,24 +21,53 @@ public final class JdbcOutboxRepository {
             String eventType,
             Map<String, ?> payload,
             Instant now) {
+        String destination = "CANONICAL_EVENT_READY".equals(eventType)
+                ? OutboxDestination.GAME_EVENTS.name()
+                : OutboxDestination.FUTURE_NOTIFICATIONS.name();
+        Object messageGroupId = payload.get("gameId");
         int rows = jdbc.sql("""
                         INSERT INTO outbox (
                             id, deduplication_key, aggregate_type, aggregate_id, event_type,
-                            payload, status, attempts, next_attempt_at, created_at)
+                            payload, destination, message_group_id, status, attempts,
+                            next_attempt_at, created_at)
                         VALUES (
                             :id, :deduplicationKey, :aggregateType, :aggregateId, :eventType,
-                            CAST(:payload AS JSONB), 'PENDING', 0, :now, :now)
+                            CAST(:payload AS JSONB), :destination, :messageGroupId,
+                            'PENDING', 0, :now, :now)
                         ON CONFLICT (deduplication_key) DO NOTHING
                         """)
-                .params(Map.of(
-                        "id", UUID.randomUUID(),
-                        "deduplicationKey", deduplicationKey,
-                        "aggregateType", aggregateType,
-                        "aggregateId", aggregateId,
-                        "eventType", eventType,
-                        "payload", json.write(payload),
-                        "now", SqlTime.offset(now)))
+                .params(parameters(
+                        deduplicationKey,
+                        aggregateType,
+                        aggregateId,
+                        eventType,
+                        payload,
+                        destination,
+                        messageGroupId,
+                        now))
                 .update();
         return rows == 1;
+    }
+
+    private Map<String, Object> parameters(
+            String deduplicationKey,
+            String aggregateType,
+            String aggregateId,
+            String eventType,
+            Map<String, ?> payload,
+            String destination,
+            Object messageGroupId,
+            Instant now) {
+        java.util.HashMap<String, Object> parameters = new java.util.HashMap<>();
+        parameters.put("id", UUID.randomUUID());
+        parameters.put("deduplicationKey", deduplicationKey);
+        parameters.put("aggregateType", aggregateType);
+        parameters.put("aggregateId", aggregateId);
+        parameters.put("eventType", eventType);
+        parameters.put("payload", json.write(payload));
+        parameters.put("destination", destination);
+        parameters.put("messageGroupId", messageGroupId);
+        parameters.put("now", SqlTime.offset(now));
+        return parameters;
     }
 }

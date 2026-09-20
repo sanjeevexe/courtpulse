@@ -3,6 +3,9 @@
 - Status: Accepted
 - Date: 2026-09-20
 
+Milestone note: ADR 0003 extends this durable boundary with leased SQS FIFO publication. Statements
+below that defer publication describe the scope at the time this decision was adopted.
+
 ## Context
 
 The infrastructure-free replay proves that canonical events reduce deterministically and that

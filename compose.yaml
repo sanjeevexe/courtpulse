@@ -15,5 +15,25 @@ services:
     volumes:
       - courtpulse-postgres-data:/var/lib/postgresql/data
 
+  localstack:
+    image: localstack/localstack:4.4.0
+    environment:
+      SERVICES: sqs
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      PERSISTENCE: "1"
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health | grep -q '\"sqs\": \"running\"'"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - courtpulse-localstack-data:/var/lib/localstack
+      - ./localstack/init/ready.d:/etc/localstack/init/ready.d:ro
+
 volumes:
   courtpulse-postgres-data:
+  courtpulse-localstack-data:

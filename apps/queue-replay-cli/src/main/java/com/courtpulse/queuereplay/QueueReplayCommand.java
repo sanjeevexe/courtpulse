@@ -1,0 +1,288 @@
+package com.courtpulse.queuereplay;
+
+import com.courtpulse.domain.game.GameState;
+import com.courtpulse.domain.replay.StateChecksum;
+import com.courtpulse.messaging.consumer.ConsumerBatchResult;
+import com.courtpulse.messaging.consumer.ConsumerFailureMode;
+import com.courtpulse.messaging.consumer.GameEventQueueConsumer;
+import com.courtpulse.messaging.consumer.SimulatedConsumerCrashException;
+import com.courtpulse.messaging.publisher.OutboxPublisher;
+import com.courtpulse.messaging.publisher.PublisherBatchResult;
+import com.courtpulse.messaging.publisher.PublisherFailureMode;
+import com.courtpulse.messaging.publisher.SimulatedPublisherCrashException;
+import com.courtpulse.messaging.queue.QueueDepth;
+import com.courtpulse.messaging.queue.QueuePort;
+import com.courtpulse.persistence.DatabaseCounts;
+import com.courtpulse.persistence.FixtureIngestionService;
+import com.courtpulse.persistence.ImportResult;
+import com.courtpulse.persistence.JdbcFixtureRepository;
+import com.courtpulse.persistence.JdbcGameProcessingRepository;
+import com.courtpulse.persistence.JdbcInspectionRepository;
+import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
+import com.courtpulse.persistence.OutboxStatusCounts;
+import com.courtpulse.providers.fixture.LoadedFixture;
+import com.courtpulse.testkit.SyntheticFixtureResources;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.sqs.SqsClient;
+
+@Component
+public final class QueueReplayCommand implements ApplicationRunner {
+    private static final Set<String> SUPPORTED = Set.of(
+            "reset-import", "publish", "drain", "run", "inspect", "help",
+            "simulate-publisher-after-send", "simulate-consumer-before-commit",
+            "simulate-consumer-after-commit");
+
+    private final JdbcFixtureRepository fixtures;
+    private final FixtureIngestionService ingestion;
+    private final OutboxPublisher publisher;
+    private final GameEventQueueConsumer consumer;
+    private final QueuePort queue;
+    private final QueuePort dlq;
+    private final JdbcOutboxPublicationRepository outbox;
+    private final JdbcInspectionRepository inspection;
+    private final JdbcGameProcessingRepository processing;
+    private final SqsClient sqs;
+    private final String queueUrl;
+    private final String dlqUrl;
+    private final Duration drainTimeout;
+    private final int workerConcurrency;
+
+    public QueueReplayCommand(
+            JdbcFixtureRepository fixtures,
+            FixtureIngestionService ingestion,
+            OutboxPublisher publisher,
+            GameEventQueueConsumer consumer,
+            @Qualifier("gameEventsQueue") QueuePort queue,
+            @Qualifier("gameEventsDlq") QueuePort dlq,
+            JdbcOutboxPublicationRepository outbox,
+            JdbcInspectionRepository inspection,
+            JdbcGameProcessingRepository processing,
+            SqsClient sqs,
+            @Qualifier("gameEventsQueueUrl") String queueUrl,
+            @Qualifier("gameEventsDlqUrl") String dlqUrl,
+            @Value("${courtpulse.demo.drain-timeout}") Duration drainTimeout,
+            @Value("${courtpulse.consumer.worker-concurrency}") int workerConcurrency) {
+        this.fixtures = fixtures;
+        this.ingestion = ingestion;
+        this.publisher = publisher;
+        this.consumer = consumer;
+        this.queue = queue;
+        this.dlq = dlq;
+        this.outbox = outbox;
+        this.inspection = inspection;
+        this.processing = processing;
+        this.sqs = sqs;
+        this.queueUrl = queueUrl;
+        this.dlqUrl = dlqUrl;
+        this.drainTimeout = drainTimeout;
+        if (workerConcurrency < 1 || workerConcurrency > 8) {
+            throw new IllegalArgumentException("consumer worker concurrency must be between 1 and 8");
+        }
+        this.workerConcurrency = workerConcurrency;
+    }
+
+    @Override
+    public void run(ApplicationArguments arguments) {
+        Options options = Options.parse(arguments);
+        if (options.help()) {
+            printUsage();
+            return;
+        }
+
+        LoadedFixture fixture = SyntheticFixtureResources.loadMilestoneGame();
+        ImportResult imported = new ImportResult(0, 0, 0);
+        if (options.resetImport()) {
+            fixtures.resetAll();
+            sqs.purgeQueue(builder -> builder.queueUrl(queueUrl));
+            sqs.purgeQueue(builder -> builder.queueUrl(dlqUrl));
+            imported = ingestion.importFixture(fixture);
+        }
+
+        PublisherBatchResult publication = PublisherBatchResult.empty();
+        ConsumerBatchResult consumption = ConsumerBatchResult.empty();
+        Instant deadline = Instant.now().plus(drainTimeout);
+        boolean publishRequested = options.publish() || options.run();
+        boolean drainRequested = options.drain() || options.run();
+
+        if (publishRequested) {
+            PublisherFailureMode mode = options.publisherCrash()
+                    ? PublisherFailureMode.AFTER_SEND_BEFORE_SENT_UPDATE
+                    : PublisherFailureMode.NONE;
+            for (int attempt = 0; attempt < 10_000 && Instant.now().isBefore(deadline); attempt++) {
+                try {
+                    PublisherBatchResult batch = publisher.publishBatch(mode);
+                    publication = publication.plus(batch);
+                    mode = PublisherFailureMode.NONE;
+                    if (batch.claimed() == 0) {
+                        break;
+                    }
+                } catch (SimulatedPublisherCrashException exception) {
+                    System.out.println("Injected publisher crash: " + exception.getMessage());
+                    break;
+                }
+            }
+        }
+
+        if (drainRequested && !options.publisherCrash()) {
+            ConsumerFailureMode mode = options.consumerBeforeCommit()
+                    ? ConsumerFailureMode.BEFORE_DATABASE_COMMIT
+                    : options.consumerAfterCommit()
+                            ? ConsumerFailureMode.AFTER_COMMIT_BEFORE_DELETE
+                            : ConsumerFailureMode.NONE;
+            for (int attempt = 0; attempt < 10_000 && Instant.now().isBefore(deadline); attempt++) {
+                try {
+                    ConsumerBatchResult batch = mode == ConsumerFailureMode.NONE
+                            ? pollWorkers()
+                            : consumer.pollOnce(mode);
+                    consumption = consumption.plus(batch);
+                    if (mode != ConsumerFailureMode.NONE) {
+                        break;
+                    }
+                    if (batch.received() == 0 && queue.depth().total() == 0) {
+                        break;
+                    }
+                } catch (SimulatedConsumerCrashException exception) {
+                    System.out.println("Injected consumer crash: " + exception.getMessage());
+                    break;
+                }
+            }
+        }
+
+        printReport(fixture, imported, publication, consumption, Instant.now().isBefore(deadline));
+    }
+
+    private ConsumerBatchResult pollWorkers() {
+        if (workerConcurrency == 1) {
+            return consumer.pollOnce();
+        }
+        ExecutorService executor = Executors.newFixedThreadPool(workerConcurrency);
+        try {
+            List<Future<ConsumerBatchResult>> futures = executor.invokeAll(
+                    java.util.Collections.nCopies(workerConcurrency, consumer::pollOnce));
+            ConsumerBatchResult result = ConsumerBatchResult.empty();
+            for (Future<ConsumerBatchResult> future : futures) {
+                result = result.plus(future.get());
+            }
+            return result;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Queue drain interrupted", exception);
+        } catch (ExecutionException exception) {
+            throw new IllegalStateException("Queue worker failed", exception.getCause());
+        } finally {
+            executor.shutdown();
+        }
+    }
+
+    private void printReport(
+            LoadedFixture fixture,
+            ImportResult imported,
+            PublisherBatchResult publication,
+            ConsumerBatchResult consumption,
+            boolean beforeDeadline) {
+        QueueDepth queueDepth = queue.depth();
+        QueueDepth dlqDepth = dlq.depth();
+        OutboxStatusCounts statuses = outbox.statusCounts();
+        DatabaseCounts counts = inspection.counts();
+        boolean hasCheckpoint = counts.gameCheckpoints() > 0;
+        long version = hasCheckpoint ? inspection.checkpointVersion(fixture.game().gameId()) : 0;
+        GameState state = hasCheckpoint ? processing.readCheckpoint(fixture.game().gameId()) : null;
+        boolean drained = queueDepth.total() == 0;
+
+        System.out.println("CourtPulse bounded queue replay");
+        System.out.printf("Imported: raw=%d canonical=%d outbox=%d%n",
+                imported.insertedRawPayloads(), imported.insertedCanonicalEvents(), imported.insertedOutboxRecords());
+        System.out.printf("Publisher: claimed=%d sent=%d retried=%d failed=%d lostLease=%d%n",
+                publication.claimed(), publication.sent(), publication.retryScheduled(),
+                publication.failed(), publication.lostLease());
+        System.out.printf("Consumer: received=%d accepted=%d suppressed=%d deleted=%d failed=%d%n",
+                consumption.received(), consumption.accepted(), consumption.suppressed(),
+                consumption.deleted(), consumption.failed());
+        System.out.printf("Queue: visible=%d inFlight=%d delayed=%d; DLQ visible=%d%n",
+                queueDepth.visible(), queueDepth.inFlight(), queueDepth.delayed(), dlqDepth.visible());
+        System.out.printf("Outbox: pending=%d publishing=%d retry=%d sent=%d failed=%d deferred=%d%n",
+                statuses.pending(), statuses.publishing(), statuses.retryScheduled(),
+                statuses.sent(), statuses.failed(), statuses.deferred());
+        System.out.printf("Database: processed=%d checkpointVersion=%d alerts=%d%n",
+                counts.processedEvents(), version, counts.alertInstances());
+        if (state != null) {
+            System.out.printf("Final score: HOME %d - AWAY %d; player_ace=%d%n",
+                    state.homeScore(), state.awayScore(), state.pointsFor("player_ace"));
+            System.out.println("Final-state checksum: " + StateChecksum.sha256(state));
+        } else {
+            System.out.println("Final score/checksum: unavailable (fixture has not been imported)");
+        }
+        System.out.printf("Drain complete before deadline: %s (workers=%d)%n",
+                drained && beforeDeadline, workerConcurrency);
+    }
+
+    static void printUsage() {
+        System.out.println("Usage: queue-replay-cli [--reset-import] [--run | --publish | --drain] [--inspect]");
+        System.out.println("       [--simulate-publisher-after-send]");
+        System.out.println("       [--simulate-consumer-before-commit | --simulate-consumer-after-commit]");
+    }
+
+    private record Options(
+            boolean resetImport,
+            boolean publish,
+            boolean drain,
+            boolean run,
+            boolean inspect,
+            boolean help,
+            boolean publisherCrash,
+            boolean consumerBeforeCommit,
+            boolean consumerAfterCommit) {
+        static Options parse(ApplicationArguments arguments) {
+            List<String> unknown = arguments.getOptionNames().stream()
+                    .filter(option -> !SUPPORTED.contains(option))
+                    .filter(option -> !option.startsWith("spring."))
+                    .filter(option -> !option.startsWith("logging."))
+                    .filter(option -> !option.startsWith("courtpulse."))
+                    .sorted()
+                    .toList();
+            if (!unknown.isEmpty() || !arguments.getNonOptionArgs().isEmpty()) {
+                throw new IllegalArgumentException("Unsupported arguments; use --help");
+            }
+            Options options = new Options(
+                    arguments.containsOption("reset-import"),
+                    arguments.containsOption("publish"),
+                    arguments.containsOption("drain"),
+                    arguments.containsOption("run"),
+                    arguments.containsOption("inspect"),
+                    arguments.containsOption("help"),
+                    arguments.containsOption("simulate-publisher-after-send"),
+                    arguments.containsOption("simulate-consumer-before-commit"),
+                    arguments.containsOption("simulate-consumer-after-commit"));
+            if (options.consumerBeforeCommit && options.consumerAfterCommit) {
+                throw new IllegalArgumentException("Choose only one consumer failure injection");
+            }
+            if (options.run && (options.publish || options.drain)) {
+                throw new IllegalArgumentException("--run cannot be combined with --publish or --drain");
+            }
+            boolean publishes = options.run || options.publish;
+            boolean drains = options.run || options.drain;
+            if (options.publisherCrash && !publishes) {
+                throw new IllegalArgumentException("Publisher failure injection requires --run or --publish");
+            }
+            if ((options.consumerBeforeCommit || options.consumerAfterCommit) && !drains) {
+                throw new IllegalArgumentException("Consumer failure injection requires --run or --drain");
+            }
+            if (!options.help && !options.resetImport && !publishes && !drains && !options.inspect) {
+                throw new IllegalArgumentException("Choose an action; use --help");
+            }
+            return options;
+        }
+    }
+}

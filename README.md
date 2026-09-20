@@ -1,197 +1,238 @@
 # CourtPulse
 
-CourtPulse is a replay-first basketball event platform. The repository now contains two executable
-vertical slices:
-
-- An infrastructure-free replay that proves deterministic event reduction and alert evaluation.
-- A durable PostgreSQL replay that stores source and canonical events, processes them in sequence,
-  checkpoints game state, suppresses duplicates across restarts, and writes a transactional outbox.
-
-The product direction is documented in `CourtPulse_Product_and_Engineering_Plan.docx`. This
-milestone intentionally stops before HTTP APIs, React, WebSockets, Redis, queues, authentication,
-email, live providers, and cloud infrastructure.
-
-## Prerequisites
-
-- Java 21
-- Docker with Docker Compose for the manual PostgreSQL demonstration
-- Internet access on the first build so Gradle can download its pinned distribution and dependencies
-
-No global Gradle or PostgreSQL installation is required. Tests use Testcontainers when Docker is
-available; a real embedded PostgreSQL suite also verifies the durable path on development machines
-without Docker.
-
-## Build and test
-
-```bash
-./gradlew clean build
-```
-
-The build runs the infrastructure-free tests, domain invariant tests, embedded PostgreSQL tests,
-the Spring Boot command test, and Testcontainers tests. Tests annotated for Testcontainers are
-reported as skipped when Docker is unavailable.
-
-Run only the Testcontainers PostgreSQL suite:
-
-```bash
-./gradlew :modules:persistence:test --tests '*DurablePostgresIntegrationTest'
-```
-
-## Infrastructure-free replay
-
-```bash
-./gradlew :apps:replay-cli:run
-./gradlew :apps:replay-cli:run --args='--inject-duplicates'
-```
-
-Both commands produce an 18–14 final score, 13 points for `player_ace`, one logical milestone
-alert, and this checksum:
+CourtPulse is a replay-first basketball event platform. Its current production-shaped path is:
 
 ```text
-06d40d7e19ecf9ed9496e1523e6715bba029f008f94cb76148f600702d4c3bca
+synthetic fixture -> PostgreSQL transactional outbox -> lease-based publisher
+                  -> SQS FIFO game-events queue -> queue consumer
+                  -> durable processor -> PostgreSQL checkpoint, identities, alert, deferred outbox
 ```
 
-## Durable PostgreSQL replay
+The infrastructure-free and direct PostgreSQL replay commands remain available. This milestone
+stops before HTTP APIs, UI, WebSockets, authentication, Redis, email, live providers, and cloud
+deployment.
 
-Choose a local-only password in your shell, start PostgreSQL, and check its health:
+## Prerequisites and tests
+
+- Java 21
+- Docker Desktop with a healthy Linux engine and Docker Compose
+- Internet access for the first dependency and image download
+
+No global Gradle, PostgreSQL, LocalStack, or AWS CLI installation is required. Verify and test:
 
 ```bash
-export COURTPULSE_DB_PASSWORD='choose-a-local-password'
-docker compose up -d postgres
+docker version
+docker info
+docker compose version
+./gradlew clean test --rerun-tasks --console=plain
+```
+
+Docker is required for final validation; a skipped container test is not a successful validation.
+Run the PostgreSQL/LocalStack messaging suite alone with:
+
+```bash
+./gradlew :modules:messaging:test --rerun-tasks --console=plain
+```
+
+Build and smoke-test the executable queue application:
+
+```bash
+./gradlew :apps:queue-replay-cli:bootJar
+./gradlew :apps:queue-replay-cli:run --args='--help'
+java -jar apps/queue-replay-cli/build/libs/queue-replay-cli-0.1.0-SNAPSHOT.jar --help
+```
+
+## Local PostgreSQL and SQS
+
+Choose a local-only password and start both pinned services:
+
+```bash
+export COURTPULSE_DB_PASSWORD='courtpulse-local-dev'
+docker compose config
+docker compose up -d postgres localstack
 docker compose ps
 ```
 
-The application defaults to `jdbc:postgresql://localhost:5432/courtpulse` with user `courtpulse`.
-Override `COURTPULSE_DB_URL` or `COURTPULSE_DB_USERNAME` when needed. No password or generated
-database data is committed; Compose stores data in the `courtpulse-postgres-data` volume.
+PostgreSQL and LocalStack must report healthy. The idempotent LocalStack ready hook creates:
 
-Reset the demonstration database, import the fixture, and process it:
+- `game-events.fifo`: FIFO source queue, `MessageGroupId=gameId`, 8-second visibility timeout,
+  2-second long poll, and explicit deduplication IDs.
+- `game-events-dlq.fifo`: FIFO dead-letter queue.
+- A redrive policy that moves a message after three failed receives.
 
-```bash
-./gradlew :apps:durable-replay-cli:run --args='--reset'
-```
-
-Reset and inject two duplicate deliveries during processing:
+Inspect the topology:
 
 ```bash
-./gradlew :apps:durable-replay-cli:run --args='--reset --inject-duplicates'
+docker compose exec localstack awslocal sqs list-queues
+docker compose exec localstack awslocal sqs get-queue-attributes \
+  --queue-url http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/game-events.fifo \
+  --attribute-names All
 ```
 
-Process the already imported canonical events in a new application process without importing them
-again:
+LocalStack is pinned to `localstack/localstack:4.4.0`. Only a configured endpoint override receives
+the dummy local credentials; without an override, the AWS SDK default credential chain applies. No
+real credentials or generated database data are committed.
+
+## Queue-backed replay
+
+The bounded command imports only when `--reset-import` is supplied. That explicit local-demo option
+also purges both queues. Publish and drain the full fixture:
 
 ```bash
-./gradlew :apps:durable-replay-cli:run --args='--reprocess-existing'
+./gradlew :apps:queue-replay-cli:run --args='--reset-import --run'
 ```
 
-A normal invocation without `--reset` idempotently observes/imports the fixture again and attempts
-processing:
-
-```bash
-./gradlew :apps:durable-replay-cli:run
-```
-
-Each run prints the durable final state, alerts, accepted and suppressed event counts, import counts,
-checksum, and all relevant table counts. Stop PostgreSQL with `docker compose down`; add `-v` only
-when you intentionally want to delete the local database volume.
-
-## Module structure
+Expected logical result:
 
 ```text
-apps/replay-cli
-    -> modules/testkit
-    -> modules/providers
-    -> modules/domain
-
-apps/durable-replay-cli
-    -> modules/persistence
-    -> modules/testkit
-    -> modules/providers
-    -> modules/domain
-
-compose.yaml -> PostgreSQL only
+Imported: raw=20 canonical=20 outbox=20
+Publisher: claimed=20 sent=20 retried=0 failed=0 lostLease=0
+Consumer: received=20 accepted=20 suppressed=0 deleted=20 failed=0
+Queue: visible=0 inFlight=0 delayed=0; DLQ visible=0
+Outbox: pending=0 publishing=0 retry=0 sent=20 failed=0 deferred=21
+Database: processed=20 checkpointVersion=20 alerts=1
+Final score: HOME 18 - AWAY 14; player_ace=13
+Final-state checksum: 06d40d7e19ecf9ed9496e1523e6715bba029f008f94cb76148f600702d4c3bca
+Drain complete before deadline: true
 ```
 
-- `modules/domain` contains canonical events, immutable game state, pure transitions, rules, and
-  checksumming. It has no Spring, JDBC, PostgreSQL, queue, or system-clock dependency.
-- `modules/providers` validates and maps source events. Its fixture loader retains a stable raw JSON
-  representation and SHA-256 content hash alongside each canonical event.
-- `modules/testkit` owns the redistributable four-period synthetic fixture.
-- `modules/persistence` owns explicit SQL repositories, transaction-aware services, Flyway
-  migrations, checkpoint reconstruction, durable deduplication, alerts, and outbox records.
-- `apps/replay-cli` preserves the original in-memory demonstration.
-- `apps/durable-replay-cli` is the Spring Boot composition root and command-line orchestrator.
+Run phases or inspection in separate processes:
 
-## Schema and migrations
+```bash
+./gradlew :apps:queue-replay-cli:run --args='--reset-import --publish'
+./gradlew :apps:queue-replay-cli:run --args='--drain'
+./gradlew :apps:queue-replay-cli:run --args='--inspect'
+./gradlew :apps:queue-replay-cli:run --args='--run'
+```
 
-Flyway automatically applies migrations from `modules/persistence/src/main/resources/db/migration`
-when the durable application starts. `V1__durable_event_processing.sql` creates:
+The last command demonstrates restart safety: no eligible game-event outbox work remains and the
+durable result is unchanged.
 
-- `games`
-- `raw_provider_payloads`
-- `canonical_events`
-- `game_checkpoints`
-- `processed_events`
-- `alert_instances`
-- `outbox`
-- `replay_runs`
+Configuration defaults are in `apps/queue-replay-cli/src/main/resources/application.yml`.
+Overrides include `COURTPULSE_DB_URL`, `COURTPULSE_DB_USERNAME`, `COURTPULSE_DB_PASSWORD`,
+`COURTPULSE_SQS_ENDPOINT`, `AWS_REGION`, queue names, batch sizes, lease/retry durations,
+`COURTPULSE_CONSUMER_WORKERS` (1–8), and `COURTPULSE_DRAIN_TIMEOUT`.
 
-The schema enforces provider identity plus revision, game sequence plus revision, processed identity
-per consumer, one checkpoint per game, unique alert rule and trigger key, and unique outbox
-deduplication keys. Queryable identity, status, sequence, and time fields use typed columns; variable
-payloads and compact state collections use JSONB.
+## Failure and redelivery demonstrations
 
-## Transaction and idempotency boundaries
+SQS accepted the send, then the publisher failed before recording `SENT`:
 
-Fixture ingestion is one transaction. For each source event it stores or observes the raw payload,
-stores its canonical form, and writes `CANONICAL_EVENT_READY` to the outbox. Re-importing identical
-content updates only observation metadata and creates no second canonical event or outbox record.
+```bash
+./gradlew :apps:queue-replay-cli:run --args='--reset-import --publish --simulate-publisher-after-send'
+sleep 31
+./gradlew :apps:queue-replay-cli:run --args='--publish --drain'
+```
 
-Each game event is processed in a separate transaction. The processor loads and locks the game's
-checkpoint, validates game and score invariants before duplicate suppression, checks the durable
-consumer identity, applies the pure reducer, updates the checkpoint, records the processed event,
-creates any unique logical alert, and writes state/alert outbox records. A pre-commit failure rolls
-all those writes back. A failure after commit is safe because redelivery finds the durable processed
-identity and leaves state, alerts, and outbox unchanged.
+Consumer rollback before commit, then redelivery after visibility expires:
 
-PostgreSQL constraints are the final race-safety boundary. The checkpoint row lock serializes
-competing deliveries for a game, while processed-event, trigger-key, and outbox uniqueness protects
-against duplicate writes.
+```bash
+./gradlew :apps:queue-replay-cli:run --args='--reset-import --publish'
+./gradlew :apps:queue-replay-cli:run --args='--drain --simulate-consumer-before-commit'
+sleep 9
+./gradlew :apps:queue-replay-cli:run --args='--drain'
+```
 
-The outbox currently remains in PostgreSQL for inspection. A future publisher can claim pending
-rows, publish them to SQS, and mark them sent. Since publication may happen more than once, every
-record has a stable deduplication key and downstream consumers must remain idempotent.
+Consumer commit followed by failure before delete; the next process suppresses the duplicate:
 
-## Domain correctness
+```bash
+./gradlew :apps:queue-replay-cli:run --args='--reset-import --publish'
+./gradlew :apps:queue-replay-cli:run --args='--drain --simulate-consumer-after-commit'
+sleep 9
+./gradlew :apps:queue-replay-cli:run --args='--drain'
+```
 
-The domain now identifies home and away teams and rejects score decreases, score changes on both
-sides, point deltas that disagree with the scoring event, scoring-team/side mismatches, and score
-changes on non-scoring events. Wrong-game events and malformed duplicate deliveries are validated
-before any duplicate is acknowledged.
+Demonstrate poison-message redrive by sending malformed JSON. The bounded drain keeps long-polling
+through the visibility intervals and exits after LocalStack redrives the third failed receive:
 
-The final-state checksum uses representation version 2. It covers game ID, home and away team IDs,
-status, period, game clock, score, last applied sequence, sorted player totals, every accepted
-provider identity with its canonical-event fingerprint, and the bounded recent-event history.
-Operational timestamps, replay-run counters, and suppressed-delivery counts are deliberately
-excluded, so restarts and duplicate redelivery do not alter it. Version 2 changed the golden
-checksum because version 1 omitted team identity and retained only accepted identities rather than
-fingerprints. The synthetic game's version 2 checksum is the value shown above.
+```bash
+docker compose exec localstack awslocal sqs send-message \
+  --queue-url http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/game-events.fifo \
+  --message-body '{not-json' --message-group-id poison-game \
+  --message-deduplication-id poison-1
+./gradlew :apps:queue-replay-cli:run --args='--drain'
+```
 
-Every accepted provider identity retains a compact SHA-256 fingerprint of the complete canonical
-event. This allows a conflicting redelivery to be rejected even after the original full event has
-fallen outside the ten-event recent-history window.
+Inspect queue depth and receive the DLQ message without deleting it:
+
+```bash
+docker compose exec localstack awslocal sqs get-queue-attributes \
+  --queue-url http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/game-events.fifo \
+  --attribute-names ApproximateNumberOfMessages ApproximateNumberOfMessagesNotVisible
+docker compose exec localstack awslocal sqs receive-message \
+  --queue-url http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/game-events-dlq.fifo
+```
+
+## Correctness boundaries
+
+Flyway V2 adds explicit destination, message group, lease owner/expiration, and bounded last-error
+fields without modifying V1. The state machine is `PENDING -> PUBLISHING -> SENT`,
+`PUBLISHING -> RETRY_SCHEDULED -> PUBLISHING`, or `PUBLISHING -> FAILED`.
+
+A short transaction claims eligible `GAME_EVENTS` rows with `FOR UPDATE SKIP LOCKED`, records the
+owner and expiration, and commits before SQS is called. A second short transaction completes the row
+only while the same publisher owns a still-valid lease. Expired rows are reclaimable.
+
+Within one game, every older non-`SENT` row—including `FAILED`—blocks a newer row. Order is sequence,
+revision, creation time, then outbox UUID. The V1 unique `(game_id, sequence_number, revision)`
+constraint rejects ambiguous equal sequence/revision records. Different game groups remain
+independently claimable.
+
+The version-1 envelope carries type/schema, event/game/sequence, provider identity, occurrence time,
+outbox ID, stable deduplication key, and optional correlation ID. Before processing, the consumer
+compares this data with the committed canonical event and outbox row. It invokes the existing
+durable processor and deletes only after its transaction commits. PostgreSQL processed identities
+and alert trigger keys—not FIFO deduplication—remain authoritative.
+
+`GAME_STATE_UPDATED` and `ALERT_CREATED` use `FUTURE_NOTIFICATIONS` and remain deferred. They are
+never claimed by the game-events publisher.
+
+The version-2 state checksum covers game/team IDs, status, period, clock, score, last sequence,
+sorted player totals, every accepted provider identity plus canonical fingerprint, and bounded
+recent-event history. Operational times and delivery counters are excluded.
+
+## Modules
+
+```text
+modules/domain       pure events, reducer, rules, checksum (no infrastructure)
+modules/providers    fixture mapping and raw source evidence
+modules/persistence  Flyway, JDBC, checkpoints, idempotency, outbox leases
+modules/messaging    queue port, publisher/consumer, AWS SDK v2 SQS adapter
+modules/testkit      reusable synthetic fixture
+apps/replay-cli      infrastructure-free replay
+apps/durable-replay-cli  direct PostgreSQL replay
+apps/queue-replay-cli    bounded PostgreSQL -> FIFO SQS -> PostgreSQL demo
+```
+
+## Troubleshooting and shutdown
+
+- Docker unavailable: start Docker Desktop and ensure `docker info` succeeds for the same user.
+- PostgreSQL authentication failure: use the password that initialized this Compose volume.
+- LocalStack unhealthy: inspect `docker compose logs localstack`; SQS must show `running` and the
+  ready hook must finish.
+- Stale queue messages: use the explicit `--reset-import` local-demo action. SQS can reject repeated
+  purge requests for 60 seconds.
+- A row remains `PUBLISHING`: wait for lease expiry, then run `--publish`.
+- An older `FAILED` row blocks its game by design; inspect and repair it rather than skipping ahead.
+
+Stop without deleting data:
+
+```bash
+docker compose down
+```
+
+Intentionally delete only this Compose project's PostgreSQL and LocalStack volumes:
+
+```bash
+docker compose down -v
+```
 
 ## Current limitations
 
-- The synthetic fixture is the only provider input; no live or licensed data is included.
-- Regulation periods and five event types are supported; overtime and corrections are deferred.
-- There is no outbox publisher or retry worker yet—outbox rows remain `PENDING`.
-- Processing is command-driven rather than queue-driven.
-- There are no REST endpoints, client application, streaming updates, authentication, email, or
-  cloud deployment.
-- `--reset` is a destructive local demonstration command and should not become a production
-  administrative interface.
+- The synthetic fixture is the only provider; corrections, overtime, and live feeds are deferred.
+- LocalStack is test infrastructure, not a production AWS deployment.
+- Publication of notification-destination outbox rows is deliberately deferred.
+- There is no REST API, UI, streaming, authentication, email, Terraform, or Kubernetes.
 
-Architecture decisions are recorded in
-[`docs/adr/0001-infrastructure-independent-domain.md`](docs/adr/0001-infrastructure-independent-domain.md)
-and [`docs/adr/0002-postgresql-transactional-outbox.md`](docs/adr/0002-postgresql-transactional-outbox.md).
+See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
+[ADR 0002](docs/adr/0002-postgresql-transactional-outbox.md), and
+[ADR 0003](docs/adr/0003-sqs-fifo-outbox-leasing.md).
