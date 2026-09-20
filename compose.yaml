@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: courtpulse
+      POSTGRES_USER: courtpulse
+      POSTGRES_PASSWORD: ${COURTPULSE_DB_PASSWORD:?Set COURTPULSE_DB_PASSWORD before starting PostgreSQL}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U courtpulse -d courtpulse"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - courtpulse-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  courtpulse-postgres-data:

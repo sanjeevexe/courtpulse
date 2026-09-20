@@ -26,8 +26,8 @@ class ReplayEngineTest {
                 normal.get(0), normal.get(1), normal.get(2), normal.get(3),
                 milestoneEvent, milestoneEvent, normal.get(5));
 
-        ReplayResult expected = engine.replay(GAME_ID, normal, List.of(rule));
-        ReplayResult duplicateRun = engine.replay(GAME_ID, withDuplicate, List.of(rule));
+        ReplayResult expected = replay(normal);
+        ReplayResult duplicateRun = replay(withDuplicate);
 
         assertEquals(expected.finalStateChecksum(), duplicateRun.finalStateChecksum());
         assertEquals(1, duplicateRun.suppressedDuplicateCount());
@@ -39,8 +39,8 @@ class ReplayEngineTest {
     @Test
     void milestoneTriggersOnlyWhenTotalCrossesThreshold() {
         ReplayResult beforeCrossing =
-                engine.replay(GAME_ID, scoringSequence().subList(0, 4), List.of(rule));
-        ReplayResult afterCrossing = engine.replay(GAME_ID, scoringSequence(), List.of(rule));
+                replay(scoringSequence().subList(0, 4));
+        ReplayResult afterCrossing = replay(scoringSequence());
 
         assertEquals(0, beforeCrossing.alerts().size());
         assertEquals(8, beforeCrossing.finalState().pointsFor(PLAYER_ID));
@@ -58,7 +58,7 @@ class ReplayEngineTest {
 
         SequenceViolationException exception = assertThrows(
                 SequenceViolationException.class,
-                () -> engine.replay(GAME_ID, events, List.of(rule)));
+                () -> replay(events));
 
         assertEquals("Expected event sequence 2 but received 3", exception.getMessage());
     }
@@ -71,6 +71,10 @@ class ReplayEngineTest {
                 scored(4, 2, new Score(8, 0)),
                 scored(5, 2, new Score(10, 0)),
                 scored(6, 2, new Score(12, 0)));
+    }
+
+    private ReplayResult replay(List<CanonicalEvent> events) {
+        return engine.replay(GAME_ID, "team-home", "team-away", events, List.of(rule));
     }
 
     private static CanonicalEvent started(long sequence) {

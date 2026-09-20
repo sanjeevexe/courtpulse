@@ -3,6 +3,7 @@ package com.courtpulse.domain.replay;
 import com.courtpulse.domain.alert.Alert;
 import com.courtpulse.domain.alert.AlertRule;
 import com.courtpulse.domain.event.CanonicalEvent;
+import com.courtpulse.domain.event.EventFingerprint;
 import com.courtpulse.domain.game.GameReducer;
 import com.courtpulse.domain.game.GameState;
 import java.util.ArrayList;
@@ -15,7 +16,13 @@ final class GameEventProcessor {
             CanonicalEvent event,
             List<? extends AlertRule> rules,
             Set<String> emittedTriggerKeys) {
-        if (state.appliedEventIdentities().contains(event.identity())) {
+        GameReducer.validateEventMetadata(state, event);
+        String acceptedFingerprint = state.appliedEventFingerprints().get(event.identity());
+        if (acceptedFingerprint != null) {
+            if (!acceptedFingerprint.equals(EventFingerprint.sha256(event))) {
+                throw new IllegalArgumentException(
+                        "Conflicting duplicate payload for identity " + event.identity());
+            }
             return new ProcessingOutcome(state, List.of(), false);
         }
 

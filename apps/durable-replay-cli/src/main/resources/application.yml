@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: courtpulse-durable-replay
+  main:
+    banner-mode: "off"
+    web-application-type: none
+  datasource:
+    url: ${COURTPULSE_DB_URL:jdbc:postgresql://localhost:5432/courtpulse}
+    username: ${COURTPULSE_DB_USERNAME:courtpulse}
+    password: ${COURTPULSE_DB_PASSWORD:}
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: WARN

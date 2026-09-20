@@ -1,6 +1,7 @@
 package com.courtpulse.testkit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.courtpulse.domain.alert.PlayerMilestoneRule;
 import com.courtpulse.domain.event.CanonicalEvent;
@@ -21,8 +22,8 @@ class SyntheticReplayTest {
         LoadedFixture fixture = SyntheticFixtureResources.loadMilestoneGame();
         ReplayEngine engine = new ReplayEngine();
 
-        ReplayResult first = engine.replay(fixture.game().gameId(), fixture.events(), List.of(RULE));
-        ReplayResult second = engine.replay(fixture.game().gameId(), fixture.events(), List.of(RULE));
+        ReplayResult first = replay(engine, fixture, fixture.events());
+        ReplayResult second = replay(engine, fixture, fixture.events());
 
         assertEquals(first.finalStateChecksum(), second.finalStateChecksum());
         assertEquals(first.alerts(), second.alerts());
@@ -40,7 +41,7 @@ class SyntheticReplayTest {
     void duplicateInjectionPreservesChecksumAndLogicalAlertSet() {
         LoadedFixture fixture = SyntheticFixtureResources.loadMilestoneGame();
         ReplayEngine engine = new ReplayEngine();
-        ReplayResult normal = engine.replay(fixture.game().gameId(), fixture.events(), List.of(RULE));
+        ReplayResult normal = replay(engine, fixture, fixture.events());
 
         List<CanonicalEvent> injected = new ArrayList<>();
         for (CanonicalEvent event : fixture.events()) {
@@ -49,12 +50,48 @@ class SyntheticReplayTest {
                 injected.add(event);
             }
         }
-        ReplayResult duplicateRun = engine.replay(fixture.game().gameId(), injected, List.of(RULE));
+        ReplayResult duplicateRun = replay(engine, fixture, injected);
 
         assertEquals(normal.finalStateChecksum(), duplicateRun.finalStateChecksum());
         assertEquals(normal.alerts(), duplicateRun.alerts());
         assertEquals(20, duplicateRun.acceptedEventCount());
         assertEquals(2, duplicateRun.suppressedDuplicateCount());
         assertEquals(1, duplicateRun.alerts().size());
+    }
+
+    @Test
+    void conflictingDuplicateIsRejectedAfterOriginalLeavesRecentHistory() {
+        LoadedFixture fixture = SyntheticFixtureResources.loadMilestoneGame();
+        List<CanonicalEvent> events = new ArrayList<>(fixture.events().subList(0, 12));
+        CanonicalEvent original = events.getFirst();
+        events.add(new CanonicalEvent(
+                "conflicting-event-id",
+                original.schemaVersion(),
+                original.gameId(),
+                original.source(),
+                original.providerEventId(),
+                original.sequence(),
+                original.revision(),
+                original.type(),
+                original.period(),
+                original.clockMillisRemaining(),
+                original.occurredAt().plusSeconds(1),
+                original.teamId(),
+                original.participantIds(),
+                original.scoreAfter(),
+                original.points()));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> replay(new ReplayEngine(), fixture, events));
+    }
+
+    private static ReplayResult replay(
+            ReplayEngine engine, LoadedFixture fixture, List<CanonicalEvent> events) {
+        return engine.replay(
+                fixture.game().gameId(),
+                fixture.game().homeTeamId(),
+                fixture.game().awayTeamId(),
+                events,
+                List.of(RULE));
     }
 }

@@ -9,9 +9,13 @@ public record LoadedFixture(
         String description,
         String provenance,
         FixtureGame game,
-        List<CanonicalEvent> events) {
+        List<LoadedSourceEvent> sourceEvents) {
 
     public LoadedFixture {
-        events = List.copyOf(events);
+        sourceEvents = List.copyOf(sourceEvents);
+    }
+
+    public List<CanonicalEvent> events() {
+        return sourceEvents.stream().map(LoadedSourceEvent::canonicalEvent).toList();
     }
 }

@@ -7,7 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,7 +33,7 @@ public final class FixtureLoader {
         try {
             FixtureDocument source = objectMapper.readValue(inputStream, FixtureDocument.class);
             validateDocument(source);
-            List<CanonicalEvent> events = new ArrayList<>();
+            List<LoadedSourceEvent> events = new ArrayList<>();
             for (FixtureEvent event : source.events()) {
                 CanonicalEvent canonicalEvent = eventMapper.toCanonicalEvent(event);
                 if (!source.game().gameId().equals(canonicalEvent.gameId())) {
@@ -38,7 +42,9 @@ public final class FixtureLoader {
                                     + canonicalEvent.gameId() + " but fixture gameId is "
                                     + source.game().gameId());
                 }
-                events.add(canonicalEvent);
+                String rawPayload = objectMapper.writeValueAsString(event);
+                events.add(new LoadedSourceEvent(
+                        canonicalEvent, rawPayload, sha256(rawPayload)));
             }
             return new LoadedFixture(
                     source.fixtureSchemaVersion(),
@@ -82,6 +88,15 @@ public final class FixtureLoader {
     private static void requireText(String value, String field) {
         if (value == null || value.isBlank()) {
             throw new FixtureFormatException(field + " is required and must not be blank");
+        }
+    }
+
+    private static String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("Required SHA-256 algorithm is unavailable", exception);
         }
     }
 }

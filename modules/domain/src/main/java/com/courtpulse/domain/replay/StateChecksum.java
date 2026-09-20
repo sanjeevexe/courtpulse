@@ -7,12 +7,21 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
-final class StateChecksum {
+/**
+ * SHA-256 over the versioned complete durable game-state representation.
+ * Operational counters and timestamps are intentionally excluded.
+ */
+public final class StateChecksum {
+    public static final int REPRESENTATION_VERSION = 2;
+
     private StateChecksum() {}
 
-    static String sha256(GameState state) {
+    public static String sha256(GameState state) {
         StringBuilder canonical = new StringBuilder()
+                .append("stateChecksumVersion=").append(REPRESENTATION_VERSION).append('\n')
                 .append("gameId=").append(state.gameId()).append('\n')
+                .append("homeTeamId=").append(state.homeTeamId()).append('\n')
+                .append("awayTeamId=").append(state.awayTeamId()).append('\n')
                 .append("status=").append(state.status()).append('\n')
                 .append("period=").append(state.period()).append('\n')
                 .append("clockMillisRemaining=").append(state.clockMillisRemaining()).append('\n')
@@ -25,15 +34,21 @@ final class StateChecksum {
                 .forEach(entry -> canonical.append("playerPoints.")
                         .append(entry.getKey()).append('=')
                         .append(entry.getValue()).append('\n'));
-        state.appliedEventIdentities().stream()
-                .map(identity -> identity.source() + ":" + identity.providerEventId() + ":" + identity.revision())
-                .sorted()
-                .forEach(identity -> canonical.append("identity=").append(identity).append('\n'));
+        state.appliedEventFingerprints().entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey(
+                        java.util.Comparator.comparing(identity -> identity.source()
+                                + ":" + identity.providerEventId()
+                                + ":" + identity.revision())))
+                .forEach(entry -> canonical.append("identity=")
+                        .append(entry.getKey().source()).append(':')
+                        .append(entry.getKey().providerEventId()).append(':')
+                        .append(entry.getKey().revision()).append(':')
+                        .append(entry.getValue()).append('\n'));
         for (CanonicalEvent event : state.recentEvents()) {
             canonical.append("recent=")
                     .append(event.sequence()).append(':')
                     .append(event.eventId()).append(':')
-                    .append(event.type()).append('\n');
+                    .append(com.courtpulse.domain.event.EventFingerprint.sha256(event)).append('\n');
         }
 
         try {

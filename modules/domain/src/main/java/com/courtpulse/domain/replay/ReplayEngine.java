@@ -15,11 +15,15 @@ public final class ReplayEngine {
     private final GameEventProcessor processor = new GameEventProcessor();
 
     public ReplayResult replay(
-            String gameId, List<CanonicalEvent> events, List<? extends AlertRule> rules) {
+            String gameId,
+            String homeTeamId,
+            String awayTeamId,
+            List<CanonicalEvent> events,
+            List<? extends AlertRule> rules) {
         Objects.requireNonNull(events, "events are required");
         Objects.requireNonNull(rules, "rules are required");
 
-        GameState state = GameState.initial(gameId);
+        GameState state = GameState.initial(gameId, homeTeamId, awayTeamId);
         List<Alert> alerts = new ArrayList<>();
         Set<String> emittedTriggerKeys = new LinkedHashSet<>();
         long accepted = 0;

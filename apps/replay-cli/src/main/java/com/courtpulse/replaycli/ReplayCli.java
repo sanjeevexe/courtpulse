@@ -46,7 +46,11 @@ public final class ReplayCli {
         PlayerMilestoneRule rule =
                 new PlayerMilestoneRule("milestone-player-ace-10", SELECTED_PLAYER_ID, MILESTONE_THRESHOLD);
         ReplayResult result = new ReplayEngine().replay(
-                fixture.game().gameId(), events, List.of(rule));
+                fixture.game().gameId(),
+                fixture.game().homeTeamId(),
+                fixture.game().awayTeamId(),
+                events,
+                List.of(rule));
 
         out.println("CourtPulse deterministic replay");
         out.println("Fixture: " + fixture.name());
