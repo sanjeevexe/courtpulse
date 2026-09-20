@@ -1,0 +1,153 @@
+{
+  "fixtureSchemaVersion": 1,
+  "name": "CourtPulse Synthetic Milestone Game",
+  "description": "A compact four-period game used to prove deterministic replay and a 10-point player milestone.",
+  "provenance": "Authored specifically for CourtPulse. Entirely synthetic and safe to redistribute.",
+  "game": {
+    "gameId": "game_synthetic_001",
+    "homeTeamId": "team_home",
+    "awayTeamId": "team_away"
+  },
+  "events": [
+    {
+      "eventId": "event-001", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:001", "sequence": 1, "revision": 1,
+      "type": "GAME_STARTED", "period": 1, "clockMillisRemaining": 720000,
+      "occurredAt": "2026-01-01T00:00:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 0, "away": 0}, "points": 0
+    },
+    {
+      "eventId": "event-002", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:002", "sequence": 2, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 1, "clockMillisRemaining": 680000,
+      "occurredAt": "2026-01-01T00:00:40Z", "teamId": "team_away", "participantIds": ["player_away_1"],
+      "scoreAfter": {"home": 0, "away": 2}, "points": 2
+    },
+    {
+      "eventId": "event-003", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:003", "sequence": 3, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 1, "clockMillisRemaining": 650000,
+      "occurredAt": "2026-01-01T00:01:10Z", "teamId": "team_home", "participantIds": ["player_ace"],
+      "scoreAfter": {"home": 2, "away": 2}, "points": 2
+    },
+    {
+      "eventId": "event-004", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:004", "sequence": 4, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 1, "clockMillisRemaining": 610000,
+      "occurredAt": "2026-01-01T00:01:50Z", "teamId": "team_home", "participantIds": ["player_ace"],
+      "scoreAfter": {"home": 5, "away": 2}, "points": 3
+    },
+    {
+      "eventId": "event-005", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:005", "sequence": 5, "revision": 1,
+      "type": "PERIOD_STARTED", "period": 2, "clockMillisRemaining": 720000,
+      "occurredAt": "2026-01-01T00:12:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 5, "away": 2}, "points": 0
+    },
+    {
+      "eventId": "event-006", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:006", "sequence": 6, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 2, "clockMillisRemaining": 660000,
+      "occurredAt": "2026-01-01T00:13:00Z", "teamId": "team_away", "participantIds": ["player_away_1"],
+      "scoreAfter": {"home": 5, "away": 5}, "points": 3
+    },
+    {
+      "eventId": "event-007", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:007", "sequence": 7, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 2, "clockMillisRemaining": 500000,
+      "occurredAt": "2026-01-01T00:15:40Z", "teamId": "team_home", "participantIds": ["player_ace"],
+      "scoreAfter": {"home": 7, "away": 5}, "points": 2
+    },
+    {
+      "eventId": "event-008", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:008", "sequence": 8, "revision": 1,
+      "type": "FREE_THROW_MADE", "period": 2, "clockMillisRemaining": 490000,
+      "occurredAt": "2026-01-01T00:15:50Z", "teamId": "team_home", "participantIds": ["player_ace"],
+      "scoreAfter": {"home": 8, "away": 5}, "points": 1
+    },
+    {
+      "eventId": "event-009", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:009", "sequence": 9, "revision": 1,
+      "type": "PERIOD_STARTED", "period": 3, "clockMillisRemaining": 720000,
+      "occurredAt": "2026-01-01T00:24:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 8, "away": 5}, "points": 0
+    },
+    {
+      "eventId": "event-010", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:010", "sequence": 10, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 3, "clockMillisRemaining": 690000,
+      "occurredAt": "2026-01-01T00:24:30Z", "teamId": "team_away", "participantIds": ["player_away_1"],
+      "scoreAfter": {"home": 8, "away": 7}, "points": 2
+    },
+    {
+      "eventId": "event-011", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:011", "sequence": 11, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 3, "clockMillisRemaining": 640000,
+      "occurredAt": "2026-01-01T00:25:20Z", "teamId": "team_home", "participantIds": ["player_ace"],
+      "scoreAfter": {"home": 10, "away": 7}, "points": 2
+    },
+    {
+      "eventId": "event-012", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:012", "sequence": 12, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 3, "clockMillisRemaining": 600000,
+      "occurredAt": "2026-01-01T00:26:00Z", "teamId": "team_away", "participantIds": ["player_away_1"],
+      "scoreAfter": {"home": 10, "away": 10}, "points": 3
+    },
+    {
+      "eventId": "event-013", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:013", "sequence": 13, "revision": 1,
+      "type": "PERIOD_STARTED", "period": 4, "clockMillisRemaining": 720000,
+      "occurredAt": "2026-01-01T00:36:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 10, "away": 10}, "points": 0
+    },
+    {
+      "eventId": "event-014", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:014", "sequence": 14, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 4, "clockMillisRemaining": 650000,
+      "occurredAt": "2026-01-01T00:37:10Z", "teamId": "team_home", "participantIds": ["player_home_2"],
+      "scoreAfter": {"home": 12, "away": 10}, "points": 2
+    },
+    {
+      "eventId": "event-015", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:015", "sequence": 15, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 4, "clockMillisRemaining": 590000,
+      "occurredAt": "2026-01-01T00:38:10Z", "teamId": "team_away", "participantIds": ["player_away_1"],
+      "scoreAfter": {"home": 12, "away": 12}, "points": 2
+    },
+    {
+      "eventId": "event-016", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:016", "sequence": 16, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 4, "clockMillisRemaining": 510000,
+      "occurredAt": "2026-01-01T00:39:30Z", "teamId": "team_home", "participantIds": ["player_ace"],
+      "scoreAfter": {"home": 15, "away": 12}, "points": 3
+    },
+    {
+      "eventId": "event-017", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:017", "sequence": 17, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 4, "clockMillisRemaining": 420000,
+      "occurredAt": "2026-01-01T00:41:00Z", "teamId": "team_away", "participantIds": ["player_away_1"],
+      "scoreAfter": {"home": 15, "away": 14}, "points": 2
+    },
+    {
+      "eventId": "event-018", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:018", "sequence": 18, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 4, "clockMillisRemaining": 300000,
+      "occurredAt": "2026-01-01T00:43:00Z", "teamId": "team_home", "participantIds": ["player_home_2"],
+      "scoreAfter": {"home": 17, "away": 14}, "points": 2
+    },
+    {
+      "eventId": "event-019", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:019", "sequence": 19, "revision": 1,
+      "type": "FREE_THROW_MADE", "period": 4, "clockMillisRemaining": 120000,
+      "occurredAt": "2026-01-01T00:46:00Z", "teamId": "team_home", "participantIds": ["player_home_2"],
+      "scoreAfter": {"home": 18, "away": 14}, "points": 1
+    },
+    {
+      "eventId": "event-020", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:020", "sequence": 20, "revision": 1,
+      "type": "GAME_FINAL", "period": 4, "clockMillisRemaining": 0,
+      "occurredAt": "2026-01-01T00:48:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 18, "away": 14}, "points": 0
+    }
+  ]
+}
