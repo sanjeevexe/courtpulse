@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: courtpulse
       POSTGRES_PASSWORD: ${COURTPULSE_DB_PASSWORD:?Set COURTPULSE_DB_PASSWORD before starting PostgreSQL}
     ports:
-      - "5432:5432"
+      - "${COURTPULSE_POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U courtpulse -d courtpulse"]
       interval: 2s
@@ -24,7 +24,7 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       PERSISTENCE: "1"
     ports:
-      - "4566:4566"
+      - "${COURTPULSE_LOCALSTACK_HOST_PORT:-4566}:4566"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health | grep -q '\"sqs\": \"running\"'"]
       interval: 2s

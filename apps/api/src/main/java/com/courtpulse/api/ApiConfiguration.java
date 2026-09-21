@@ -1,6 +1,11 @@
 package com.courtpulse.api;
 
 import com.courtpulse.query.CourtPulseQueryService;
+import com.courtpulse.api.realtime.RealtimeHub;
+import com.courtpulse.api.realtime.RealtimeOutboxPublisher;
+import com.courtpulse.api.realtime.RealtimeProtocol;
+import com.courtpulse.api.realtime.RealtimePublicationScheduler;
+import com.courtpulse.api.realtime.RealtimeWebSocketHandler;
 import com.courtpulse.query.DataStatusPolicy;
 import com.courtpulse.query.JdbcCourtPulseReadRepository;
 import com.courtpulse.query.OpaqueCursorCodec;
@@ -12,16 +17,22 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.headers.Header;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -64,6 +75,75 @@ public class ApiConfiguration {
     CourtPulseQueryService courtPulseQueryService(
             JdbcCourtPulseReadRepository repository, OpaqueCursorCodec cursors) {
         return new CourtPulseQueryService(repository, cursors);
+    }
+
+    @Bean
+    TransactionTemplate apiTransactionTemplate(PlatformTransactionManager manager) {
+        return new TransactionTemplate(manager);
+    }
+
+    @Bean
+    JdbcOutboxPublicationRepository realtimeOutboxRepository(JdbcClient jdbc) {
+        return new JdbcOutboxPublicationRepository(jdbc);
+    }
+
+    @Bean("realtimeLeaseOwner")
+    String realtimeLeaseOwner() {
+        return "api-realtime-" + UUID.randomUUID();
+    }
+
+    @Bean
+    RealtimeProtocol realtimeProtocol(@Qualifier("queryObjectMapper") ObjectMapper objectMapper) {
+        return new RealtimeProtocol(objectMapper);
+    }
+
+    @Bean
+    RealtimeHub realtimeHub(
+            RealtimeProtocol protocol,
+            CourtPulseQueryService queries,
+            Clock clock,
+            MeterRegistry meters,
+            @Value("${courtpulse.realtime.session-limit}") int sessionLimit,
+            @Value("${courtpulse.realtime.outbound-buffer-size}") int outboundBufferSize) {
+        return new RealtimeHub(
+                protocol, queries, clock, meters, sessionLimit, outboundBufferSize);
+    }
+
+    @Bean
+    RealtimeWebSocketHandler realtimeWebSocketHandler(RealtimeHub hub) {
+        return new RealtimeWebSocketHandler(hub);
+    }
+
+    @Bean
+    RealtimeOutboxPublisher realtimeOutboxPublisher(
+            JdbcOutboxPublicationRepository repository,
+            RealtimeHub hub,
+            TransactionTemplate transactions,
+            Clock clock,
+            @Qualifier("realtimeLeaseOwner") String leaseOwner,
+            @Value("${courtpulse.realtime.lease-duration}") Duration leaseDuration,
+            @Value("${courtpulse.realtime.batch-size}") int batchSize,
+            @Value("${courtpulse.realtime.maximum-attempts}") int maximumAttempts,
+            MeterRegistry meters) {
+        return new RealtimeOutboxPublisher(
+                repository,
+                hub,
+                transactions,
+                clock,
+                leaseOwner,
+                leaseDuration,
+                batchSize,
+                maximumAttempts,
+                meters);
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+            name = "courtpulse.realtime.publication.enabled",
+            havingValue = "true",
+            matchIfMissing = true)
+    RealtimePublicationScheduler realtimePublicationScheduler(RealtimeOutboxPublisher publisher) {
+        return new RealtimePublicationScheduler(publisher);
     }
 
     @Bean

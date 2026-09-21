@@ -1,0 +1,160 @@
+asyncapi: 3.0.0
+info:
+  title: CourtPulse Realtime Hints
+  version: 1.0.0
+  description: >-
+    Versioned, non-authoritative WebSocket hints. Clients always resynchronize from the
+    PostgreSQL-backed HTTP API after gaps or reconnects.
+servers:
+  local:
+    host: localhost:4173
+    protocol: ws
+    pathname: /ws/v1/games
+channels:
+  gameHints:
+    address: /ws/v1/games
+    messages:
+      subscribe:
+        $ref: '#/components/messages/Subscribe'
+      subscriptionAcknowledged:
+        $ref: '#/components/messages/SubscriptionAcknowledged'
+      gameStateUpdated:
+        $ref: '#/components/messages/GameStateUpdated'
+      alertCreated:
+        $ref: '#/components/messages/AlertCreated'
+      resyncRequired:
+        $ref: '#/components/messages/ResyncRequired'
+      problem:
+        $ref: '#/components/messages/Problem'
+operations:
+  subscribeToGame:
+    action: receive
+    channel:
+      $ref: '#/channels/gameHints'
+    messages:
+      - $ref: '#/channels/gameHints/messages/subscribe'
+  receiveGameHints:
+    action: send
+    channel:
+      $ref: '#/channels/gameHints'
+    messages:
+      - $ref: '#/channels/gameHints/messages/subscriptionAcknowledged'
+      - $ref: '#/channels/gameHints/messages/gameStateUpdated'
+      - $ref: '#/channels/gameHints/messages/alertCreated'
+      - $ref: '#/channels/gameHints/messages/resyncRequired'
+      - $ref: '#/channels/gameHints/messages/problem'
+components:
+  messages:
+    Subscribe:
+      payload:
+        $ref: '#/components/schemas/Subscribe'
+    SubscriptionAcknowledged:
+      payload:
+        $ref: '#/components/schemas/SubscriptionAcknowledged'
+    GameStateUpdated:
+      payload:
+        $ref: '#/components/schemas/GameStateUpdated'
+    AlertCreated:
+      payload:
+        $ref: '#/components/schemas/AlertCreated'
+    ResyncRequired:
+      payload:
+        $ref: '#/components/schemas/ResyncRequired'
+    Problem:
+      payload:
+        $ref: '#/components/schemas/Problem'
+  schemas:
+    Subscribe:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, messageType, gameId]
+      properties:
+        schemaVersion:
+          const: 1
+        messageType:
+          const: SUBSCRIBE
+        gameId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[A-Za-z0-9._:-]+$'
+        lastStateVersion:
+          type: integer
+          minimum: 0
+    ServerMessage:
+      type: object
+      required: [schemaVersion, messageType, messageId, gameId, emittedAt, correlationId]
+      properties:
+        schemaVersion:
+          const: 1
+        messageType:
+          type: string
+        messageId:
+          type: string
+          format: uuid
+        gameId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[A-Za-z0-9._:-]+$'
+        stateVersion:
+          type: integer
+          minimum: 0
+        emittedAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+    SubscriptionAcknowledged:
+      allOf:
+        - $ref: '#/components/schemas/ServerMessage'
+        - type: object
+          required: [stateVersion]
+          properties:
+            messageType:
+              const: SUBSCRIPTION_ACKNOWLEDGED
+            stateVersion:
+              type: integer
+              minimum: 0
+    GameStateUpdated:
+      allOf:
+        - $ref: '#/components/schemas/ServerMessage'
+        - type: object
+          required: [stateVersion, eventId]
+          properties:
+            messageType:
+              const: GAME_STATE_UPDATED
+            eventId:
+              type: string
+    AlertCreated:
+      allOf:
+        - $ref: '#/components/schemas/ServerMessage'
+        - type: object
+          required: [stateVersion, triggerKey]
+          properties:
+            messageType:
+              const: ALERT_CREATED
+            triggerKey:
+              type: string
+    ResyncRequired:
+      allOf:
+        - $ref: '#/components/schemas/ServerMessage'
+        - type: object
+          required: [stateVersion, code]
+          properties:
+            messageType:
+              const: RESYNC_REQUIRED
+            code:
+              const: version_gap
+    Problem:
+      allOf:
+        - $ref: '#/components/schemas/ServerMessage'
+        - type: object
+          required: [code, detail]
+          properties:
+            messageType:
+              const: PROBLEM
+            code:
+              type: string
+            detail:
+              type: string

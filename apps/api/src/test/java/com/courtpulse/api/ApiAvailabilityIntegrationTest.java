@@ -19,7 +19,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "courtpulse.realtime.publication.enabled=false")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApiAvailabilityIntegrationTest {
     @Container

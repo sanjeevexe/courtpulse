@@ -14,10 +14,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -212,6 +214,117 @@ class DurablePostgresIntegrationTest {
         assertEquals(1, services.inspection().checkpointVersion(fixture.game().gameId()));
         assertEquals(1, services.inspection().counts().processedEvents());
         assertEquals(1, services.inspection().countOutboxByType("GAME_STATE_UPDATED"));
+    }
+
+    @Test
+    void realtimeClaimsPreservePerGameVersionAndAlertOrder() {
+        LoadedFixture fixture = importFixture();
+        services.processing().listEventIds(fixture.game().gameId()).stream()
+                .limit(11)
+                .forEach(eventId -> services.processor().processEvent(eventId));
+        JdbcOutboxPublicationRepository publication =
+                new JdbcOutboxPublicationRepository(JdbcClient.create(dataSource));
+        List<RealtimeOutboxRecord> published = new ArrayList<>();
+
+        for (int index = 0; index < 12; index++) {
+            List<RealtimeOutboxRecord> claimed = publication.claimRealtime(
+                    "realtime-a", 25, CLOCK.instant(), Duration.ofSeconds(15));
+            assertEquals(1, claimed.size());
+            RealtimeOutboxRecord record = claimed.getFirst();
+            published.add(record);
+            assertTrue(publication.markRealtimeSent(record.outboxId(), "realtime-a", CLOCK.instant()));
+        }
+
+        assertEquals(
+                java.util.stream.LongStream.rangeClosed(1, 11).boxed().toList(),
+                published.stream().limit(11).map(RealtimeOutboxRecord::stateVersion).toList());
+        assertTrue(published.stream().limit(11)
+                .allMatch(record -> "GAME_STATE_UPDATED".equals(record.eventType())));
+        assertEquals("ALERT_CREATED", published.getLast().eventType());
+        assertEquals(11, published.getLast().stateVersion());
+    }
+
+    @Test
+    void expiredRealtimeLeaseRecoversSameHintAfterCrashBeforeCompletion() {
+        LoadedFixture fixture = importFixture();
+        services.processor().processEvent(fixture.events().getFirst().eventId());
+        JdbcOutboxPublicationRepository publication =
+                new JdbcOutboxPublicationRepository(JdbcClient.create(dataSource));
+        RealtimeOutboxRecord first = publication.claimRealtime(
+                "crashed", 10, CLOCK.instant(), Duration.ofSeconds(5)).getFirst();
+
+        assertTrue(publication.claimRealtime(
+                "replacement", 10, CLOCK.instant().plusSeconds(4), Duration.ofSeconds(5)).isEmpty());
+        RealtimeOutboxRecord recovered = publication.claimRealtime(
+                "replacement", 10, CLOCK.instant().plusSeconds(6), Duration.ofSeconds(5)).getFirst();
+
+        assertEquals(first.outboxId(), recovered.outboxId());
+        assertEquals(2, recovered.attempt());
+        assertFalse(publication.markRealtimeSent(
+                first.outboxId(), "crashed", CLOCK.instant().plusSeconds(6)));
+        assertTrue(publication.markRealtimeSent(
+                recovered.outboxId(), "replacement", CLOCK.instant().plusSeconds(7)));
+    }
+
+    @Test
+    void terminalRealtimeFailureIsInspectableAndBlocksNewerSameGameHints() {
+        LoadedFixture fixture = importFixture();
+        services.processing().listEventIds(fixture.game().gameId()).stream()
+                .limit(2)
+                .forEach(eventId -> services.processor().processEvent(eventId));
+        JdbcClient jdbc = JdbcClient.create(dataSource);
+        JdbcOutboxPublicationRepository publication = new JdbcOutboxPublicationRepository(jdbc);
+        RealtimeOutboxRecord claimed = publication.claimRealtime(
+                "realtime-a", 10, CLOCK.instant(), Duration.ofSeconds(5)).getFirst();
+        assertTrue(publication.markRealtimeFailed(
+                claimed.outboxId(), "realtime-a", CLOCK.instant().plusSeconds(1),
+                "password=unsafe\nprovider failed"));
+
+        assertEquals("FAILED", jdbc.sql("SELECT status FROM outbox WHERE id = :id")
+                .param("id", claimed.outboxId()).query(String.class).single());
+        assertEquals("password=[redacted] provider failed", jdbc.sql(
+                        "SELECT last_error FROM outbox WHERE id = :id")
+                .param("id", claimed.outboxId()).query(String.class).single());
+        assertTrue(publication.claimRealtime(
+                "realtime-b", 10, CLOCK.instant().plusSeconds(20), Duration.ofSeconds(5)).isEmpty());
+    }
+
+    @Test
+    void terminalRealtimeFailureForOneGameDoesNotBlockAnotherGame() {
+        LoadedFixture fixture = importFixture();
+        services.processing().listEventIds(fixture.game().gameId()).stream()
+                .limit(2)
+                .forEach(eventId -> services.processor().processEvent(eventId));
+        JdbcClient jdbc = JdbcClient.create(dataSource);
+        JdbcOutboxPublicationRepository publication = new JdbcOutboxPublicationRepository(jdbc);
+        RealtimeOutboxRecord blocked = publication.claimRealtime(
+                "realtime-a", 10, CLOCK.instant(), Duration.ofSeconds(5)).getFirst();
+        assertTrue(publication.markRealtimeFailed(
+                blocked.outboxId(), "realtime-a", CLOCK.instant().plusSeconds(1), "terminal"));
+
+        UUID otherId = UUID.randomUUID();
+        jdbc.sql("""
+                        INSERT INTO outbox(
+                            id, deduplication_key, aggregate_type, aggregate_id, event_type,
+                            payload, status, attempts, next_attempt_at, created_at,
+                            destination, message_group_id)
+                        VALUES (
+                            :id, :deduplicationKey, 'Game', 'event-other', 'GAME_STATE_UPDATED',
+                            CAST(:payload AS jsonb), 'PENDING', 0, :now, :now,
+                            'FUTURE_NOTIFICATIONS', 'game-other')
+                        """)
+                .params(java.util.Map.of(
+                        "id", otherId,
+                        "deduplicationKey", "realtime-other-1",
+                        "payload", "{\"stateVersion\":1,\"eventId\":\"event-other\"}",
+                        "now", java.time.OffsetDateTime.ofInstant(CLOCK.instant(), ZoneOffset.UTC)))
+                .update();
+
+        List<RealtimeOutboxRecord> next = publication.claimRealtime(
+                "realtime-b", 10, CLOCK.instant().plusSeconds(20), Duration.ofSeconds(5));
+        assertEquals(1, next.size());
+        assertEquals(otherId, next.getFirst().outboxId());
+        assertEquals("game-other", next.getFirst().gameId());
     }
 
     private LoadedFixture importFixture() {

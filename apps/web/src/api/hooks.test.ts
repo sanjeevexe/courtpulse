@@ -20,4 +20,9 @@ describe('snapshot polling policy', () => {
   it('does not poll before the first snapshot arrives', () => {
     expect(snapshotRefreshInterval(undefined)).toBe(false);
   });
+
+  it('suppresses redundant polling while realtime is connected', () => {
+    expect(snapshotRefreshInterval({ ...snapshot, status: 'LIVE', dataStatus: 'LIVE' }, true))
+      .toBe(false);
+  });
 });

@@ -41,6 +41,7 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 public final class QueueReplayCommand implements ApplicationRunner {
     private static final Set<String> SUPPORTED = Set.of(
             "reset-import", "publish", "drain", "run", "inspect", "help",
+            "pace-ms",
             "simulate-publisher-after-send", "simulate-consumer-before-commit",
             "simulate-consumer-after-commit");
 
@@ -147,6 +148,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
                             ? pollWorkers()
                             : consumer.pollOnce(mode);
                     consumption = consumption.plus(batch);
+                    pauseAfterAcceptedBatch(options.paceMillis(), batch.accepted());
                     if (mode != ConsumerFailureMode.NONE) {
                         break;
                     }
@@ -161,6 +163,18 @@ public final class QueueReplayCommand implements ApplicationRunner {
         }
 
         printReport(fixture, imported, publication, consumption, Instant.now().isBefore(deadline));
+    }
+
+    private static void pauseAfterAcceptedBatch(long paceMillis, long accepted) {
+        if (paceMillis == 0 || accepted == 0) {
+            return;
+        }
+        try {
+            Thread.sleep(paceMillis);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Paced replay interrupted", exception);
+        }
     }
 
     private ConsumerBatchResult pollWorkers() {
@@ -232,6 +246,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
         System.out.println("Usage: queue-replay-cli [--reset-import] [--run | --publish | --drain] [--inspect]");
         System.out.println("       [--simulate-publisher-after-send]");
         System.out.println("       [--simulate-consumer-before-commit | --simulate-consumer-after-commit]");
+        System.out.println("       [--pace-ms=0..10000] (use consumer batch size 1 for event-by-event pacing)");
     }
 
     private record Options(
@@ -241,6 +256,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
             boolean run,
             boolean inspect,
             boolean help,
+            long paceMillis,
             boolean publisherCrash,
             boolean consumerBeforeCommit,
             boolean consumerAfterCommit) {
@@ -262,6 +278,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
                     arguments.containsOption("run"),
                     arguments.containsOption("inspect"),
                     arguments.containsOption("help"),
+                    parsePace(arguments),
                     arguments.containsOption("simulate-publisher-after-send"),
                     arguments.containsOption("simulate-consumer-before-commit"),
                     arguments.containsOption("simulate-consumer-after-commit"));
@@ -283,6 +300,25 @@ public final class QueueReplayCommand implements ApplicationRunner {
                 throw new IllegalArgumentException("Choose an action; use --help");
             }
             return options;
+        }
+
+        private static long parsePace(ApplicationArguments arguments) {
+            if (!arguments.containsOption("pace-ms")) {
+                return 0;
+            }
+            List<String> values = arguments.getOptionValues("pace-ms");
+            if (values == null || values.size() != 1) {
+                throw new IllegalArgumentException("--pace-ms requires exactly one value");
+            }
+            try {
+                long value = Long.parseLong(values.getFirst());
+                if (value < 0 || value > 10_000) {
+                    throw new IllegalArgumentException("--pace-ms must be between 0 and 10000");
+                }
+                return value;
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("--pace-ms must be an integer", exception);
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { InfiniteData } from '@tanstack/react-query';
@@ -49,6 +49,56 @@ describe('game detail', () => {
     await user.click(screen.getByRole('button', { name: 'Load more possessions' }));
     expect(await screen.findByText('16 loaded')).toBeVisible();
     expect(screen.getByText('16', { selector: '.event-sequence' })).toBeVisible();
+  });
+
+  it('preserves unique loaded pages while a realtime invalidation refetches them', async () => {
+    const user = userEvent.setup();
+    let initialRequests = 0;
+    let releaseRefresh: (() => void) | undefined;
+    const refreshGate = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+    const activeByCursor = new Map<string, number>();
+    let concurrentSameCursor = false;
+    server.use(http.get('*/api/v1/games/:gameId/events', async ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get('cursor') ?? 'first';
+      const active = (activeByCursor.get(cursor) ?? 0) + 1;
+      activeByCursor.set(cursor, active);
+      concurrentSameCursor ||= active > 1;
+      try {
+        if (cursor === 'first') {
+          initialRequests += 1;
+          if (initialRequests > 1) await refreshGate;
+          return HttpResponse.json(eventPage(events.slice(0, 8), 'page-2'));
+        }
+        if (cursor === 'page-2') {
+          return HttpResponse.json(eventPage(events.slice(8, 16), 'page-3'));
+        }
+        return HttpResponse.json(eventPage(events.slice(16, 20)));
+      } finally {
+        activeByCursor.set(cursor, (activeByCursor.get(cursor) ?? 1) - 1);
+      }
+    }));
+
+    const { queryClient } = renderApp('/games/game_synthetic_001');
+    await screen.findByText('8 loaded');
+    await user.click(screen.getByRole('button', { name: 'Load more possessions' }));
+    await screen.findByText('16 loaded');
+
+    const invalidation = queryClient.invalidateQueries({
+      queryKey: ['game', 'game_synthetic_001', 'events'],
+    });
+    const refreshButton = await screen.findByRole('button', { name: 'Refreshing possessions…' });
+    expect(refreshButton).toBeDisabled();
+    expect(screen.getByText('16 loaded')).toBeVisible();
+    expect(screen.getAllByText('8', { selector: '.event-sequence' })).toHaveLength(1);
+
+    releaseRefresh?.();
+    await invalidation;
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Load more possessions' })).toBeEnabled());
+    expect(screen.getByText('16 loaded')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Load more possessions' }));
+    await screen.findByText('20 loaded');
+    expect(screen.queryByRole('button', { name: 'Load more possessions' })).not.toBeInTheDocument();
+    expect(concurrentSameCursor).toBe(false);
   });
 
   it('suppresses duplicate events when pages overlap', () => {

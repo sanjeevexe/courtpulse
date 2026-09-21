@@ -11,6 +11,7 @@ dependencies {
     implementation(project(":modules:persistence"))
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
@@ -28,6 +29,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
     testImplementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
+    testImplementation("org.mockito:mockito-core")
 }
 
 application {

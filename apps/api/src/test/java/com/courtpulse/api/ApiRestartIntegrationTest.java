@@ -49,6 +49,7 @@ class ApiRestartIntegrationTest {
                         "--spring.datasource.url=" + POSTGRES.getJdbcUrl(),
                         "--spring.datasource.username=" + POSTGRES.getUsername(),
                         "--spring.datasource.password=" + POSTGRES.getPassword(),
+                        "--courtpulse.realtime.publication.enabled=false",
                         "--logging.level.root=ERROR");
     }
 

@@ -32,7 +32,7 @@ export function useGames(status: GameSummary['status'] | 'ALL') {
   });
 }
 
-export function useGameSnapshot(gameId: string) {
+export function useGameSnapshot(gameId: string, realtimeConnected = false) {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: snapshotQueryKey(gameId),
@@ -53,14 +53,18 @@ export function useGameSnapshot(gameId: string) {
       }
       return response.snapshot;
     },
-    refetchInterval: (query) => snapshotRefreshInterval(query.state.data),
+    refetchInterval: (query) => snapshotRefreshInterval(query.state.data, realtimeConnected),
     refetchIntervalInBackground: false,
   });
 }
 
-export function snapshotRefreshInterval(snapshot: GameSnapshot | undefined): number | false {
+export function snapshotRefreshInterval(
+  snapshot: GameSnapshot | undefined,
+  realtimeConnected = false,
+): number | false {
   if (!snapshot) return false;
   if (snapshot.status === 'FINAL') return false;
+  if (realtimeConnected) return false;
   if (snapshot.status === 'LIVE' && snapshot.dataStatus === 'LIVE') return 15_000;
   if (snapshot.dataStatus === 'STALE' || snapshot.dataStatus === 'PROCESSING_BLOCKED') return 30_000;
   return 60_000;

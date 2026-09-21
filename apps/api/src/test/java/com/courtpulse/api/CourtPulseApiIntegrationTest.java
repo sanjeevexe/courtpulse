@@ -42,7 +42,11 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @Testcontainers
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"logging.level.root=ERROR", "courtpulse.api.live-freshness-window=2m"})
+        properties = {
+            "logging.level.root=ERROR",
+            "courtpulse.api.live-freshness-window=2m",
+            "courtpulse.realtime.publication.enabled=false"
+        })
 class CourtPulseApiIntegrationTest {
     @Container
     private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.6-alpine");

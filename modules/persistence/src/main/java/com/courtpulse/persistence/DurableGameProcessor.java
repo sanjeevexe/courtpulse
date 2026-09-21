@@ -75,6 +75,7 @@ public final class DurableGameProcessor {
                 Map.of(
                         "eventId", event.eventId(),
                         "gameId", event.gameId(),
+                        "stateVersion", nextState.appliedEventIdentities().size(),
                         "sequence", event.sequence(),
                         "stateChecksum", checksum),
                 now);
@@ -91,6 +92,7 @@ public final class DurableGameProcessor {
                             "ALERT_CREATED",
                             Map.of(
                                     "gameId", alert.gameId(),
+                                    "stateVersion", nextState.appliedEventIdentities().size(),
                                     "ruleId", alert.ruleId(),
                                     "triggerKey", alert.triggerKey(),
                                     "triggeringEventId", alert.triggeringEventId()),

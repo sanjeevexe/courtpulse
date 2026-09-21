@@ -5,18 +5,20 @@ CourtPulse is a replay-first basketball event platform. Its current production-s
 ```text
 synthetic fixture -> PostgreSQL transactional outbox -> lease-based publisher
                   -> SQS FIFO game-events queue -> queue consumer
-                  -> durable processor -> PostgreSQL checkpoint, identities, alert, deferred outbox
+                  -> durable processor -> PostgreSQL checkpoint, identities, alert, realtime outbox
                                                         |
 HTTP client -> Spring MVC -> query service -> bounded JDBC reads -> PostgreSQL
 Browser -> non-root Nginx -> React dashboard
                          \-> same-origin /api proxy -> Spring MVC
+                         \-> /ws/v1/games -> versioned realtime hints
 ```
 
 PostgreSQL is the durable source of truth for the versioned, read-only HTTP API. The API never reads
 from SQS and does not need LocalStack to serve requests. The React dashboard consumes only the
 versioned REST contract through a same-origin Nginx boundary. The infrastructure-free and direct
-PostgreSQL replay commands remain available. This milestone stops before WebSockets,
-authentication, Redis, email, live providers, and cloud deployment.
+PostgreSQL replay commands remain available. WebSocket messages are non-authoritative hints; clients
+resynchronize through HTTP after gaps and reconnects. Authentication, Redis, email, live providers,
+and cloud deployment remain outside this milestone.
 
 ## Prerequisites and tests
 
@@ -323,8 +325,54 @@ Snapshot requests retain the last ETag and send `If-None-Match`; a 304 preserves
 representation. Fresh live games poll every 15 seconds, stale or processing-blocked games every 30
 seconds, other non-final games every 60 seconds, and final games stop automatic polling. TanStack
 Query pauses interval work while the document is hidden and refreshes stale data when focus returns.
-Manual refresh remains available. WebSockets are intentionally deferred, so polling is currently the
-only automatic update transport.
+Manual refresh remains available.
+
+## Realtime hints and paced replay
+
+The versioned protocol is checked in at
+`contracts/asyncapi/courtpulse-realtime-v1.yaml` and served at `/ws/v1/games`. A client subscribes to
+one game with its last observed state version. The server acknowledges the subscription and emits
+`GAME_STATE_UPDATED`, `ALERT_CREATED`, `RESYNC_REQUIRED`, or sanitized `PROBLEM` messages. Every hint
+has a schema version, stable message ID, game ID, emission time, correlation ID, and state version
+where applicable.
+
+Hints are never authoritative. The API claims committed `FUTURE_NOTIFICATIONS` outbox rows in short
+transactions, broadcasts after the claim commits, and marks completion in another short transaction.
+Expired claims are recoverable. A crash after broadcast but before completion can redeliver the same
+message ID; the browser suppresses it. A missing or gapped version invalidates the snapshot, event,
+and alert queries so the browser resynchronizes from HTTP/PostgreSQL. Healthy sockets suppress
+redundant interval polling; disconnects retain the existing polling policy while bounded exponential
+backoff reconnects. Hidden documents pause reconnect work until visible.
+
+Run the deterministic paced replay and reconnect acceptance harness. It uses the fixed
+`courtpulse-m6-acceptance` Compose project, separate volumes and host ports, waits on observable
+health/checkpoint state, captures failure diagnostics under `build/verification/milestone-6`, and
+never touches the normal `courtpulse` database:
+
+```bash
+./scripts/verify-milestone-6.sh
+```
+
+The harness proves 20 visible messages before draining, starts both desktop and mobile browsers at
+an early checkpoint during a 1000 ms single-event replay, records actual WebSocket frames, forces a
+same-identity alert redelivery, and interrupts only the isolated API while a browser remains open.
+The expected durable result remains HOME 18–AWAY 14, `player_ace=13`, 20 ordered events, one alert,
+and checksum
+`06d40d7e19ecf9ed9496e1523e6715bba029f008f94cb76148f600702d4c3bca`. Remove only the explicitly
+named isolated project manually only if a terminated harness did not reach its cleanup trap:
+
+```bash
+docker compose -p courtpulse-m6-acceptance down -v
+```
+
+Realtime metrics cover active sessions/subscriptions, published and stale hints, resync requests,
+slow-client disconnects, publication failures, and recovered leases. Logs carry message ID, game ID,
+state version, and type without tokens or raw payloads. For failure injection, the publisher exposes
+an automated crash-after-broadcast mode; persistence tests prove the expired lease republishes the
+same identity and ownership prevents stale completion.
+
+The hub is intentionally single-API-instance. Before horizontal API scaling, add Redis or another
+shared fanout layer while retaining PostgreSQL outbox ownership and HTTP resynchronization.
 
 ## Failure and redelivery demonstrations
 
@@ -396,8 +444,9 @@ compares this data with the committed canonical event and outbox row. It invokes
 durable processor and deletes only after its transaction commits. PostgreSQL processed identities
 and alert trigger keys—not FIFO deduplication—remain authoritative.
 
-`GAME_STATE_UPDATED` and `ALERT_CREATED` use `FUTURE_NOTIFICATIONS` and remain deferred. They are
-never claimed by the game-events publisher.
+`GAME_STATE_UPDATED` and `ALERT_CREATED` use `FUTURE_NOTIFICATIONS`. A separate leased publisher
+claims those rows only after the processor commits and emits versioned WebSocket hints. The
+game-events publisher continues to claim only `GAME_EVENTS` rows.
 
 The version-2 state checksum covers game/team IDs, status, period, clock, score, last sequence,
 sorted player totals, every accepted provider identity plus canonical fingerprint, and bounded
@@ -454,15 +503,17 @@ docker compose down -v
 
 - The synthetic fixture is the only provider; corrections, overtime, and live feeds are deferred.
 - LocalStack is test infrastructure, not a production AWS deployment.
-- Publication of notification-destination outbox rows is deliberately deferred.
+- Email and other external notification delivery remain deliberately deferred; the realtime
+  publisher handles only the WebSocket hint types documented in the AsyncAPI contract.
 - The read API has no authentication; its narrow operations endpoint must be protected before a
   public deployment.
-- The dashboard is read-only and relies on polling; there are no write APIs, streaming, offline
-  mode, authentication, email, live provider integration, corrections, Redis, Terraform, or
-  Kubernetes.
+- The dashboard is read-only; realtime fanout is single-instance and falls back to polling. There
+  are no write APIs, offline mode, authentication, email, live provider integration, corrections,
+  Redis multi-replica fanout, Terraform, or Kubernetes.
 
 See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0002](docs/adr/0002-postgresql-transactional-outbox.md),
 [ADR 0003](docs/adr/0003-sqs-fifo-outbox-leasing.md),
 [ADR 0004](docs/adr/0004-read-api-contract-and-query-model.md), and
-[ADR 0005](docs/adr/0005-react-dashboard-and-polling.md).
+[ADR 0005](docs/adr/0005-react-dashboard-and-polling.md), and
+[ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md).

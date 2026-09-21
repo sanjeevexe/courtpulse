@@ -4,14 +4,17 @@ import { DataStatusBadge } from '../components/DataStatusBadge';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
 import { formatClock, formatDateTime, formatPeriod, readableEventType, shortTeam } from '../lib/format';
+import { connectionLabel, useGameRealtime } from '../realtime/hooks';
 
 export function GameDetailPage() {
   const { gameId = '' } = useParams();
-  const snapshotQuery = useGameSnapshot(gameId);
+  const realtimeState = useGameRealtime(gameId);
+  const snapshotQuery = useGameSnapshot(gameId, realtimeState === 'CONNECTED');
   const eventsQuery = useEvents(gameId);
   const alertsQuery = useAlerts(gameId);
   const events = uniqueEvents(eventsQuery.data);
   const alerts = uniqueAlerts(alertsQuery.data);
+  const eventsBusy = eventsQuery.isFetchingNextPage || eventsQuery.isRefetching;
 
   if (snapshotQuery.isPending) {
     return <LoadingState label="Loading game detail" />;
@@ -32,14 +35,19 @@ export function GameDetailPage() {
     <article className="game-detail">
       <div className="detail-toolbar">
         <Link className="back-link" to="/">← Back to game slate</Link>
-        <button
-          className="button button--quiet"
-          disabled={snapshotQuery.isFetching}
-          onClick={() => void snapshotQuery.refetch()}
-          aria-label="Refresh game snapshot"
-        >
-          {snapshotQuery.isFetching ? 'Refreshing…' : 'Refresh score'}
-        </button>
+        <div className="detail-toolbar__status">
+          <span className={`connection-state connection-state--${realtimeState.toLowerCase()}`} role="status">
+            {connectionLabel(realtimeState)}
+          </span>
+          <button
+            className="button button--quiet"
+            disabled={snapshotQuery.isFetching}
+            onClick={() => void snapshotQuery.refetch()}
+            aria-label="Refresh game snapshot"
+          >
+            {snapshotQuery.isFetching ? 'Refreshing…' : 'Refresh score'}
+          </button>
+        </div>
       </div>
 
       <header className="scoreboard">
@@ -138,10 +146,16 @@ export function GameDetailPage() {
         {eventsQuery.hasNextPage ? (
           <button
             className="button button--secondary button--full"
-            disabled={eventsQuery.isFetchingNextPage}
-            onClick={() => void eventsQuery.fetchNextPage()}
+            disabled={eventsBusy}
+            onClick={() => {
+              if (!eventsBusy) void eventsQuery.fetchNextPage({ cancelRefetch: false });
+            }}
           >
-            {eventsQuery.isFetchingNextPage ? 'Loading possessions…' : 'Load more possessions'}
+            {eventsQuery.isFetchingNextPage
+              ? 'Loading possessions…'
+              : eventsQuery.isRefetching
+                ? 'Refreshing possessions…'
+                : 'Load more possessions'}
           </button>
         ) : null}
       </section>

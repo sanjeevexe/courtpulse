@@ -21,6 +21,15 @@ server:
 courtpulse:
   api:
     live-freshness-window: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:2m}
+  realtime:
+    publication:
+      enabled: ${COURTPULSE_REALTIME_PUBLICATION_ENABLED:true}
+    publish-delay: ${COURTPULSE_REALTIME_PUBLISH_DELAY:250ms}
+    lease-duration: ${COURTPULSE_REALTIME_LEASE_DURATION:15s}
+    batch-size: ${COURTPULSE_REALTIME_BATCH_SIZE:25}
+    maximum-attempts: ${COURTPULSE_REALTIME_MAXIMUM_ATTEMPTS:5}
+    session-limit: ${COURTPULSE_REALTIME_SESSION_LIMIT:500}
+    outbound-buffer-size: ${COURTPULSE_REALTIME_OUTBOUND_BUFFER_SIZE:32}
 
 management:
   endpoints:
