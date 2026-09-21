@@ -1,0 +1,147 @@
+import type { components } from './generated/schema';
+
+export type GamePage = components['schemas']['GamePage'];
+export type GameSummary = components['schemas']['GameSummary'];
+export type GameSnapshot = components['schemas']['GameSnapshot'];
+export type EventPage = components['schemas']['EventPage'];
+export type GameEvent = components['schemas']['Event'];
+export type AlertPage = components['schemas']['AlertPage'];
+export type GameAlert = components['schemas']['Alert'];
+export type DataStatus = components['schemas']['DataStatus'];
+export type ProblemDetails = components['schemas']['Problem'];
+
+type FailureKind = 'problem' | 'network' | 'timeout' | 'malformed';
+
+export class ApiError extends Error {
+  readonly kind: FailureKind;
+  readonly status: number | null;
+  readonly code: string;
+  readonly correlationId: string | null;
+
+  constructor(
+    message: string,
+    options: {
+      kind: FailureKind;
+      status?: number | null;
+      code?: string;
+      correlationId?: string | null;
+      cause?: unknown;
+    },
+  ) {
+    super(message, { cause: options.cause });
+    this.name = 'ApiError';
+    this.kind = options.kind;
+    this.status = options.status ?? null;
+    this.code = options.code ?? options.kind;
+    this.correlationId = options.correlationId ?? null;
+  }
+}
+
+export interface SnapshotResponse {
+  snapshot: GameSnapshot | null;
+  etag: string | null;
+  unchanged: boolean;
+}
+
+const REQUEST_TIMEOUT_MS = 10_000;
+
+async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort('CourtPulse request timed out'), REQUEST_TIMEOUT_MS);
+  const headers = new Headers(init.headers);
+  headers.set('Accept', 'application/json, application/problem+json');
+  try {
+    return await fetch(new URL(path, window.location.origin), {
+      ...init,
+      signal: controller.signal,
+      headers,
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new ApiError('The request timed out. Try again.', { kind: 'timeout', cause: error });
+    }
+    throw new ApiError('CourtPulse could not reach the server.', { kind: 'network', cause: error });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function parseJson<T>(response: Response): Promise<T> {
+  try {
+    const value: unknown = await response.json();
+    if (typeof value !== 'object' || value === null) {
+      throw new Error('Expected a JSON object');
+    }
+    return value as T;
+  } catch (error) {
+    throw new ApiError('CourtPulse received an unexpected server response.', {
+      kind: 'malformed',
+      status: response.status,
+      correlationId: response.headers.get('X-Correlation-ID'),
+      cause: error,
+    });
+  }
+}
+
+async function expectOk<T>(response: Response): Promise<T> {
+  if (response.ok) {
+    return parseJson<T>(response);
+  }
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/problem+json')) {
+    const problem = await parseJson<ProblemDetails>(response);
+    throw new ApiError(problem.detail, {
+      kind: 'problem',
+      status: problem.status,
+      code: problem.code,
+      correlationId: problem.correlationId,
+    });
+  }
+  throw new ApiError('CourtPulse received an unexpected server response.', {
+    kind: 'malformed',
+    status: response.status,
+    correlationId: response.headers.get('X-Correlation-ID'),
+  });
+}
+
+export async function listGames(
+  status: GameSummary['status'] | 'ALL',
+  cursor: string | null,
+  limit = 8,
+): Promise<GamePage> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (status !== 'ALL') search.set('status', status);
+  if (cursor) search.set('cursor', cursor);
+  return expectOk<GamePage>(await apiFetch(`/api/v1/games?${search.toString()}`));
+}
+
+export async function getGameSnapshot(gameId: string, etag?: string): Promise<SnapshotResponse> {
+  const response = await apiFetch(`/api/v1/games/${encodeURIComponent(gameId)}`, {
+    headers: etag ? { 'If-None-Match': etag } : {},
+  });
+  if (response.status === 304) {
+    return { snapshot: null, etag: response.headers.get('ETag') ?? etag ?? null, unchanged: true };
+  }
+  const snapshot = await expectOk<GameSnapshot>(response);
+  return { snapshot, etag: response.headers.get('ETag'), unchanged: false };
+}
+
+export async function listEvents(
+  gameId: string,
+  cursor: string | null,
+  limit = 8,
+): Promise<EventPage> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (cursor) search.set('cursor', cursor);
+  return expectOk<EventPage>(
+    await apiFetch(`/api/v1/games/${encodeURIComponent(gameId)}/events?${search.toString()}`),
+  );
+}
+
+export async function listAlerts(gameId: string, cursor: string | null, limit = 8): Promise<AlertPage> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (cursor) search.set('cursor', cursor);
+  return expectOk<AlertPage>(
+    await apiFetch(`/api/v1/games/${encodeURIComponent(gameId)}/alerts?${search.toString()}`),
+  );
+}

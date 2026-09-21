@@ -8,16 +8,20 @@ synthetic fixture -> PostgreSQL transactional outbox -> lease-based publisher
                   -> durable processor -> PostgreSQL checkpoint, identities, alert, deferred outbox
                                                         |
 HTTP client -> Spring MVC -> query service -> bounded JDBC reads -> PostgreSQL
+Browser -> non-root Nginx -> React dashboard
+                         \-> same-origin /api proxy -> Spring MVC
 ```
 
 PostgreSQL is the durable source of truth for the versioned, read-only HTTP API. The API never reads
-from SQS and does not need LocalStack to serve requests. The infrastructure-free and direct
-PostgreSQL replay commands remain available. This milestone stops before UI, WebSockets,
+from SQS and does not need LocalStack to serve requests. The React dashboard consumes only the
+versioned REST contract through a same-origin Nginx boundary. The infrastructure-free and direct
+PostgreSQL replay commands remain available. This milestone stops before WebSockets,
 authentication, Redis, email, live providers, and cloud deployment.
 
 ## Prerequisites and tests
 
 - Java 21
+- Node.js 24.21.0 (the exact version in `apps/web/.nvmrc`)
 - Docker Desktop with a healthy Linux engine and Docker Compose
 - Internet access for the first dependency and image download
 
@@ -36,6 +40,25 @@ Run the PostgreSQL/LocalStack messaging suite alone with:
 ```bash
 ./gradlew :modules:messaging:test --rerun-tasks --console=plain
 ```
+
+Use the pinned frontend runtime and install the locked dependency graph:
+
+```bash
+cd apps/web
+nvm use
+npm ci
+```
+
+Generate TypeScript definitions from the checked OpenAPI contract, or verify that the checked-in
+generated file has not drifted:
+
+```bash
+npm run generate:api
+npm run check:api
+```
+
+The generated `apps/web/src/api/generated/schema.ts` is intentionally version controlled. Dependency
+trees, production bundles, coverage, Playwright reports, traces, and Vite/Vitest caches are ignored.
 
 Build and smoke-test the executable queue application:
 
@@ -240,6 +263,69 @@ Overrides include `COURTPULSE_DB_URL`, `COURTPULSE_DB_USERNAME`, `COURTPULSE_DB_
 `COURTPULSE_SQS_ENDPOINT`, `AWS_REGION`, queue names, batch sizes, lease/retry durations,
 `COURTPULSE_CONSUMER_WORKERS` (1–8), and `COURTPULSE_DRAIN_TIMEOUT`.
 
+## Web dashboard
+
+`apps/web` is a React 19 and TypeScript single-page application built by Vite. TanStack Query owns
+bounded REST caching, retry, pagination, and refresh policy; React Router owns `/` and
+`/games/{gameId}`. Public request and response types come from the checked OpenAPI contract rather
+than handwritten mirrors. The browser never computes an authoritative score, player total, event,
+or alert: PostgreSQL-backed REST responses remain the source of truth.
+
+Run the API on port 8080 and the Vite development server on port 5173:
+
+```bash
+cd apps/web
+nvm use
+npm ci
+npm run dev
+```
+
+Vite proxies `/api` and health requests to the local API. The production container uses unprivileged
+Nginx on port 8080, serves the immutable hashed bundle, falls back to `index.html` for deep routes,
+and proxies `/api/v1/...` to the API service. It exposes only API liveness and readiness beneath
+`/actuator`; metrics and other actuator routes are not available through the public web boundary.
+Neither development nor production requires a backend URL in the browser bundle.
+
+Frontend validation commands are:
+
+```bash
+cd apps/web
+npm run check:api
+npm run typecheck
+npm run lint
+npm run test:run
+npm run build
+npm run e2e
+```
+
+Vitest runs only `src/**/*.test.ts` and `src/**/*.test.tsx`; Playwright exclusively owns `e2e/`.
+The Playwright configuration runs desktop Chromium and a Pixel 7 viewport against port 4173. Start
+the production-shaped stack without resetting its durable volume:
+
+```bash
+export COURTPULSE_DB_PASSWORD='courtpulse-local-dev'
+docker compose config
+docker compose build web
+docker compose up -d postgres localstack api web
+docker compose ps
+curl -fsS http://localhost:4173/
+curl -fsS http://localhost:4173/games/game_synthetic_001
+curl -fsS http://localhost:4173/api/v1/games/game_synthetic_001
+```
+
+The safe seeded-game acceptance flow assumes the existing durable fixture and never runs
+`--reset-import`: open `/`, select the final game, load possession pages until 20 unique rows are
+shown, and verify HOME 18–AWAY 14, `player_ace` at 13 points, checkpoint v20, and exactly one
+milestone alert. Use Testcontainers or a separately named Compose project and isolated volumes when
+a clean database is required.
+
+Snapshot requests retain the last ETag and send `If-None-Match`; a 304 preserves the cached
+representation. Fresh live games poll every 15 seconds, stale or processing-blocked games every 30
+seconds, other non-final games every 60 seconds, and final games stop automatic polling. TanStack
+Query pauses interval work while the document is hidden and refreshes stale data when focus returns.
+Manual refresh remains available. WebSockets are intentionally deferred, so polling is currently the
+only automatic update transport.
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:
@@ -330,6 +416,7 @@ apps/replay-cli      infrastructure-free replay
 apps/durable-replay-cli  direct PostgreSQL replay
 apps/queue-replay-cli    bounded PostgreSQL -> FIFO SQS -> PostgreSQL demo
 apps/api             Spring MVC read API, DTOs, OpenAPI, errors, health
+apps/web             React dashboard, typed REST client, Nginx same-origin boundary
 ```
 
 ## Troubleshooting and shutdown
@@ -345,6 +432,9 @@ apps/api             Spring MVC read API, DTOs, OpenAPI, errors, health
 - API returns 503: verify PostgreSQL is healthy, the configured password matches the existing
   volume, and `/actuator/health/readiness` becomes `UP`.
 - Port 8080 is busy: stop the host API or set `COURTPULSE_API_HOST_PORT` for Compose.
+- Port 4173 is busy: set `COURTPULSE_WEB_HOST_PORT` for the Compose web service.
+- Frontend types are stale: run `npm run generate:api` in `apps/web`, inspect the contract-driven
+  change, then rerun `npm run check:api`.
 - A cursor is rejected: treat it as opaque and do not reuse it for another resource, game, or
   filtered game list.
 
@@ -367,10 +457,12 @@ docker compose down -v
 - Publication of notification-destination outbox rows is deliberately deferred.
 - The read API has no authentication; its narrow operations endpoint must be protected before a
   public deployment.
-- There are no write APIs, UI, streaming, email, live provider integration, corrections, Redis,
-  Terraform, or Kubernetes.
+- The dashboard is read-only and relies on polling; there are no write APIs, streaming, offline
+  mode, authentication, email, live provider integration, corrections, Redis, Terraform, or
+  Kubernetes.
 
 See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
-[ADR 0002](docs/adr/0002-postgresql-transactional-outbox.md), and
-[ADR 0003](docs/adr/0003-sqs-fifo-outbox-leasing.md), and
-[ADR 0004](docs/adr/0004-read-api-contract-and-query-model.md).
+[ADR 0002](docs/adr/0002-postgresql-transactional-outbox.md),
+[ADR 0003](docs/adr/0003-sqs-fifo-outbox-leasing.md),
+[ADR 0004](docs/adr/0004-read-api-contract-and-query-model.md), and
+[ADR 0005](docs/adr/0005-react-dashboard-and-polling.md).

@@ -27,6 +27,11 @@ local.properties
 **/coverage
 **/.nyc_output
 **/test-results
+**/node_modules
+**/dist
+**/playwright-report
+.npm
+npm-debug.log*
 .DS_Store
 **/.DS_Store
 Thumbs.db

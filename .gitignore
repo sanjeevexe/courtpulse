@@ -8,3 +8,16 @@ out/
 .env.*
 !.env.example
 data/
+
+# Frontend dependencies, builds, test output, and caches
+**/node_modules/
+**/dist/
+**/playwright-report/
+**/test-results/
+**/coverage/
+**/.vite/
+**/.vitest/
+**/.cache/
+*.tsbuildinfo
+npm-debug.log*
+npm-error.log*
