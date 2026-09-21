@@ -1,0 +1,270 @@
+openapi: 3.1.0
+info:
+  title: CourtPulse Read API
+  version: 1.0.0
+  description: Read-only durable game, canonical event, alert, and processing state.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/games:
+    get:
+      summary: List durable games
+      parameters:
+        - {name: status, in: query, required: false, schema: {type: string, enum: [SCHEDULED, LIVE, FINAL]}}
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100, default: 20}}
+        - {name: cursor, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: Stable keyset page
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GamePage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/games/{gameId}:
+    get:
+      summary: Read current durable game snapshot
+      parameters:
+        - {$ref: '#/components/parameters/GameId'}
+        - {name: If-None-Match, in: header, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: Current snapshot
+          headers:
+            ETag: {description: Snapshot validator, schema: {type: string}}
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GameSnapshot'}
+              example:
+                gameId: game_synthetic_001
+                status: FINAL
+                homeScore: 18
+                awayScore: 14
+                playerPoints: {player_ace: 13}
+                stateVersion: 20
+                stateChecksum: 06d40d7e19ecf9ed9496e1523e6715bba029f008f94cb76148f600702d4c3bca
+                dataStatus: FINAL
+        '304':
+          description: Snapshot has not changed
+          headers:
+            ETag: {description: Snapshot validator, schema: {type: string}}
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/games/{gameId}/events:
+    get:
+      summary: Read canonical event history
+      parameters:
+        - {$ref: '#/components/parameters/GameId'}
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100, default: 20}}
+        - {name: cursor, in: query, required: false, schema: {type: string}}
+        - {name: afterSequence, in: query, required: false, schema: {type: integer, format: int64, minimum: 0}}
+      responses:
+        '200':
+          description: Events ordered by sequence, revision, and event ID
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/EventPage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/games/{gameId}/alerts:
+    get:
+      summary: Read durable logical alerts
+      parameters:
+        - {$ref: '#/components/parameters/GameId'}
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100, default: 20}}
+        - {name: cursor, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: Alerts in stable reverse chronological order
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/AlertPage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/operations/processing:
+    get:
+      summary: Read sanitized processing health
+      responses:
+        '200':
+          description: Sanitized outbox and processing counts
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/Processing'}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  headers:
+    CorrelationId: {description: Safe request correlation identifier, schema: {type: string}}
+  parameters:
+    GameId: {name: gameId, in: path, required: true, schema: {type: string, maxLength: 200}}
+  responses:
+    BadRequest:
+      description: Invalid parameter or cursor
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    NotFound:
+      description: Unknown game
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    MethodNotAllowed:
+      description: HTTP method is not supported
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    NotAcceptable:
+      description: Requested representation is unavailable
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    InternalError:
+      description: Unexpected server failure
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Unavailable:
+      description: Durable data unavailable
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+  schemas:
+    GamePage:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/GameSummary'}}
+        nextCursor: {type: [string, 'null']}
+    GameSummary:
+      type: object
+      required: [gameId, source, homeTeamId, awayTeamId, status, stateVersion, homeScore, awayScore, period, clockMillisRemaining, lastAppliedSequence, updatedAt, dataStatus]
+      properties:
+        gameId: {type: string}
+        source: {type: string}
+        homeTeamId: {type: string}
+        awayTeamId: {type: string}
+        status: {type: string, enum: [SCHEDULED, LIVE, FINAL]}
+        stateVersion: {type: integer, format: int64}
+        homeScore: {type: integer, format: int32}
+        awayScore: {type: integer, format: int32}
+        period: {type: integer, format: int32}
+        clockMillisRemaining: {type: integer, format: int64}
+        lastAppliedSequence: {type: integer, format: int64}
+        updatedAt: {type: string, format: date-time}
+        stateChecksum: {type: [string, 'null']}
+        dataStatus: {$ref: '#/components/schemas/DataStatus'}
+    GameSnapshot:
+      type: object
+      required: [gameId, source, homeTeamId, awayTeamId, status, period, clockMillisRemaining, homeScore, awayScore, playerPoints, stateVersion, lastAppliedSequence, recentEvents, updatedAt, dataStatus]
+      properties:
+        gameId: {type: string}
+        source: {type: string}
+        homeTeamId: {type: string}
+        awayTeamId: {type: string}
+        status: {type: string, enum: [SCHEDULED, LIVE, FINAL]}
+        period: {type: integer, format: int32}
+        clockMillisRemaining: {type: integer, format: int64}
+        homeScore: {type: integer, format: int32}
+        awayScore: {type: integer, format: int32}
+        playerPoints: {type: object, additionalProperties: {type: integer, format: int32}}
+        stateVersion: {type: integer, format: int64}
+        lastAppliedSequence: {type: integer, format: int64}
+        stateChecksum: {type: [string, 'null']}
+        recentEvents: {type: array, items: {$ref: '#/components/schemas/RecentEvent'}}
+        updatedAt: {type: string, format: date-time}
+        dataStatus: {$ref: '#/components/schemas/DataStatus'}
+    RecentEvent:
+      type: object
+      required: [eventId, sequence, revision, eventType, occurredAt, scoreAfter]
+      properties:
+        eventId: {type: string}
+        sequence: {type: integer, format: int64}
+        revision: {type: integer, format: int32}
+        eventType: {type: string}
+        occurredAt: {type: string, format: date-time}
+        scoreAfter: {$ref: '#/components/schemas/Score'}
+    EventPage:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Event'}}
+        nextCursor: {type: [string, 'null']}
+    Event:
+      type: object
+      required: [eventId, schemaVersion, gameId, source, providerEventId, sequence, revision, eventType, period, clockMillisRemaining, occurredAt, participantIds, scoreAfter, points]
+      properties:
+        eventId: {type: string}
+        schemaVersion: {type: integer, format: int32}
+        gameId: {type: string}
+        source: {type: string}
+        providerEventId: {type: string}
+        sequence: {type: integer, format: int64}
+        revision: {type: integer, format: int32}
+        eventType: {type: string}
+        period: {type: integer, format: int32}
+        clockMillisRemaining: {type: integer, format: int64}
+        occurredAt: {type: string, format: date-time}
+        teamId: {type: [string, 'null']}
+        participantIds: {type: array, items: {type: string}}
+        scoreAfter: {$ref: '#/components/schemas/Score'}
+        points: {type: integer, format: int32}
+    Score:
+      type: object
+      required: [home, away]
+      properties: {home: {type: integer, format: int32}, away: {type: integer, format: int32}}
+    AlertPage:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Alert'}}
+        nextCursor: {type: [string, 'null']}
+    Alert:
+      type: object
+      required: [ruleId, triggerKey, gameId, triggeringEventId, title, context, status, createdAt]
+      properties:
+        ruleId: {type: string}
+        triggerKey: {type: string}
+        gameId: {type: string}
+        triggeringEventId: {type: string}
+        title: {type: string}
+        context: {type: object, additionalProperties: {type: string}}
+        status: {type: string}
+        createdAt: {type: string, format: date-time}
+    Processing:
+      type: object
+      required: [pending, publishing, retryScheduled, sent, failed, deferredNotifications, blockedGames, processedEvents, alerts, apiTimestamp]
+      properties:
+        pending: {type: integer, format: int64}
+        publishing: {type: integer, format: int64}
+        retryScheduled: {type: integer, format: int64}
+        sent: {type: integer, format: int64}
+        failed: {type: integer, format: int64}
+        deferredNotifications: {type: integer, format: int64}
+        oldestEligiblePendingAgeSeconds: {type: [integer, 'null'], format: int64}
+        blockedGames: {type: integer, format: int64}
+        processedEvents: {type: integer, format: int64}
+        alerts: {type: integer, format: int64}
+        apiTimestamp: {type: string, format: date-time}
+    DataStatus: {type: string, enum: [SCHEDULED, LIVE, FINAL, STALE, PROCESSING_BLOCKED]}
+    Problem:
+      type: object
+      required: [type, title, status, detail, instance, correlationId, code]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer, format: int32}
+        detail: {type: string}
+        instance: {type: string, format: uri-reference}
+        correlationId: {type: string}
+        code: {type: string}

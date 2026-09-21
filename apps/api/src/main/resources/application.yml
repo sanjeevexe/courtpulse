@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: courtpulse-api
+  datasource:
+    url: ${COURTPULSE_DB_URL:jdbc:postgresql://localhost:5432/courtpulse}
+    username: ${COURTPULSE_DB_USERNAME:courtpulse}
+    password: ${COURTPULSE_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${COURTPULSE_API_DB_POOL_SIZE:10}
+      connection-timeout: 3000
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${COURTPULSE_API_PORT:8080}
+  shutdown: graceful
+
+courtpulse:
+  api:
+    live-freshness-window: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:2m}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,courtPulseSchema
+  info:
+    env:
+      enabled: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    com.courtpulse: INFO
