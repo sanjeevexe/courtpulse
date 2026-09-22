@@ -19,8 +19,12 @@ import {
   type GameSummary,
   listMyRules,
   listMyAlerts,
+  getNotificationSettings,
+  listDeliveryHistory,
+  listDeliveryAttempts,
   type RulePage,
   type OwnedAlertPage,
+  type DeliveryHistoryPage,
 } from './client';
 
 const snapshotEtags = new Map<string, string>();
@@ -110,6 +114,40 @@ export function useMyAlerts(accessToken: string | null, authenticated: boolean) 
     getNextPageParam: (page: OwnedAlertPage) => page.nextCursor ?? undefined,
     enabled: authenticated && accessToken !== null,
   });
+}
+
+export function useNotificationSettings(accessToken: string | null, authenticated: boolean) {
+  return useQuery({
+    queryKey: ['me', 'notification-settings'],
+    queryFn: () => getNotificationSettings(accessToken ?? ''),
+    enabled: authenticated && accessToken !== null,
+  });
+}
+
+export function useDeliveryHistory(accessToken: string | null, authenticated: boolean) {
+  return useQuery({
+    queryKey: ['me', 'delivery-history'],
+    queryFn: () => listDeliveryHistory(accessToken ?? ''),
+    enabled: authenticated && accessToken !== null,
+    refetchInterval: (query) => deliveryRefreshInterval(query.state.data),
+  });
+}
+
+export function useDeliveryAttempts(
+  accessToken: string | null, authenticated: boolean, deliveryId: string, expanded: boolean,
+) {
+  return useQuery({
+    queryKey: ['me', 'delivery-attempts', deliveryId],
+    queryFn: () => listDeliveryAttempts(accessToken ?? '', deliveryId),
+    enabled: authenticated && accessToken !== null && expanded,
+  });
+}
+
+export function deliveryRefreshInterval(history: DeliveryHistoryPage | undefined): number | false {
+  if (!history) return false;
+  return history.items.some((delivery) =>
+    delivery.status === 'PENDING' || delivery.status === 'LEASED'
+      || delivery.status === 'RETRY_SCHEDULED') ? 2_000 : false;
 }
 
 export function uniqueGames(data: InfiniteData<GamePage> | undefined): GameSummary[] {

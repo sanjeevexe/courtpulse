@@ -127,6 +127,21 @@ paths:
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/operations/deliveries:
+    get:
+      summary: Read sanitized aggregate alert-delivery health
+      security: [{oidcBearer: ['courtpulse:ops']}]
+      responses:
+        '200':
+          description: Aggregate delivery counts and pending age
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryOperations'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/v1/me:
     get:
       summary: Read the authenticated application user
@@ -339,6 +354,79 @@ paths:
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/notifications/settings:
+    get:
+      summary: Read private notification settings
+      security: [{oidcBearer: []}]
+      responses:
+        '200':
+          description: Owned notification settings
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/NotificationSettings'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    put:
+      summary: Update local email opt-in and destination
+      security: [{oidcBearer: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/UpdateNotificationSettings'}}}
+      responses:
+        '200':
+          description: Updated owned settings
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/NotificationSettings'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/notifications/deliveries:
+    get:
+      summary: Read owned delivery history
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100}}
+        - {name: cursor, in: query, required: false, schema: {type: string, maxLength: 2048}}
+      responses:
+        '200':
+          description: Owned delivery history
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryHistoryPage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/notifications/deliveries/{deliveryId}/attempts:
+    get:
+      summary: Read immutable attempts for one owned delivery
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: deliveryId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100}}
+        - {name: cursor, in: query, required: false, schema: {type: string, maxLength: 2048}}
+      responses:
+        '200':
+          description: Owned delivery attempts
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/DeliveryAttemptPage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
 components:
   securitySchemes:
     oidcBearer:
@@ -406,6 +494,54 @@ components:
       headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
       content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
   schemas:
+    NotificationSettings:
+      type: object
+      required: [inAppEnabled, emailEnabled]
+      properties:
+        inAppEnabled: {type: boolean}
+        emailEnabled: {type: boolean}
+        emailAddress: {type: [string, 'null']}
+    UpdateNotificationSettings:
+      type: object
+      additionalProperties: false
+      required: [emailEnabled]
+      properties:
+        emailEnabled: {type: boolean}
+        emailAddress: {type: [string, 'null'], maxLength: 254}
+    DeliveryHistoryPage:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/DeliveryHistoryRecord'}}
+        nextCursor: {type: [string, 'null']}
+    DeliveryHistoryRecord:
+      type: object
+      required: [id, alertId, channel, status, attempts, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        alertId: {type: string, format: uuid}
+        channel: {type: string, enum: [IN_APP, EMAIL]}
+        status: {type: string, enum: [DELIVERED, PENDING, LEASED, RETRY_SCHEDULED, FAILED, CANCELLED]}
+        attempts: {type: integer, format: int32}
+        createdAt: {type: string, format: date-time}
+        deliveredAt: {type: [string, 'null'], format: date-time}
+        nextAttemptAt: {type: [string, 'null'], format: date-time}
+        lastErrorCode: {type: [string, 'null']}
+    DeliveryAttemptPage:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/DeliveryAttemptRecord'}}
+        nextCursor: {type: [string, 'null']}
+    DeliveryAttemptRecord:
+      type: object
+      required: [id, attemptNumber, outcome, completedAt]
+      properties:
+        id: {type: string, format: uuid}
+        attemptNumber: {type: integer, format: int32}
+        outcome: {type: string, enum: [SENT, TRANSIENT_FAILURE, PERMANENT_FAILURE, CANCELLED, UNKNOWN_ACCEPTANCE]}
+        errorCode: {type: [string, 'null']}
+        completedAt: {type: string, format: date-time}
     AuthenticationConfiguration:
       type: object
       additionalProperties: false
@@ -677,6 +813,21 @@ components:
         disabledOwnedRules: {type: integer, format: int64}
         systemRules: {type: integer, format: int64}
         privateAlerts: {type: integer, format: int64}
+    DeliveryOperations:
+      type: object
+      additionalProperties: false
+      required: [backlog, oldestPendingAgeSeconds, publications, attempts, successes, retries, terminalFailures, leaseRecoveries, dlqDepth, dlqObservedAt]
+      properties:
+        backlog: {type: integer, format: int64}
+        oldestPendingAgeSeconds: {type: number, format: double}
+        publications: {type: integer, format: int64}
+        attempts: {type: integer, format: int64}
+        successes: {type: integer, format: int64}
+        retries: {type: integer, format: int64}
+        terminalFailures: {type: integer, format: int64}
+        leaseRecoveries: {type: integer, format: int64}
+        dlqDepth: {type: integer, format: int64}
+        dlqObservedAt: {type: [string, 'null'], format: date-time}
     Processing:
       type: object
       required: [pending, publishing, retryScheduled, sent, failed, deferredNotifications, blockedGames, processedEvents, alerts, apiTimestamp]

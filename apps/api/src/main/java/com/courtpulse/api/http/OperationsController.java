@@ -2,6 +2,9 @@ package com.courtpulse.api.http;
 
 import com.courtpulse.query.CourtPulseQueryService;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
+import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.persistence.DeliveryOperations;
+import java.time.Clock;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -16,10 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class OperationsController {
     private final CourtPulseQueryService queries;
     private final JdbcAlertRuleRepository rules;
+    private final JdbcDeliveryWorkRepository deliveries;
+    private final Clock clock;
 
-    public OperationsController(CourtPulseQueryService queries, JdbcAlertRuleRepository rules) {
+    public OperationsController(CourtPulseQueryService queries, JdbcAlertRuleRepository rules,
+            JdbcDeliveryWorkRepository deliveries, Clock clock) {
         this.queries = queries;
         this.rules = rules;
+        this.deliveries = deliveries;
+        this.clock = clock;
     }
 
     @Operation(summary = "Read sanitized processing and outbox health")
@@ -47,5 +55,17 @@ public class OperationsController {
         return new RuleApiDto.RuleOperations(
                 summary.ownedRules(), summary.enabledOwnedRules(), summary.disabledOwnedRules(),
                 summary.systemRules(), summary.privateAlerts());
+    }
+
+    @Operation(summary = "Read sanitized aggregate alert-delivery health")
+    @SecurityRequirement(name = "oidcBearer", scopes = "courtpulse:ops")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Aggregate delivery counts and pending age"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Operational authority required")
+    })
+    @GetMapping("/deliveries")
+    public DeliveryOperations deliveries() {
+        return deliveries.operations(clock.instant());
     }
 }

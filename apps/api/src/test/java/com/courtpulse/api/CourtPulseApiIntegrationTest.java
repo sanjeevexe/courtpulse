@@ -313,17 +313,22 @@ class CourtPulseApiIntegrationTest {
             }
         }
 
+        List<String> schemaMismatches = new ArrayList<>();
         for (String schema : List.of(
                 "GamePage", "GameSummary", "GameSnapshot", "RecentEvent", "EventPage",
                 "Event", "Score", "AlertPage", "Alert", "Processing", "Me",
                 "FollowedGamePage", "FollowedGame", "AuthenticationConfiguration", "Problem",
                 "RulePage", "PlayerPointsRule", "CloseGameRule", "ScoringRunRule",
-                "OwnedAlertPage", "OwnedAlert", "UpdateAlertRule", "RuleOperations")) {
-            assertEquals(
-                    publicSchema(contract, schema),
-                    publicSchema(runtime, schema),
-                    schema + " public schema");
+                "OwnedAlertPage", "OwnedAlert", "UpdateAlertRule", "RuleOperations",
+                "NotificationSettings", "UpdateNotificationSettings", "DeliveryHistoryPage",
+                "DeliveryHistoryRecord", "DeliveryAttemptPage", "DeliveryAttemptRecord",
+                "DeliveryOperations")) {
+            if (!publicSchema(contract, schema).equals(publicSchema(runtime, schema))) {
+                schemaMismatches.add(schema + ": expected " + publicSchema(contract, schema)
+                        + "; runtime " + publicSchema(runtime, schema));
+            }
         }
+        assertEquals(List.of(), schemaMismatches);
 
         Set<String> expectedDataStatuses = enumValues(
                 contract.path("components").path("schemas").path("DataStatus"));

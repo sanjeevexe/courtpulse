@@ -7,6 +7,7 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { MyGamesPage } from './pages/MyGamesPage';
 import { MyRulesPage } from './pages/MyRulesPage';
 import { MyAlertsPage } from './pages/MyAlertsPage';
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
       { path: '/my-games', element: <MyGamesPage /> },
       { path: '/my-rules', element: <MyRulesPage /> },
       { path: '/my-alerts', element: <MyAlertsPage /> },
+      { path: '/notification-settings', element: <NotificationSettingsPage /> },
       { path: '/auth/callback', element: <AuthCallbackPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -18,10 +18,13 @@ import io.swagger.v3.oas.models.headers.Header;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -35,6 +38,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.JdbcUserOwnershipRepository;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
+import com.courtpulse.persistence.JdbcAlertDeliveryRepository;
+import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.api.notifications.NotificationService;
 import com.courtpulse.persistence.MicrometerRuleEngineMetrics;
 import com.courtpulse.persistence.RuleEngineMetrics;
 import com.courtpulse.api.ownership.OwnershipService;
@@ -102,6 +108,50 @@ public class ApiConfiguration {
     JdbcAlertRuleRepository alertRuleRepository(
             JdbcClient jdbc, @Qualifier("queryObjectMapper") ObjectMapper objectMapper) {
         return new JdbcAlertRuleRepository(jdbc, objectMapper);
+    }
+
+    @Bean
+    JdbcAlertDeliveryRepository alertDeliveryRepository(JdbcClient jdbc) {
+        return new JdbcAlertDeliveryRepository(jdbc);
+    }
+
+    @Bean
+    JdbcDeliveryWorkRepository deliveryWorkRepository(JdbcClient jdbc) {
+        return new JdbcDeliveryWorkRepository(jdbc);
+    }
+
+    @Bean
+    MeterBinder deliveryAggregateMeters(JdbcDeliveryWorkRepository deliveries, Clock clock) {
+        return registry -> {
+            Gauge.builder("courtpulse.delivery.backlog", deliveries,
+                    work -> work.operations(clock.instant()).backlog()).register(registry);
+            Gauge.builder("courtpulse.delivery.oldest.pending.seconds", deliveries,
+                    work -> work.operations(clock.instant()).oldestPendingAgeSeconds()).register(registry);
+            Gauge.builder("courtpulse.delivery.publications", deliveries,
+                    work -> work.operations(clock.instant()).publications()).register(registry);
+            Gauge.builder("courtpulse.delivery.attempts", deliveries,
+                    work -> work.operations(clock.instant()).attempts()).register(registry);
+            Gauge.builder("courtpulse.delivery.successes", deliveries,
+                    work -> work.operations(clock.instant()).successes()).register(registry);
+            Gauge.builder("courtpulse.delivery.retries", deliveries,
+                    work -> work.operations(clock.instant()).retries()).register(registry);
+            Gauge.builder("courtpulse.delivery.terminal.failures", deliveries,
+                    work -> work.operations(clock.instant()).terminalFailures()).register(registry);
+            Gauge.builder("courtpulse.delivery.lease.recoveries", deliveries,
+                    work -> work.operations(clock.instant()).leaseRecoveries()).register(registry);
+            Gauge.builder("courtpulse.delivery.dlq.depth", deliveries,
+                    work -> work.operations(clock.instant()).dlqDepth()).register(registry);
+        };
+    }
+
+    @Bean
+    NotificationService notificationService(
+            JdbcAlertDeliveryRepository deliveries,
+            JdbcUserOwnershipRepository users,
+            TransactionTemplate transactions,
+            Clock clock,
+            OpaqueCursorCodec cursors) {
+        return new NotificationService(deliveries, users, transactions, clock, cursors);
     }
 
     @Bean
@@ -226,6 +276,64 @@ public class ApiConfiguration {
                 });
             });
         });
+    }
+
+    /** Springdoc cannot infer nullable keyset fields or fixed delivery states from repository records. */
+    @Bean
+    OpenApiCustomizer deliverySchemaCustomizer() {
+        return openApi -> {
+            var schemas = openApi.getComponents().getSchemas();
+            required(schemas, "NotificationSettings", "inAppEnabled", "emailEnabled");
+            required(schemas, "DeliveryHistoryPage", "items");
+            required(schemas, "DeliveryHistoryRecord", "id", "alertId", "channel", "status",
+                    "attempts", "createdAt");
+            required(schemas, "DeliveryAttemptPage", "items");
+            required(schemas, "DeliveryAttemptRecord", "id", "attemptNumber", "outcome",
+                    "completedAt");
+            required(schemas, "DeliveryOperations", "backlog", "oldestPendingAgeSeconds",
+                    "publications", "attempts", "successes", "retries", "terminalFailures",
+                    "leaseRecoveries", "dlqDepth", "dlqObservedAt");
+            nullable(schemas, "NotificationSettings", "emailAddress");
+            nullable(schemas, "UpdateNotificationSettings", "emailAddress");
+            nullable(schemas, "DeliveryHistoryPage", "nextCursor");
+            nullable(schemas, "DeliveryHistoryRecord", "deliveredAt", "nextAttemptAt",
+                    "lastErrorCode");
+            nullable(schemas, "DeliveryAttemptPage", "nextCursor");
+            nullable(schemas, "DeliveryAttemptRecord", "errorCode");
+            nullable(schemas, "DeliveryOperations", "dlqObservedAt");
+            fixedValues(schemas, "DeliveryHistoryRecord", "channel", "IN_APP", "EMAIL");
+            fixedValues(schemas, "DeliveryHistoryRecord", "status", "DELIVERED", "PENDING",
+                    "LEASED", "RETRY_SCHEDULED", "FAILED", "CANCELLED");
+            fixedValues(schemas, "DeliveryAttemptRecord", "outcome", "SENT",
+                    "TRANSIENT_FAILURE", "PERMANENT_FAILURE", "CANCELLED", "UNKNOWN_ACCEPTANCE");
+        };
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void required(
+            java.util.Map<String, io.swagger.v3.oas.models.media.Schema> schemas,
+            String name, String... fields) {
+        schemas.get(name).setRequired(List.of(fields));
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void nullable(
+            java.util.Map<String, io.swagger.v3.oas.models.media.Schema> schemas,
+            String name, String... fields) {
+        for (String field : fields) {
+            var property = (io.swagger.v3.oas.models.media.Schema<?>)
+                    schemas.get(name).getProperties().get(field);
+            property.setType(null);
+            property.setTypes(Set.of("string", "null"));
+        }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void fixedValues(
+            java.util.Map<String, io.swagger.v3.oas.models.media.Schema> schemas,
+            String name, String field, String... values) {
+        ((io.swagger.v3.oas.models.media.Schema) schemas.get(name).getProperties().get(field))
+                .setEnum(List.of(values));
     }
 
     private static void addStandardError(

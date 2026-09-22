@@ -165,6 +165,22 @@ class SecurityAndOwnershipIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.systemRules").value(1))
                 .andExpect(jsonPath("$.ownedRules").value(0));
+        http.perform(get("/api/v1/operations/deliveries"))
+                .andExpect(status().isUnauthorized());
+        http.perform(get("/api/v1/operations/deliveries")
+                        .with(jwt().jwt(value -> value.subject("user-a"))))
+                .andExpect(status().isForbidden());
+        http.perform(get("/api/v1/operations/deliveries")
+                        .with(jwt().jwt(value -> value.subject("operator"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_courtpulse:ops"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.backlog").isNumber())
+                .andExpect(jsonPath("$.leaseRecoveries").isNumber());
+        http.perform(get("/actuator/metrics/courtpulse.delivery.backlog")
+                        .with(jwt().jwt(value -> value.subject("operator"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_courtpulse:ops"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("courtpulse.delivery.backlog"));
     }
 
     @Test

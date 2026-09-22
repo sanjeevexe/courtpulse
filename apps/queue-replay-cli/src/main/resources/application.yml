@@ -19,6 +19,11 @@ courtpulse:
     local-secret-key: ${COURTPULSE_LOCAL_AWS_SECRET_KEY:test}
     game-events-queue: ${COURTPULSE_GAME_EVENTS_QUEUE:game-events.fifo}
     game-events-dlq: ${COURTPULSE_GAME_EVENTS_DLQ:game-events-dlq.fifo}
+    alert-deliveries-queue: ${COURTPULSE_ALERT_DELIVERIES_QUEUE:alert-deliveries.fifo}
+    alert-deliveries-dlq: ${COURTPULSE_ALERT_DELIVERIES_DLQ:alert-deliveries-dlq.fifo}
+  mailpit:
+    host: ${COURTPULSE_MAILPIT_HOST:localhost}
+    port: ${COURTPULSE_MAILPIT_PORT:1025}
   publisher:
     batch-size: ${COURTPULSE_PUBLISHER_BATCH_SIZE:10}
     lease-duration: ${COURTPULSE_PUBLISHER_LEASE_DURATION:30s}

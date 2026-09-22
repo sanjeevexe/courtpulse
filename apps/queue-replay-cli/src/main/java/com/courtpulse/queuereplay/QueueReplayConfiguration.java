@@ -7,6 +7,11 @@ import com.courtpulse.messaging.publisher.PublicationRetryPolicy;
 import com.courtpulse.messaging.queue.GameEventEnvelopeCodec;
 import com.courtpulse.messaging.queue.QueuePort;
 import com.courtpulse.messaging.sqs.SqsQueueAdapter;
+import com.courtpulse.messaging.delivery.DeliveryQueuePublisher;
+import com.courtpulse.messaging.delivery.DeliveryQueueConsumer;
+import com.courtpulse.messaging.delivery.EmailSender;
+import com.courtpulse.messaging.delivery.LocalSmtpEmailSender;
+import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FixtureIngestionService;
 import com.courtpulse.persistence.JdbcFixtureRepository;
@@ -25,6 +30,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -90,6 +97,11 @@ public class QueueReplayConfiguration {
     }
 
     @Bean
+    JdbcDeliveryWorkRepository deliveryWorkRepository(JdbcClient jdbc) {
+        return new JdbcDeliveryWorkRepository(jdbc);
+    }
+
+    @Bean
     FixtureIngestionService fixtureIngestionService(
             JdbcFixtureRepository fixtures,
             JdbcOutboxRepository outbox,
@@ -130,9 +142,10 @@ public class QueueReplayConfiguration {
         if (!endpoint.isBlank()) {
             URI endpointUri = URI.create(endpoint);
             String host = endpointUri.getHost();
-            if (!("localhost".equals(host) || "127.0.0.1".equals(host))) {
+            if (!("localhost".equals(host) || "127.0.0.1".equals(host)
+                    || "localstack".equals(host))) {
                 throw new IllegalArgumentException(
-                        "SQS endpoint overrides and dummy credentials are restricted to localhost");
+                        "SQS endpoint overrides and dummy credentials are restricted to localstack");
             }
             builder.endpointOverride(endpointUri);
             builder.credentialsProvider(StaticCredentialsProvider.create(
@@ -163,6 +176,52 @@ public class QueueReplayConfiguration {
     QueuePort gameEventsDlq(
             SqsClient client, @Qualifier("gameEventsDlqUrl") String queueUrl) {
         return new SqsQueueAdapter(client, queueUrl);
+    }
+
+    @Bean("alertDeliveriesQueue")
+    QueuePort alertDeliveriesQueue(
+            SqsClient client, @Value("${courtpulse.sqs.alert-deliveries-queue}") String name) {
+        return new SqsQueueAdapter(client,
+                client.getQueueUrl(builder -> builder.queueName(name)).queueUrl());
+    }
+
+    @Bean("alertDeliveriesDlq")
+    QueuePort alertDeliveriesDlq(
+            SqsClient client, @Value("${courtpulse.sqs.alert-deliveries-dlq}") String name) {
+        return new SqsQueueAdapter(client,
+                client.getQueueUrl(builder -> builder.queueName(name)).queueUrl());
+    }
+
+    @Bean
+    MeterBinder deliveryDlqMeter(@Qualifier("alertDeliveriesDlq") QueuePort dlq) {
+        return registry -> Gauge.builder("courtpulse.delivery.dlq.depth", dlq,
+                queue -> queue.depth().total()).register(registry);
+    }
+
+    @Bean
+    EmailSender localEmailSender(
+            @Value("${courtpulse.mailpit.host}") String host,
+            @Value("${courtpulse.mailpit.port}") int port) {
+        return new LocalSmtpEmailSender(host, port);
+    }
+
+    @Bean
+    DeliveryQueuePublisher deliveryQueuePublisher(
+            JdbcDeliveryWorkRepository work,
+            @Qualifier("alertDeliveriesQueue") QueuePort queue,
+            TransactionTemplate transactions, Clock clock) {
+        return new DeliveryQueuePublisher(
+                work, queue, transactions, clock, "delivery-publisher-" + UUID.randomUUID());
+    }
+
+    @Bean
+    DeliveryQueueConsumer deliveryQueueConsumer(
+            JdbcDeliveryWorkRepository work,
+            @Qualifier("alertDeliveriesQueue") QueuePort queue,
+            EmailSender email, TransactionTemplate transactions, Clock clock) {
+        return new DeliveryQueueConsumer(
+                work, queue, email, transactions, clock,
+                "delivery-consumer-" + UUID.randomUUID());
     }
 
     @Bean

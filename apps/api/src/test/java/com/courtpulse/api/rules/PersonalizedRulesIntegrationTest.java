@@ -3,12 +3,14 @@ package com.courtpulse.api;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,10 +27,13 @@ import com.courtpulse.api.rules.PersonalizedRuleService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.concurrent.CountDownLatch;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -222,6 +227,267 @@ class PersonalizedRulesIntegrationTest {
                         """).query(Long.class).single());
         assertEquals(4L, jdbc.sql("SELECT count(*) FROM alert_instances")
                 .query(Long.class).single());
+        assertEquals(3L, jdbc.sql("SELECT count(*) FROM alert_deliveries WHERE channel = 'IN_APP'")
+                .query(Long.class).single());
+        assertEquals(0L, jdbc.sql("SELECT count(*) FROM alert_deliveries WHERE channel = 'EMAIL'")
+                .query(Long.class).single());
+    }
+
+    @Test
+    void optedInEmailWorkIsAtomicWithPrivateAlertAndRedeliverySafe() throws Exception {
+        create("email-owner", "email-player", playerRule(10));
+        JdbcClient jdbc = JdbcClient.create(dataSource);
+        jdbc.sql("""
+                        INSERT INTO notification_preferences(owner_subject, email_enabled, updated_at)
+                        VALUES ('email-owner', TRUE, now())
+                        """).update();
+        jdbc.sql("""
+                        INSERT INTO notification_destinations(
+                            id, owner_subject, channel, address, enabled, created_at, updated_at)
+                        VALUES (gen_random_uuid(), 'email-owner', 'EMAIL', 'local@example.test',
+                                TRUE, now(), now())
+                        """).update();
+
+        ObjectMapper persistenceJson = new ObjectMapper().findAndRegisterModules();
+        JdbcGameProcessingRepository processing = seeded.processing();
+        DurableGameProcessor processor = new DurableGameProcessor(
+                processing,
+                new com.courtpulse.persistence.JdbcOutboxRepository(jdbc, persistenceJson),
+                new TransactionTemplate(transactionManager),
+                new JdbcAlertRuleRepository(jdbc, persistenceJson),
+                clock,
+                RuleEngineMetrics.NONE);
+        var ids = processing.listEventIds("game_synthetic_001");
+        ids.subList(0, 10).forEach(processor::processEvent);
+        String trigger = ids.get(10);
+        org.junit.jupiter.api.Assertions.assertThrows(
+                SimulatedProcessingFailureException.class,
+                () -> processor.processEvent(trigger, FailureMode.BEFORE_COMMIT));
+        assertEquals(0L, jdbc.sql("SELECT count(*) FROM alert_deliveries")
+                .query(Long.class).single());
+        assertEquals(0L, jdbc.sql("SELECT count(*) FROM delivery_outbox")
+                .query(Long.class).single());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                SimulatedProcessingFailureException.class,
+                () -> processor.processEvent(trigger, FailureMode.AFTER_COMMIT));
+        org.junit.jupiter.api.Assertions.assertFalse(processor.processEvent(trigger).accepted());
+        assertEquals(1L, jdbc.sql("SELECT count(*) FROM alert_deliveries WHERE channel = 'IN_APP'")
+                .query(Long.class).single());
+        assertEquals(1L, jdbc.sql("SELECT count(*) FROM alert_deliveries WHERE channel = 'EMAIL'")
+                .query(Long.class).single());
+        assertEquals(1L, jdbc.sql("SELECT count(*) FROM delivery_outbox")
+                .query(Long.class).single());
+        assertEquals("PENDING", jdbc.sql("SELECT status FROM delivery_outbox")
+                .query(String.class).single());
+
+        String emailId = jdbc.sql("SELECT id::text FROM alert_deliveries WHERE channel = 'EMAIL'")
+                .query(String.class).single();
+        MvcResult firstPage = http.perform(get("/api/v1/me/notifications/deliveries?limit=1")
+                        .with(jwt().jwt(value -> value.subject("email-owner"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.nextCursor").isNotEmpty())
+                .andExpect(content().string(not(containsString("local@example.test"))))
+                .andReturn();
+        String cursor = json.readTree(firstPage.getResponse().getContentAsString())
+                .path("nextCursor").asText();
+        http.perform(get("/api/v1/me/notifications/deliveries?limit=1&cursor="
+                        + java.net.URLEncoder.encode(cursor, java.nio.charset.StandardCharsets.UTF_8))
+                        .with(jwt().jwt(value -> value.subject("email-owner"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1));
+        http.perform(get("/api/v1/me/notifications/deliveries/" + emailId + "/attempts")
+                        .with(jwt().jwt(value -> value.subject("other-owner"))))
+                .andExpect(status().isNotFound());
+
+        http.perform(put("/api/v1/me/notifications/settings")
+                        .with(jwt().jwt(value -> value.subject("email-owner")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"emailEnabled":true,"emailAddress":"new@example.test"}
+                                """))
+                .andExpect(status().isOk());
+        assertEquals("CANCELLED|local@example.test", jdbc.sql("""
+                        SELECT status || '|' || address_snapshot FROM alert_deliveries
+                        WHERE id = :id
+                        """).param("id", UUID.fromString(emailId)).query(String.class).single());
+        assertEquals("FAILED", jdbc.sql("SELECT status FROM delivery_outbox")
+                .query(String.class).single());
+        jdbc.sql("""
+                        INSERT INTO delivery_attempts(id, delivery_id, attempt_number,
+                            outcome, error_code, started_at, completed_at)
+                        VALUES (gen_random_uuid(), :id, 1, 'CANCELLED',
+                            'preference_changed', now(), now())
+                        """).param("id", UUID.fromString(emailId)).update();
+        http.perform(get("/api/v1/me/notifications/deliveries/" + emailId + "/attempts")
+                        .with(jwt().jwt(value -> value.subject("email-owner"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].errorCode").value("preference_changed"))
+                .andExpect(content().string(not(containsString("local@example.test"))));
+        jdbc.sql("DELETE FROM application_users WHERE subject = 'email-owner'").update();
+        assertEquals(0L, jdbc.sql("SELECT count(*) FROM delivery_attempts")
+                .query(Long.class).single());
+    }
+
+    @Test
+    void expiredPublisherAndAcceptedSmtpLeasesRecoverWithoutDuplicateLogicalDelivery() throws Exception {
+        create("lease-owner", "lease-rule", playerRule(10));
+        JdbcClient jdbc = JdbcClient.create(dataSource);
+        jdbc.sql("""
+                INSERT INTO notification_preferences(owner_subject, email_enabled, updated_at)
+                VALUES ('lease-owner', TRUE, now())
+                """).update();
+        jdbc.sql("""
+                INSERT INTO notification_destinations(
+                    id, owner_subject, channel, address, enabled, created_at, updated_at)
+                VALUES (gen_random_uuid(), 'lease-owner', 'EMAIL', 'lease@example.test',
+                    TRUE, now(), now())
+                """).update();
+        var processing = seeded.processing();
+        ObjectMapper persistenceJson = new ObjectMapper().findAndRegisterModules();
+        var processor = new DurableGameProcessor(processing,
+                new com.courtpulse.persistence.JdbcOutboxRepository(jdbc, persistenceJson),
+                new TransactionTemplate(transactionManager),
+                new JdbcAlertRuleRepository(jdbc, persistenceJson), clock, RuleEngineMetrics.NONE);
+        processing.listEventIds("game_synthetic_001").subList(0, 11).forEach(processor::processEvent);
+        var work = new com.courtpulse.persistence.JdbcDeliveryWorkRepository(jdbc);
+        var transactions = new TransactionTemplate(transactionManager);
+        Instant now = clock.instant();
+        java.util.List<com.courtpulse.persistence.DeliveryOutboxLease> firstClaims;
+        java.util.List<com.courtpulse.persistence.DeliveryOutboxLease> secondClaims;
+        CountDownLatch claimStart = new CountDownLatch(1);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var first = executor.submit(() -> {
+                claimStart.await();
+                return transactions.execute(status -> work.claimOutbox(
+                        "publisher-a", 1, now, Duration.ofSeconds(20)));
+            });
+            var second = executor.submit(() -> {
+                claimStart.await();
+                return transactions.execute(status -> work.claimOutbox(
+                        "publisher-b", 1, now, Duration.ofSeconds(20)));
+            });
+            claimStart.countDown();
+            firstClaims = first.get();
+            secondClaims = second.get();
+        }
+        assertEquals(1, firstClaims.size() + secondClaims.size());
+        var firstPublication = firstClaims.isEmpty() ? secondClaims.getFirst() : firstClaims.getFirst();
+        // Broker accepted the UUID, but the publisher crashed before marking SENT.
+        transactions.executeWithoutResult(status -> work.recoverExpired(now.plusSeconds(21)));
+        var republished = transactions.execute(status -> work.claimOutbox(
+                "publisher-b", 1, now.plusSeconds(21), Duration.ofSeconds(20))).getFirst();
+        assertEquals(firstPublication.deliveryId(), republished.deliveryId());
+        assertTrue(Boolean.TRUE.equals(transactions.execute(status -> work.markPublished(
+                republished.outboxId(), "publisher-b", "local-sqs-id", now.plusSeconds(21)))));
+        var firstSend = transactions.execute(status -> work.claimDelivery(
+                republished.deliveryId(), "consumer-a", now.plusSeconds(21), Duration.ofSeconds(30)));
+        assertEquals("lease@example.test", firstSend.address());
+        // SMTP accepted a message, but the worker died before acknowledging PostgreSQL.
+        transactions.executeWithoutResult(status -> work.recoverExpired(now.plusSeconds(52)));
+        assertEquals("UNKNOWN_ACCEPTANCE", jdbc.sql("SELECT outcome FROM delivery_attempts")
+                .query(String.class).single());
+        var retry = transactions.execute(status -> work.claimDelivery(
+                republished.deliveryId(), "consumer-b", now.plusSeconds(52), Duration.ofSeconds(30)));
+        assertEquals(2, retry.attempt());
+        assertTrue(Boolean.TRUE.equals(transactions.execute(status -> work.finishDelivery(
+                retry, "consumer-b", "SENT", null, null, now.plusSeconds(53), null))));
+        assertEquals("DELIVERED", work.deliveryStatus(republished.deliveryId()));
+        assertEquals(2L, jdbc.sql("SELECT count(*) FROM delivery_attempts")
+                .query(Long.class).single());
+        assertEquals("SENT", jdbc.sql("""
+                SELECT status FROM delivery_outbox WHERE delivery_id = :id
+                """).param("id", republished.deliveryId()).query(String.class).single());
+        assertNull(transactions.execute(status -> work.claimDelivery(
+                republished.deliveryId(), "consumer-c", now.plusSeconds(54), Duration.ofSeconds(30))));
+        assertEquals(1L, work.operations(now.plusSeconds(54)).leaseRecoveries());
+
+        UUID exhaustedAlert = jdbc.sql("""
+                INSERT INTO alert_instances(id, rule_id, game_id, trigger_key,
+                    triggering_event_id, title, context, status, created_at,
+                    owner_subject, rule_type)
+                SELECT :id, 'lease-exhausted', game_id, 'lease-exhausted',
+                    triggering_event_id, title, context, 'CREATED', now(),
+                    owner_subject, rule_type
+                FROM alert_instances WHERE owner_subject = 'lease-owner' LIMIT 1
+                RETURNING id
+                """).param("id", UUID.randomUUID()).query(UUID.class).single();
+        transactions.executeWithoutResult(status ->
+                new com.courtpulse.persistence.JdbcAlertDeliveryRepository(jdbc)
+                        .createForAlert(exhaustedAlert, "lease-owner", now));
+        UUID exhaustedDelivery = jdbc.sql("""
+                SELECT id FROM alert_deliveries WHERE alert_id = :alert AND channel = 'EMAIL'
+                """).param("alert", exhaustedAlert).query(UUID.class).single();
+        jdbc.sql("""
+                UPDATE alert_deliveries SET status = 'LEASED', attempts = 5,
+                    lease_owner = 'crashed-consumer', lease_until = :expired
+                WHERE id = :id
+                """).param("id", exhaustedDelivery)
+                .param("expired", java.time.OffsetDateTime.ofInstant(now, java.time.ZoneOffset.UTC))
+                .update();
+        transactions.executeWithoutResult(status -> work.recoverExpired(now.plusSeconds(55)));
+        assertEquals("FAILED", work.deliveryStatus(exhaustedDelivery));
+        assertEquals("FAILED", jdbc.sql("""
+                SELECT status FROM delivery_outbox WHERE delivery_id = :id
+                """).param("id", exhaustedDelivery).query(String.class).single());
+        assertEquals("UNKNOWN_ACCEPTANCE", jdbc.sql("""
+                SELECT outcome FROM delivery_attempts WHERE delivery_id = :id
+                """).param("id", exhaustedDelivery).query(String.class).single());
+
+        UUID publicationAlert = jdbc.sql("""
+                INSERT INTO alert_instances(id, rule_id, game_id, trigger_key,
+                    triggering_event_id, title, context, status, created_at,
+                    owner_subject, rule_type)
+                SELECT :id, 'publication-failure', game_id, 'publication-failure',
+                    triggering_event_id, title, context, 'CREATED', now(),
+                    owner_subject, rule_type
+                FROM alert_instances WHERE owner_subject = 'lease-owner' LIMIT 1
+                RETURNING id
+                """).param("id", UUID.randomUUID()).query(UUID.class).single();
+        transactions.executeWithoutResult(status ->
+                new com.courtpulse.persistence.JdbcAlertDeliveryRepository(jdbc)
+                        .createForAlert(publicationAlert, "lease-owner", now));
+        var failedPublication = transactions.execute(status -> work.claimOutbox(
+                "terminal-publisher", 1, now.plusSeconds(56), Duration.ofSeconds(20))).getFirst();
+        assertTrue(Boolean.TRUE.equals(transactions.execute(status -> work.publicationFailed(
+                failedPublication.outboxId(), "terminal-publisher", "queue_terminal_failure",
+                now.plusSeconds(56), failedPublication.attempt(), false))));
+        assertEquals("FAILED", work.deliveryStatus(failedPublication.deliveryId()));
+    }
+
+    @Test
+    void notificationSettingsAndDeliveryHistoryAreOwnerScoped() throws Exception {
+        http.perform(get("/api/v1/me/notifications/settings"))
+                .andExpect(status().isUnauthorized());
+        http.perform(get("/api/v1/me/notifications/settings")
+                        .with(jwt().jwt(value -> value.subject("settings-a"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailEnabled").value(false));
+        http.perform(put("/api/v1/me/notifications/settings")
+                        .with(jwt().jwt(value -> value.subject("settings-a")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"emailEnabled":true,"emailAddress":"owner@example.test"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailEnabled").value(true));
+        http.perform(get("/api/v1/me/notifications/settings")
+                        .with(jwt().jwt(value -> value.subject("settings-b"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailEnabled").value(false))
+                .andExpect(jsonPath("$.emailAddress").doesNotExist());
+        http.perform(get("/api/v1/me/notifications/deliveries")
+                        .with(jwt().jwt(value -> value.subject("settings-b"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+        http.perform(put("/api/v1/me/notifications/settings")
+                        .with(jwt().jwt(value -> value.subject("settings-b")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"emailEnabled":true,"emailAddress":"bad-address"}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

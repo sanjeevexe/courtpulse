@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 
 const acceptance = process.env.COURTPULSE_RULE_ACCEPTANCE === '1';
+const deliveryAcceptance = process.env.COURTPULSE_DELIVERY_ACCEPTANCE === '1';
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const gameId = 'game_synthetic_001';
 
@@ -105,6 +106,13 @@ test('two real OIDC users create private rules before queue replay and see isola
   await page.getByRole('button', { name: 'Create rule' }).click();
   await expect(page.getByText('team_home · 5 unanswered')).toBeVisible();
   await expect(page.locator('article.rule-card')).toHaveCount(3);
+  if (deliveryAcceptance) {
+    await page.goto('/notification-settings');
+    await page.getByLabel('Email address').fill('recipient@example.test');
+    await page.getByLabel('Enable local email alerts').check();
+    await page.getByRole('button', { name: 'Save settings' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Settings saved.' })).toBeVisible();
+  }
 
   const tokenA = await accessToken(page);
   const headersA = { Authorization: `Bearer ${tokenA}` };
@@ -157,6 +165,7 @@ test('two real OIDC users create private rules before queue replay and see isola
   expect(frames.join('\n')).not.toContain(meA.subject);
   expect(frames.join('\n')).not.toContain('runStartSequence');
   expect(frames.join('\n')).not.toContain('maximumMargin');
+  expect(frames.join('\n')).not.toContain('recipient@example.test');
   await page.evaluate(() => (
     (window as Window & { __courtSocket?: WebSocket }).__courtSocket?.close()
   ));
@@ -175,6 +184,23 @@ test('two real OIDC users create private rules before queue replay and see isola
   });
   await page.goto('/my-alerts');
   await expect(page.locator('article.alert-card')).toHaveCount(3);
+  if (deliveryAcceptance) {
+    if (process.env.COURTPULSE_DELIVERY_AUTOMATIC !== '1') {
+      const delivered = queueReplay('--delivery-run');
+      expect(delivered).toContain('completed=3');
+    }
+    const mailpitUrl = process.env.COURTPULSE_MAILPIT_URL ?? 'http://127.0.0.1:18025';
+    await expect.poll(async () => {
+      const response = await page.request.get(`${mailpitUrl}/api/v1/messages`);
+      const payload = await response.json() as { total?: number };
+      return payload.total ?? 0;
+    }).toBe(3);
+    const messages = await (await page.request.get(
+      `${mailpitUrl}/api/v1/messages`,
+    )).text();
+    expect(messages).toContain('recipient@example.test');
+    await expect(page.getByText('Email: delivered').first()).toBeVisible();
+  }
   const owned = await (await page.request.get('/api/v1/me/alerts', {
     headers: { Authorization: `Bearer ${await accessToken(page)}` },
   })).json() as { items: { ruleType: string }[] };
@@ -189,4 +215,10 @@ test('two real OIDC users create private rules before queue replay and see isola
     headers: { Authorization: `Bearer ${await accessToken(page)}` },
   })).json() as { items: unknown[] };
   expect(privateB.items).toHaveLength(0);
+  if (deliveryAcceptance) {
+    const historyB = await (await page.request.get('/api/v1/me/notifications/deliveries', {
+      headers: { Authorization: `Bearer ${await accessToken(page)}` },
+    })).json() as { items: unknown[] };
+    expect(historyB.items).toHaveLength(0);
+  }
 });

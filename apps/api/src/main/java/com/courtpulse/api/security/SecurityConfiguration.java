@@ -73,6 +73,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/auth/config").permitAll()
                         .requestMatchers("/api/v1/games", "/api/v1/games/**", "/ws/v1/games").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/metrics", "/actuator/metrics/**")
+                            .hasAuthority(properties.getOperationsAuthority())
                         .requestMatchers("/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/**").denyAll()
                         .requestMatchers("/api/**").denyAll()

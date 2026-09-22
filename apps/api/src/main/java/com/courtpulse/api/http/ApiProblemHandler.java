@@ -6,6 +6,7 @@ import com.courtpulse.api.rules.RuleConflictException;
 import com.courtpulse.api.rules.RuleNotFoundException;
 import com.courtpulse.api.rules.RuleQuotaExceededException;
 import com.courtpulse.api.rules.RuleValidationException;
+import com.courtpulse.api.notifications.DeliveryNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
@@ -39,6 +40,13 @@ public final class ApiProblemHandler {
             RuleNotFoundException exception, HttpServletRequest request) {
         return problem(HttpStatus.NOT_FOUND, "rule_not_found", "Alert rule not found",
                 exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(DeliveryNotFoundException.class)
+    ResponseEntity<ProblemDetail> deliveryNotFound(
+            DeliveryNotFoundException exception, HttpServletRequest request) {
+        return problem(HttpStatus.NOT_FOUND, "delivery_not_found", "Delivery not found",
+                "Delivery was not found for this user.", request);
     }
 
     @ExceptionHandler(RuleConflictException.class)

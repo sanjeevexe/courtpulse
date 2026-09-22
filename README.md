@@ -242,8 +242,9 @@ schemas with the runtime document. Reproducible natural and index-eligibility pl
 
 ### Health, diagnostics, and request safety
 
-The public security policy allows only `/actuator/health` and its liveness/readiness probes; other
-actuator routes are denied even when internally enabled for operators. Liveness is independent of
+The public security policy allows only `/actuator/health` and its liveness/readiness probes;
+`/actuator/metrics` requires the operations authority and other actuator routes are denied.
+Liveness is independent of
 PostgreSQL. Readiness requires a database connection and the expected schema. Health details,
 environment variables, bean listings, configuration properties, and heap dumps are not exposed.
 
@@ -414,7 +415,7 @@ the server-only JWKS address. No wildcard, `unsafe-inline`, or `unsafe-eval` sou
 | `/api/v1/auth/config`, `/api/v1/games/**`, `/ws/v1/games` | Public |
 | `/actuator/health/**`, `/v3/api-docs/**` | Public intentionally |
 | `/api/v1/me`, `/api/v1/me/**` | Valid bearer token |
-| `/api/v1/operations/**` | Valid bearer token plus configured operations authority |
+| `/api/v1/operations/**`, `/actuator/metrics/**` | Valid bearer token plus configured operations authority |
 | Other actuator, unclassified API, or accidental controller routes | Denied by default |
 
 An anonymous request to an unclassified protected route receives sanitized 401; an authenticated
@@ -548,6 +549,49 @@ privacy, validates production images, and removes only its named resources:
 ./scripts/verify-milestone-8.sh
 ```
 
+## Local alert delivery
+
+Authenticated users can opt into local email on **Notification settings** and inspect delivery
+status, attempt counts, safe errors, and retry times on **My alerts**. The in-app delivery is
+created for every private alert. Email is created only if the user had an enabled local destination
+when that alert was committed. Changing destination or opting out cancels pending work; an already
+leased send may finish at the original snapshot address. Public game reads and WebSocket frames do
+not include private deliveries.
+
+Start the bounded automatic publisher/worker and local SMTP sink with:
+
+```bash
+docker compose --profile auth --profile delivery up -d --build
+docker compose --profile delivery ps delivery-worker mailpit
+```
+
+Mailpit is at `http://localhost:8025` by default. The worker has a heartbeat healthcheck, restarts
+on failure, and stops on SIGTERM. For a deterministic one-shot drain, use
+`./gradlew :apps:queue-replay-cli:run --args='--delivery-run'`; it intentionally does not wait for
+future retries, while the daemon does. Only local Mailpit hosts and ports are accepted. No external
+email service is contacted.
+
+An owner can read `GET /api/v1/me/notifications/deliveries?limit=20` and
+`GET /api/v1/me/notifications/deliveries/{deliveryId}/attempts?limit=20` with their bearer token;
+pages use opaque `nextCursor` values. Operators with the `courtpulse:ops` authority can read
+`GET /api/v1/operations/deliveries` for aggregate backlog, age, publication, attempt, success,
+retry, failure, lease-recovery, and last-observed DLQ counts. The DLQ observation timestamp
+indicates freshness. Metrics use aggregate names without private tags.
+
+Inspect local poison messages without clearing other queues:
+
+```bash
+docker compose --profile delivery exec localstack awslocal sqs get-queue-url --queue-name alert-deliveries-dlq.fifo
+docker compose --profile delivery exec localstack awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/alert-deliveries-dlq.fifo
+```
+
+Fix the cause and assess whether SMTP may already have accepted the message before replaying a DLQ
+entry. Retryable failures back off with jitter for at most five claims; permanent/exhausted work is
+terminal. External email is **at least once**: a crash after SMTP acceptance but before the
+database acknowledgement can produce a duplicate email. See [ADR 0009](docs/adr/0009-reliable-alert-delivery.md).
+The isolated real-Keycloak/PostgreSQL/LocalStack/Mailpit acceptance is
+`./scripts/verify-milestone-9.sh`; it removes only its named `courtpulse-m9-acceptance` stack.
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:
@@ -677,10 +721,10 @@ docker compose down -v
 
 - The synthetic fixture is the only provider; corrections, overtime, and live feeds are deferred.
 - LocalStack is test infrastructure, not a production AWS deployment.
-- Email and other external notification delivery remain deliberately deferred; the realtime
-  publisher handles only the WebSocket hint types documented in the AsyncAPI contract.
+- External email providers beyond local Mailpit remain deferred; the realtime publisher still
+  handles only the WebSocket hint types documented in the AsyncAPI contract.
 - Realtime fanout is single-instance and falls back to polling. There
-  is no personalized realtime channel, offline mode, email, live provider integration, corrections,
+  is no personalized realtime channel, offline mode, external email provider, live provider integration, corrections,
   Redis multi-replica fanout, Terraform, or Kubernetes. Rules cannot target overtime because the
   current close-game template deliberately bounds eligible periods to 1–4.
 
@@ -691,4 +735,5 @@ See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0005](docs/adr/0005-react-dashboard-and-polling.md),
 [ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md),
 [ADR 0007](docs/adr/0007-oidc-pkce-and-object-ownership.md), and
-[ADR 0008](docs/adr/0008-structured-personalized-alert-rules.md).
+[ADR 0008](docs/adr/0008-structured-personalized-alert-rules.md), and
+[ADR 0009](docs/adr/0009-reliable-alert-delivery.md).

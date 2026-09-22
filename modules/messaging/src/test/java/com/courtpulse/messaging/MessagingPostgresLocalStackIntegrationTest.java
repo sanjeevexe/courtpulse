@@ -14,6 +14,9 @@ import com.courtpulse.messaging.consumer.ConsumerBatchResult;
 import com.courtpulse.messaging.consumer.ConsumerFailureMode;
 import com.courtpulse.messaging.consumer.GameEventQueueConsumer;
 import com.courtpulse.messaging.consumer.SimulatedConsumerCrashException;
+import com.courtpulse.messaging.delivery.DeliveryQueueConsumer;
+import com.courtpulse.messaging.delivery.DeliveryQueuePublisher;
+import com.courtpulse.messaging.delivery.EmailSendException;
 import com.courtpulse.messaging.publisher.OutboxPublisher;
 import com.courtpulse.messaging.publisher.PublicationRetryPolicy;
 import com.courtpulse.messaging.publisher.PublisherFailureMode;
@@ -29,6 +32,8 @@ import com.courtpulse.messaging.sqs.SqsQueueAdapter;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FixtureIngestionService;
 import com.courtpulse.persistence.JdbcFixtureRepository;
+import com.courtpulse.persistence.JdbcAlertDeliveryRepository;
+import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
 import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
@@ -406,6 +411,103 @@ class MessagingPostgresLocalStackIntegrationTest {
                         WHERE conname = 'uq_canonical_game_sequence_revision'
                         """).query(Long.class).single();
         assertEquals(1, constraintCount);
+    }
+
+    @Test
+    void localstackDeliveryRetriesTransientEmailThenSuppressesDuplicateQueueMessage() {
+        importFixture();
+        UUID deliveryId = seedEmailDelivery("retry-owner", "retry-alert");
+        JdbcDeliveryWorkRepository work = new JdbcDeliveryWorkRepository(services.jdbc());
+        QueuePort queue = new SqsQueueAdapter(sqs, queueUrl);
+        DeliveryQueuePublisher publisher = new DeliveryQueuePublisher(
+                work, queue, services.transactions(), services.clock(), "retry-publisher");
+        int[] sends = {0};
+        DeliveryQueueConsumer consumer = new DeliveryQueueConsumer(
+                work, queue, (address, subject, body) -> {
+                    sends[0]++;
+                    if (sends[0] == 1) throw new EmailSendException("local_smtp_unavailable", true);
+                    return null;
+                }, services.transactions(), services.clock(), "retry-consumer");
+        assertEquals(1, publisher.publishBatch());
+        assertEquals(1, consumer.pollOnce());
+        assertEquals("RETRY_SCHEDULED", work.deliveryStatus(deliveryId));
+        services.clock().advance(Duration.ofSeconds(30));
+        assertEquals(1, publisher.publishBatch());
+        assertEquals(1, consumer.pollOnce());
+        assertEquals("DELIVERED", work.deliveryStatus(deliveryId));
+        assertEquals(2, sends[0]);
+        queue.send(new QueueSendRequest(deliveryId.toString(), deliveryId.toString(),
+                "duplicate-" + UUID.randomUUID()));
+        consumer.pollOnce();
+        assertEquals(2, sends[0]);
+        assertEquals(List.of("SENT", "TRANSIENT_FAILURE"), services.jdbc().sql("""
+                SELECT outcome FROM delivery_attempts WHERE delivery_id = :id
+                ORDER BY attempt_number DESC
+                """).param("id", deliveryId).query(String.class).list());
+    }
+
+    @Test
+    void permanentEmailFailureAndMalformedMessageCannotBlockOtherGroups() throws Exception {
+        importFixture();
+        UUID failedId = seedEmailDelivery("failed-owner", "failed-alert");
+        JdbcDeliveryWorkRepository work = new JdbcDeliveryWorkRepository(services.jdbc());
+        QueuePort queue = new SqsQueueAdapter(sqs, queueUrl);
+        DeliveryQueuePublisher publisher = new DeliveryQueuePublisher(
+                work, queue, services.transactions(), services.clock(), "failure-publisher");
+        DeliveryQueueConsumer consumer = new DeliveryQueueConsumer(
+                work, queue, (address, subject, body) -> {
+                    throw new EmailSendException("smtp_permanent_rejection", false);
+                }, services.transactions(), services.clock(), "failure-consumer");
+        queue.send(new QueueSendRequest("not-a-uuid", "poison-group", "poison"));
+        assertEquals(1, publisher.publishBatch());
+        consumer.pollOnce();
+        assertEquals("FAILED", work.deliveryStatus(failedId));
+        assertEquals("smtp_permanent_rejection", services.jdbc().sql("""
+                SELECT error_code FROM delivery_attempts WHERE delivery_id = :id
+                """).param("id", failedId).query(String.class).single());
+        for (int attempt = 0; attempt < 8 && new SqsQueueAdapter(sqs, dlqUrl).depth().total() == 0;
+                attempt++) {
+            Thread.sleep(1_100);
+            consumer.pollOnce();
+        }
+        assertEquals(1, new SqsQueueAdapter(sqs, dlqUrl).depth().total());
+    }
+
+    private UUID seedEmailDelivery(String owner, String trigger) {
+        UUID alertId = UUID.randomUUID();
+        services.jdbc().sql("""
+                INSERT INTO application_users(subject, created_at, last_seen_at)
+                VALUES (:owner, now(), now())
+                """).param("owner", owner).update();
+        services.jdbc().sql("""
+                INSERT INTO notification_preferences(owner_subject, email_enabled, updated_at)
+                VALUES (:owner, TRUE, now())
+                """).param("owner", owner).update();
+        services.jdbc().sql("""
+                INSERT INTO notification_destinations(
+                    id, owner_subject, channel, address, enabled, created_at, updated_at)
+                VALUES (:id, :owner, 'EMAIL', 'local@example.test', TRUE, now(), now())
+                """).param("id", UUID.randomUUID()).param("owner", owner).update();
+        String eventId = services.jdbc().sql("""
+                SELECT event_id FROM canonical_events WHERE game_id = 'game_synthetic_001'
+                ORDER BY sequence_number LIMIT 1
+                """).query(String.class).single();
+        services.jdbc().sql("""
+                INSERT INTO alert_instances(
+                    id, rule_id, game_id, trigger_key, triggering_event_id,
+                    title, context, status, created_at, owner_subject, rule_type)
+                VALUES (:id, :rule, 'game_synthetic_001', :trigger, :event,
+                    'Local test alert', '{}'::jsonb, 'CREATED', now(), :owner, 'PLAYER_POINTS')
+                """).param("id", alertId).param("rule", owner).param("trigger", trigger)
+                .param("event", eventId).param("owner", owner).update();
+        inTransaction(() -> {
+            new JdbcAlertDeliveryRepository(services.jdbc()).createForAlert(
+                    alertId, owner, services.clock().instant());
+            return null;
+        });
+        return services.jdbc().sql("""
+                SELECT id FROM alert_deliveries WHERE alert_id = :id AND channel = 'EMAIL'
+                """).param("id", alertId).query(UUID.class).single();
     }
 
     private LoadedFixture importFixture() {

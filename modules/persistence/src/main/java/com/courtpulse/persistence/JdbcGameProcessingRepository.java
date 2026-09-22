@@ -25,10 +25,12 @@ public final class JdbcGameProcessingRepository {
 
     private final JdbcClient jdbc;
     private final PersistenceJson json;
+    private final JdbcAlertDeliveryRepository deliveries;
 
     public JdbcGameProcessingRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
         this.jdbc = jdbc;
         this.json = new PersistenceJson(objectMapper);
+        this.deliveries = new JdbcAlertDeliveryRepository(jdbc);
     }
 
     public List<String> listEventIds(String gameId) {
@@ -225,6 +227,7 @@ public final class JdbcGameProcessingRepository {
     }
 
     public boolean insertAlert(Alert alert, Instant now) {
+        UUID alertId = UUID.randomUUID();
         int rows = jdbc.sql("""
                         INSERT INTO alert_instances (
                             id, rule_id, owner_subject, rule_type, game_id, trigger_key,
@@ -234,8 +237,11 @@ public final class JdbcGameProcessingRepository {
                             :triggeringEventId, :title, CAST(:context AS JSONB), 'CREATED', :now)
                         ON CONFLICT (rule_id, trigger_key) DO NOTHING
                         """)
-                .params(alertParameters(alert, now))
+                .params(alertParameters(alert, alertId, now))
                 .update();
+        if (rows == 1) {
+            deliveries.createForAlert(alertId, alert.ownerSubject(), now);
+        }
         return rows == 1;
     }
 
@@ -312,9 +318,9 @@ public final class JdbcGameProcessingRepository {
                 resultSet.getInt("points"));
     }
 
-    private Map<String, Object> alertParameters(Alert alert, Instant now) {
+    private Map<String, Object> alertParameters(Alert alert, UUID alertId, Instant now) {
         Map<String, Object> values = new java.util.HashMap<>();
-        values.put("id", UUID.randomUUID());
+        values.put("id", alertId);
         values.put("ruleId", alert.ruleId());
         values.put("ownerSubject", alert.ownerSubject());
         values.put("ruleType", alert.ruleType().name());

@@ -76,6 +76,33 @@ class FlywayV6UpgradeIntegrationTest {
         }
     }
 
+    @Test
+    void upgradesMilestoneEightSchemaToDeliverySchemaWithoutLosingOwners() {
+        String schema = "delivery_upgrade_" + UUID.randomUUID().toString().replace("-", "");
+        JdbcClient administrator = JdbcClient.create(baseDataSource());
+        administrator.sql("CREATE SCHEMA " + schema).update();
+        try {
+            DataSource dataSource = dataSource(schema);
+            Flyway.configure().dataSource(dataSource).schemas(schema).target("6").load().migrate();
+            JdbcClient jdbc = JdbcClient.create(dataSource);
+            jdbc.sql("""
+                    INSERT INTO application_users(subject, created_at, last_seen_at)
+                    VALUES ('upgrade-owner', now(), now())
+                    """).update();
+            Flyway.configure().dataSource(dataSource).schemas(schema).load().migrate();
+            assertEquals(1L, jdbc.sql("SELECT count(*) FROM application_users WHERE subject = 'upgrade-owner'")
+                    .query(Long.class).single());
+            assertEquals(1L, jdbc.sql("""
+                    SELECT count(*) FROM information_schema.tables
+                    WHERE table_schema = :schema AND table_name = 'delivery_attempts'
+                    """).param("schema", schema).query(Long.class).single());
+            assertEquals(0L, new JdbcDeliveryWorkRepository(jdbc)
+                    .operations(java.time.Instant.now()).backlog());
+        } finally {
+            administrator.sql("DROP SCHEMA " + schema + " CASCADE").update();
+        }
+    }
+
     private static DataSource dataSource(String schema) {
         PGSimpleDataSource dataSource = new PGSimpleDataSource();
         dataSource.setURL(POSTGRES.getJdbcUrl());

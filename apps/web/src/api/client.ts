@@ -18,6 +18,10 @@ export type RulePage = components['schemas']['RulePage'];
 export type UpdateAlertRule = components['schemas']['UpdateAlertRule'];
 export type OwnedAlert = components['schemas']['OwnedAlert'];
 export type OwnedAlertPage = components['schemas']['OwnedAlertPage'];
+export type NotificationSettings = components['schemas']['NotificationSettings'];
+export type UpdateNotificationSettings = components['schemas']['UpdateNotificationSettings'];
+export type DeliveryHistoryPage = components['schemas']['DeliveryHistoryPage'];
+export type DeliveryAttemptPage = components['schemas']['DeliveryAttemptPage'];
 
 type FailureKind = 'problem' | 'network' | 'timeout' | 'malformed';
 
@@ -233,4 +237,38 @@ export async function listMyAlerts(
   const search = new URLSearchParams({ limit: String(limit) });
   if (cursor) search.set('cursor', cursor);
   return expectOk<OwnedAlertPage>(await apiFetch(`/api/v1/me/alerts?${search.toString()}`, bearer(accessToken)));
+}
+
+export async function getNotificationSettings(accessToken: string): Promise<NotificationSettings> {
+  return expectOk<NotificationSettings>(await apiFetch('/api/v1/me/notifications/settings', bearer(accessToken)));
+}
+
+export async function saveNotificationSettings(
+  accessToken: string,
+  request: UpdateNotificationSettings,
+): Promise<NotificationSettings> {
+  return expectOk<NotificationSettings>(await apiFetch('/api/v1/me/notifications/settings', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  }));
+}
+
+export async function listDeliveryHistory(
+  accessToken: string, cursor: string | null = null,
+): Promise<DeliveryHistoryPage> {
+  const search = new URLSearchParams({ limit: '100' });
+  if (cursor) search.set('cursor', cursor);
+  return expectOk<DeliveryHistoryPage>(await apiFetch(
+    `/api/v1/me/notifications/deliveries?${search.toString()}`, bearer(accessToken),
+  ));
+}
+
+export async function listDeliveryAttempts(
+  accessToken: string, deliveryId: string,
+): Promise<DeliveryAttemptPage> {
+  return expectOk<DeliveryAttemptPage>(await apiFetch(
+    `/api/v1/me/notifications/deliveries/${encodeURIComponent(deliveryId)}/attempts?limit=20`,
+    bearer(accessToken),
+  ));
 }
