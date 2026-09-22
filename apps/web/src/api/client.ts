@@ -7,6 +7,9 @@ export type EventPage = components['schemas']['EventPage'];
 export type GameEvent = components['schemas']['Event'];
 export type AlertPage = components['schemas']['AlertPage'];
 export type GameAlert = components['schemas']['Alert'];
+export type AuthenticatedUser = components['schemas']['Me'];
+export type FollowedGamePage = components['schemas']['FollowedGamePage'];
+export type FollowedGame = components['schemas']['FollowedGame'];
 export type DataStatus = components['schemas']['DataStatus'];
 export type ProblemDetails = components['schemas']['Problem'];
 
@@ -64,6 +67,10 @@ async function apiFetch(path: string, init: RequestInit = {}): Promise<Response>
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+function bearer(accessToken: string, method = 'GET'): RequestInit {
+  return { method, headers: { Authorization: `Bearer ${accessToken}` } };
 }
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -144,4 +151,27 @@ export async function listAlerts(gameId: string, cursor: string | null, limit = 
   return expectOk<AlertPage>(
     await apiFetch(`/api/v1/games/${encodeURIComponent(gameId)}/alerts?${search.toString()}`),
   );
+}
+
+export async function getAuthenticatedUser(accessToken: string): Promise<AuthenticatedUser> {
+  return expectOk<AuthenticatedUser>(await apiFetch('/api/v1/me', bearer(accessToken)));
+}
+
+export async function listFollowedGames(accessToken: string): Promise<FollowedGamePage> {
+  return expectOk<FollowedGamePage>(await apiFetch('/api/v1/me/followed-games', bearer(accessToken)));
+}
+
+export async function followGame(accessToken: string, gameId: string): Promise<FollowedGame> {
+  return expectOk<FollowedGame>(await apiFetch(
+    `/api/v1/me/followed-games/${encodeURIComponent(gameId)}`,
+    bearer(accessToken, 'PUT'),
+  ));
+}
+
+export async function unfollowGame(accessToken: string, gameId: string): Promise<void> {
+  const response = await apiFetch(
+    `/api/v1/me/followed-games/${encodeURIComponent(gameId)}`,
+    bearer(accessToken, 'DELETE'),
+  );
+  if (!response.ok) await expectOk<never>(response);
 }

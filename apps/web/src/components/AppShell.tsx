@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
+import { AuthControls } from '../auth/AuthControls';
 
 export function AppShell() {
   return (
@@ -11,8 +12,11 @@ export function AppShell() {
             <small>Every possession, in context.</small>
           </span>
         </Link>
-        <div className="live-key" aria-label="Data status key">
-          <span className="pulse-dot" aria-hidden="true" /> Durable game feed
+        <div className="header-actions">
+          <div className="live-key" aria-label="Data status key">
+            <span className="pulse-dot" aria-hidden="true" /> Durable game feed
+          </div>
+          <AuthControls />
         </div>
       </header>
       <main id="main-content" className="page-frame" tabIndex={-1}>
@@ -20,7 +24,7 @@ export function AppShell() {
       </main>
       <footer className="site-footer">
         <span>CourtPulse</span>
-        <span>Read-only preview · PostgreSQL-backed</span>
+        <span>Public game data · PostgreSQL-backed</span>
       </footer>
     </div>
   );

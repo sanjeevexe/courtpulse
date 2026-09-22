@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: CourtPulse Read API
-  version: 1.0.0
-  description: Read-only durable game, canonical event, alert, and processing state.
+  version: 1.1.0
+  description: Public durable basketball reads plus OIDC-protected user ownership and operations.
 servers:
   - url: http://localhost:8080
 paths:
@@ -100,21 +100,127 @@ paths:
   /api/v1/operations/processing:
     get:
       summary: Read sanitized processing health
+      security: [{oidcBearer: ['courtpulse:ops']}]
       responses:
         '200':
           description: Sanitized outbox and processing counts
           headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
           content: {application/json: {schema: {$ref: '#/components/schemas/Processing'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me:
+    get:
+      summary: Read the authenticated application user
+      security: [{oidcBearer: []}]
+      responses:
+        '200':
+          description: Stable identity derived exclusively from the validated JWT subject
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/Me'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/auth/config:
+    get:
+      summary: Read non-secret public browser OIDC configuration
+      responses:
+        '200':
+          description: Public OIDC client settings
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/AuthenticationConfiguration'}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/followed-games:
+    get:
+      summary: List games followed by the authenticated user
+      security: [{oidcBearer: []}]
+      responses:
+        '200':
+          description: Followed games owned by the validated JWT subject
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/FollowedGamePage'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/followed-games/{gameId}:
+    put:
+      summary: Follow a public game idempotently
+      security: [{oidcBearer: []}]
+      parameters:
+        - {$ref: '#/components/parameters/GameId'}
+      responses:
+        '200':
+          description: Existing follow retained
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/FollowedGame'}}}
+        '201':
+          description: Follow created
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            Location: {description: Owned follow resource, schema: {type: string}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/FollowedGame'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    delete:
+      summary: Stop following a game; an absent follow returns 204
+      security: [{oidcBearer: []}]
+      parameters:
+        - {$ref: '#/components/parameters/GameId'}
+      responses:
+        '204':
+          description: Follow absent after the request
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '405': {$ref: '#/components/responses/MethodNotAllowed'}
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
 components:
+  securitySchemes:
+    oidcBearer:
+      type: oauth2
+      description: OIDC Authorization Code with PKCE for public browser clients
+      flows:
+        authorizationCode:
+          authorizationUrl: https://identity.example/authorize
+          tokenUrl: https://identity.example/token
+          scopes:
+            openid: Authenticate the user
+            'courtpulse:ops': Read operational processing state
   headers:
     CorrelationId: {description: Safe request correlation identifier, schema: {type: string}}
   parameters:
     GameId: {name: gameId, in: path, required: true, schema: {type: string, maxLength: 200}}
   responses:
+    Unauthorized:
+      description: Missing, expired, or invalid bearer token
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Forbidden:
+      description: Authenticated identity lacks the required authority
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
     BadRequest:
       description: Invalid parameter or cursor
       headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
@@ -140,6 +246,34 @@ components:
       headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
       content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
   schemas:
+    AuthenticationConfiguration:
+      type: object
+      additionalProperties: false
+      required: [enabled, issuer, clientId, scope]
+      properties:
+        enabled: {type: boolean}
+        issuer: {type: string}
+        clientId: {type: string, minLength: 1}
+        scope: {type: string, minLength: 1}
+    Me:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: {type: string, minLength: 1, maxLength: 255}
+    FollowedGamePage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/FollowedGame'}}
+    FollowedGame:
+      type: object
+      additionalProperties: false
+      required: [gameId, followedAt]
+      properties:
+        gameId: {type: string, minLength: 1, maxLength: 200}
+        followedAt: {type: string, format: date-time}
     GamePage:
       type: object
       required: [items]

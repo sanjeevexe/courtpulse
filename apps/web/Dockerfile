@@ -10,7 +10,10 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.29.1-alpine
 
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+ENV NGINX_ENVSUBST_FILTER=COURTPULSE_AUTH_ISSUER_ORIGIN
+
+COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
+COPY --chmod=755 apps/web/docker-entrypoint.d/15-validate-auth-issuer-origin.sh /docker-entrypoint.d/15-validate-auth-issuer-origin.sh
 COPY --from=build --chown=101:101 /workspace/apps/web/dist/ /usr/share/nginx/html/
 
 USER 101

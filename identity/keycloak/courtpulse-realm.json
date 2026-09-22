@@ -1,0 +1,57 @@
+{
+  "realm": "courtpulse",
+  "enabled": true,
+  "displayName": "CourtPulse Local Identity",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "courtpulse:ops", "description": "CourtPulse operational read access" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "courtpulse-web",
+      "name": "CourtPulse browser",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:4173/auth/callback",
+        "http://localhost:4173/auth/callback",
+        "http://127.0.0.1:55173/auth/callback"
+      ],
+      "webOrigins": ["http://127.0.0.1:4173", "http://localhost:4173", "http://127.0.0.1:55173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://127.0.0.1:4173##http://localhost:4173##http://127.0.0.1:55173"
+      },
+      "protocolMappers": [
+        {
+          "name": "courtpulse-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "courtpulse-api",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "courtpulse-realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "courtpulse_roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

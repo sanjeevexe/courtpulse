@@ -2,6 +2,7 @@ package com.courtpulse.api.http;
 
 import com.courtpulse.query.DataStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,22 @@ public final class ApiDto {
 
     @Schema(requiredProperties = {"items"})
     public record AlertPage(List<Alert> items, @Schema(nullable = true) String nextCursor) {}
+
+    @Schema(requiredProperties = {"subject"})
+    public record Me(@Size(min = 1, max = 255) String subject) {}
+
+    @Schema(requiredProperties = {"items"})
+    public record FollowedGamePage(List<FollowedGame> items) {}
+
+    @Schema(requiredProperties = {"gameId", "followedAt"})
+    public record FollowedGame(@Size(min = 1, max = 200) String gameId, Instant followedAt) {}
+
+    @Schema(requiredProperties = {"enabled", "issuer", "clientId", "scope"})
+    public record AuthenticationConfiguration(
+            boolean enabled,
+            String issuer,
+            String clientId,
+            String scope) {}
 
     @Schema(requiredProperties = {
         "gameId", "source", "homeTeamId", "awayTeamId", "status", "stateVersion",

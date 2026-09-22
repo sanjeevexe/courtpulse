@@ -38,6 +38,12 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
 .pulse-dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 0 .25rem rgb(75 225 195 / .12); }
 .page-frame { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; flex: 1; padding: 3.5rem 0 5rem; }
 .site-footer { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.5rem 0 2.5rem; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: var(--muted); font-size: .8rem; }
+.header-actions, .auth-controls { display: flex; align-items: center; gap: .7rem; }
+.header-actions { justify-content: flex-end; }
+.auth-status, .auth-subject { color: var(--muted); font-size: .72rem; }
+.auth-subject { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-error { color: #ffb5aa; font-size: .8rem; }
+.followed-games { display: grid; gap: .75rem; margin: 0; padding-left: 1.2rem; }
 
 .eyebrow { margin: 0 0 .45rem; color: var(--lime); font-size: .72rem; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
 .slate-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; margin-bottom: 2rem; }
@@ -117,6 +123,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
   .scoreboard__topline { align-items: flex-start; }.scoreboard__topline .data-status { align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }.status-explanation { flex-basis: 100%; text-align: right; }
   .event-row { grid-template-columns: 2rem 3.3rem 1fr; gap: .6rem; }.event-score { grid-column: 3; }.detail-toolbar { align-items: center; }
   .connection-state { max-width: 7rem; text-align: right; }
+  .auth-subject { display: none; }.auth-controls { gap: .35rem; }.header-actions { gap: .4rem; }
 }
 
 @media (max-width: 420px) {

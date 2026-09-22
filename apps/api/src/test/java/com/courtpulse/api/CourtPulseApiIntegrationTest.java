@@ -246,15 +246,12 @@ class CourtPulseApiIntegrationTest {
     }
 
     @Test
-    void processingHealthIsSanitizedAndAccurate() throws Exception {
+    void processingHealthRequiresAnOperationalIdentity() throws Exception {
         HttpResponse<String> response = get("/api/v1/operations/processing");
-        JsonNode health = body(response);
+        JsonNode problem = body(response);
 
-        assertEquals(0, health.path("pending").asLong());
-        assertEquals(20, health.path("sent").asLong());
-        assertEquals(21, health.path("deferredNotifications").asLong());
-        assertEquals(20, health.path("processedEvents").asLong());
-        assertEquals(1, health.path("alerts").asLong());
+        assertEquals(401, response.statusCode());
+        assertEquals("authentication_required", problem.path("code").asText());
         assertFalse(response.body().contains("last_error"));
         assertFalse(response.body().contains("password"));
     }
@@ -286,9 +283,9 @@ class CourtPulseApiIntegrationTest {
     void livenessReadinessInfoAndMetricsAreExposedSafely() throws Exception {
         assertEquals("UP", body(get("/actuator/health/liveness")).path("status").asText());
         assertEquals("UP", body(get("/actuator/health/readiness")).path("status").asText());
-        assertEquals(200, get("/actuator/info").statusCode());
-        assertEquals(200, get("/actuator/metrics").statusCode());
-        assertEquals(404, get("/actuator/env").statusCode());
+        assertEquals(401, get("/actuator/info").statusCode());
+        assertEquals(401, get("/actuator/metrics").statusCode());
+        assertEquals(401, get("/actuator/env").statusCode());
     }
 
     @Test
@@ -318,7 +315,8 @@ class CourtPulseApiIntegrationTest {
 
         for (String schema : List.of(
                 "GamePage", "GameSummary", "GameSnapshot", "RecentEvent", "EventPage",
-                "Event", "Score", "AlertPage", "Alert", "Processing", "Problem")) {
+                "Event", "Score", "AlertPage", "Alert", "Processing", "Me",
+                "FollowedGamePage", "FollowedGame", "AuthenticationConfiguration", "Problem")) {
             assertEquals(
                     publicSchema(contract, schema),
                     publicSchema(runtime, schema),

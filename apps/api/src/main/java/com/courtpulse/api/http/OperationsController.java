@@ -3,6 +3,8 @@ package com.courtpulse.api.http;
 import com.courtpulse.query.CourtPulseQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +20,12 @@ public class OperationsController {
     }
 
     @Operation(summary = "Read sanitized processing and outbox health")
-    @ApiResponse(responseCode = "200", description = "Sanitized durable processing counts")
+    @SecurityRequirement(name = "oidcBearer", scopes = "courtpulse:ops")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Sanitized durable processing counts"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Operational authority required")
+    })
     @GetMapping("/processing")
     public ApiDto.Processing processing() {
         return ApiDtoMapper.processing(queries.processingHealth());

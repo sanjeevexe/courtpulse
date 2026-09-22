@@ -3,6 +3,12 @@ import { setupServer } from 'msw/node';
 import { alertPage, eventPage, events, gamePage, snapshot } from './fixtures';
 
 export const handlers = [
+  http.get('*/api/v1/auth/config', () => HttpResponse.json({
+    enabled: false,
+    issuer: '',
+    clientId: 'courtpulse-web',
+    scope: 'openid profile',
+  })),
   http.get('*/api/v1/games', () => HttpResponse.json(gamePage())),
   http.get('*/api/v1/games/:gameId', () => HttpResponse.json(snapshot, { headers: { ETag: '"snapshot-v1"' } })),
   http.get('*/api/v1/games/:gameId/events', ({ request }) => {

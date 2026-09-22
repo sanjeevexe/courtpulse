@@ -33,6 +33,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
+import com.courtpulse.persistence.JdbcUserOwnershipRepository;
+import com.courtpulse.api.ownership.OwnershipService;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -85,6 +87,19 @@ public class ApiConfiguration {
     @Bean
     JdbcOutboxPublicationRepository realtimeOutboxRepository(JdbcClient jdbc) {
         return new JdbcOutboxPublicationRepository(jdbc);
+    }
+
+    @Bean
+    JdbcUserOwnershipRepository userOwnershipRepository(JdbcClient jdbc) {
+        return new JdbcUserOwnershipRepository(jdbc);
+    }
+
+    @Bean
+    OwnershipService ownershipService(
+            JdbcUserOwnershipRepository repository,
+            TransactionTemplate transactions,
+            Clock clock) {
+        return new OwnershipService(repository, transactions, clock);
     }
 
     @Bean("realtimeLeaseOwner")

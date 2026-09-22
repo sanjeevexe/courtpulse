@@ -19,6 +19,16 @@ server:
   shutdown: graceful
 
 courtpulse:
+  auth:
+    enabled: ${COURTPULSE_AUTH_ENABLED:false}
+    issuer-uri: ${COURTPULSE_AUTH_ISSUER_URI:}
+    jwk-set-uri: ${COURTPULSE_AUTH_JWK_SET_URI:}
+    audience: ${COURTPULSE_AUTH_AUDIENCE:}
+    client-id: ${COURTPULSE_AUTH_CLIENT_ID:courtpulse-web}
+    browser-scope: ${COURTPULSE_AUTH_BROWSER_SCOPE:openid profile}
+    authorities-claim: ${COURTPULSE_AUTH_AUTHORITIES_CLAIM:scope}
+    authority-prefix: ${COURTPULSE_AUTH_AUTHORITY_PREFIX:SCOPE_}
+    operations-authority: ${COURTPULSE_AUTH_OPERATIONS_AUTHORITY:SCOPE_courtpulse:ops}
   api:
     live-freshness-window: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:2m}
   realtime:

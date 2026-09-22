@@ -1,5 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { uniqueAlerts, uniqueEvents, useAlerts, useEvents, useGameSnapshot } from '../api/hooks';
+import { ApiError, followGame, listFollowedGames, unfollowGame } from '../api/client';
+import { useAuth } from '../auth/useAuth';
 import { DataStatusBadge } from '../components/DataStatusBadge';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
@@ -8,6 +11,8 @@ import { connectionLabel, useGameRealtime } from '../realtime/hooks';
 
 export function GameDetailPage() {
   const { gameId = '' } = useParams();
+  const auth = useAuth();
+  const queryClient = useQueryClient();
   const realtimeState = useGameRealtime(gameId);
   const snapshotQuery = useGameSnapshot(gameId, realtimeState === 'CONNECTED');
   const eventsQuery = useEvents(gameId);
@@ -15,6 +20,21 @@ export function GameDetailPage() {
   const events = uniqueEvents(eventsQuery.data);
   const alerts = uniqueAlerts(alertsQuery.data);
   const eventsBusy = eventsQuery.isFetchingNextPage || eventsQuery.isRefetching;
+  const followedQuery = useQuery({
+    queryKey: ['me', 'followed-games'],
+    queryFn: () => listFollowedGames(auth.accessToken ?? ''),
+    enabled: auth.status === 'AUTHENTICATED' && auth.accessToken !== null,
+  });
+  const followed = followedQuery.data?.items.some((item) => item.gameId === gameId) ?? false;
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      const token = auth.accessToken;
+      if (!token) throw new ApiError('Sign in again to update My Games.', { kind: 'problem', status: 401 });
+      if (followed) await unfollowGame(token, gameId);
+      else await followGame(token, gameId);
+    },
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['me', 'followed-games'] }),
+  });
 
   if (snapshotQuery.isPending) {
     return <LoadingState label="Loading game detail" />;
@@ -47,8 +67,24 @@ export function GameDetailPage() {
           >
             {snapshotQuery.isFetching ? 'Refreshing…' : 'Refresh score'}
           </button>
+          {auth.status === 'AUTHENTICATED' ? (
+            <button
+              className="button button--secondary"
+              disabled={followedQuery.isPending || followMutation.isPending}
+              onClick={() => followMutation.mutate()}
+            >
+              {followMutation.isPending ? 'Saving…' : followed ? 'Unfollow game' : 'Follow game'}
+            </button>
+          ) : null}
         </div>
       </div>
+      {followMutation.isError ? (
+        <p className="auth-error" role="alert">
+          {followMutation.error instanceof ApiError && followMutation.error.status === 403
+            ? 'Your account is not permitted to change this follow.'
+            : 'Your session expired or could not be verified. Sign in again and retry.'}
+        </p>
+      ) : null}
 
       <header className="scoreboard">
         <div className="scoreboard__topline">

@@ -13,12 +13,13 @@ Browser -> non-root Nginx -> React dashboard
                          \-> /ws/v1/games -> versioned realtime hints
 ```
 
-PostgreSQL is the durable source of truth for the versioned, read-only HTTP API. The API never reads
+PostgreSQL is the durable source of truth for the versioned public read API and minimal user-owned
+follow state. The API never reads
 from SQS and does not need LocalStack to serve requests. The React dashboard consumes only the
 versioned REST contract through a same-origin Nginx boundary. The infrastructure-free and direct
 PostgreSQL replay commands remain available. WebSocket messages are non-authoritative hints; clients
-resynchronize through HTTP after gaps and reconnects. Authentication, Redis, email, live providers,
-and cloud deployment remain outside this milestone.
+resynchronize through HTTP after gaps and reconnects. OIDC authentication protects user-owned and
+operational resources; Redis, email, live providers, and cloud deployment remain outside this milestone.
 
 ## Prerequisites and tests
 
@@ -157,6 +158,15 @@ persistence or queue records are serialized directly.
 | GET | `/api/v1/games/{gameId}/events` | Ordered canonical history; `cursor` or `afterSequence` |
 | GET | `/api/v1/games/{gameId}/alerts` | Ordered durable logical alerts |
 | GET | `/api/v1/operations/processing` | Sanitized aggregate processing and outbox health |
+| GET | `/api/v1/auth/config` | Public, non-secret browser OIDC configuration |
+| GET | `/api/v1/me` | Authenticated user derived from the JWT subject |
+| GET | `/api/v1/me/followed-games` | Authenticated user's followed games |
+| PUT | `/api/v1/me/followed-games/{gameId}` | Idempotently follow a known game |
+| DELETE | `/api/v1/me/followed-games/{gameId}` | Idempotently remove the user's follow |
+
+Game reads and `/ws/v1/games` are public. `/api/v1/me/**` requires a valid bearer token.
+`/api/v1/operations/**` additionally requires the configured `courtpulse:ops` authority. User IDs
+are never accepted as request input; ownership always comes from the validated `sub` claim.
 
 The maximum page size is 100. Cursors are versioned, URL-safe Base64 JSON values scoped to the
 resource and filter. Clients must treat them as opaque. Games order by checkpoint update time and
@@ -183,7 +193,8 @@ curl -sS http://localhost:8080/api/v1/games/game_synthetic_001
 curl -sS 'http://localhost:8080/api/v1/games/game_synthetic_001/events?limit=7'
 curl -sS 'http://localhost:8080/api/v1/games/game_synthetic_001/events?afterSequence=17&limit=10'
 curl -sS http://localhost:8080/api/v1/games/game_synthetic_001/alerts
-curl -sS http://localhost:8080/api/v1/operations/processing
+curl -sS -H 'Authorization: Bearer PASTE_OPERATIONS_ACCESS_TOKEN' \
+  http://localhost:8080/api/v1/operations/processing
 curl -sS http://localhost:8080/actuator/health/liveness
 curl -sS http://localhost:8080/actuator/health/readiness
 ```
@@ -226,16 +237,16 @@ schemas with the runtime document. Reproducible natural and index-eligibility pl
 
 ### Health, diagnostics, and request safety
 
-Actuator exposes only `/actuator/health`, `/actuator/health/liveness`,
-`/actuator/health/readiness`, `/actuator/info`, and `/actuator/metrics`. Liveness is independent of
+The public security policy allows only `/actuator/health` and its liveness/readiness probes; other
+actuator routes are denied even when internally enabled for operators. Liveness is independent of
 PostgreSQL. Readiness requires a database connection and the expected schema. Health details,
 environment variables, bean listings, configuration properties, and heap dumps are not exposed.
 
 Responses echo a valid `X-Correlation-ID` or generate one. Request logs contain correlation ID,
 method, normalized route, response status, and elapsed time—not query strings, credentials,
 authorization headers, cookies, or provider payloads. Errors use RFC Problem Details. The narrow
-processing endpoint intentionally omits outbox error text and payloads; add access control before
-making it publicly reachable.
+processing endpoint intentionally omits outbox error text and payloads and requires the configured
+operations authority.
 
 ### API container and Compose
 
@@ -374,6 +385,94 @@ same identity and ownership prevents stale completion.
 The hub is intentionally single-API-instance. Before horizontal API scaling, add Redis or another
 shared fanout layer while retaining PostgreSQL outbox ownership and HTTP resynchronization.
 
+## OIDC authentication and owned games
+
+The browser uses OAuth 2.0 Authorization Code with PKCE through `oidc-client-ts`. It is a public
+client with no client secret. OIDC state, the code verifier, and the resulting user session use
+`sessionStorage`, not local storage; tokens are sent only in the `Authorization` header to protected
+same-origin API routes. They are never placed in URLs, rendered into HTML, or logged. The API is an
+independent Spring Security resource server and validates signature, issuer, audience, expiration,
+not-before, bounded nonblank `sub`, and configurable scope/role claims before trusting ownership.
+The callback waits for OIDC configuration and runs once under React Strict Mode. Discovery, redirect,
+callback, logout, and expiry failures clear private query data and leave public browsing available
+with a sanitized retry message.
+
+The production Nginx CSP keeps `default-src`, scripts, styles, fonts, images, frames, and base URIs
+narrow. `connect-src` contains only `'self'` plus the validated browser-visible issuer origin. Empty
+configuration leaves only `'self'`; non-local origins must use HTTPS, while HTTP is accepted only for
+`localhost` or `127.0.0.1`. Container startup rejects paths, user information, malformed ports, and
+other unsafe substitutions. This origin permits browser discovery and token calls but does not reveal
+the server-only JWKS address. No wildcard, `unsafe-inline`, or `unsafe-eval` source is used.
+
+| Route class | Policy |
+| --- | --- |
+| `/api/v1/auth/config`, `/api/v1/games/**`, `/ws/v1/games` | Public |
+| `/actuator/health/**`, `/v3/api-docs/**` | Public intentionally |
+| `/api/v1/me`, `/api/v1/me/**` | Valid bearer token |
+| `/api/v1/operations/**` | Valid bearer token plus configured operations authority |
+| Other actuator, unclassified API, or accidental controller routes | Denied by default |
+
+An anonymous request to an unclassified protected route receives sanitized 401; an authenticated
+identity without a matching rule receives sanitized 403. MVC errors for explicitly public routes
+still reach safe 404/405 Problem Details through permitted error dispatch. The API is stateless,
+disables server sessions and CSRF for bearer authentication, and rejects bearer tokens in query or
+form parameters. Authentication-disabled mode does not make protected resources public.
+
+The optional local provider is Keycloak 26.7.0. Copy `.env.example` to an ignored `.env`, choose
+local-only values for every blank variable, then start and provision the profile:
+
+```bash
+docker compose --profile auth up -d identity postgres localstack api web
+./scripts/provision-local-identity.sh
+```
+
+The provisioning script reads two ordinary test identities, one operational identity, and all
+passwords from the environment; no account password or admin credential is committed. The imported
+realm contains only public client, redirect-origin, audience, PKCE, and role-claim configuration.
+Use `http://127.0.0.1:4173`; mixing `localhost` and `127.0.0.1` changes browser origin and redirect
+matching. The API's external issuer and internal JWKS URI are separately configurable so the same
+validation model maps to Cognito or another standards-compliant provider without code changes.
+Set `COURTPULSE_AUTH_ISSUER_ORIGIN` to the origin portion of the external issuer for the browser CSP;
+set `COURTPULSE_AUTH_ISSUER_URI` to the complete externally visible issuer and optionally
+`COURTPULSE_AUTH_JWK_SET_URI` to a container-network address used only by the API. Enabled
+authentication fails startup unless issuer, audience, public client ID, an `openid` browser scope,
+authority claim/prefix, and operations authority are valid.
+
+Sign-in returns through `/auth/callback`. Anonymous users can keep browsing games. Authenticated
+users can follow/unfollow from game detail and open **My Games**. Expired sessions become a
+recoverable sign-in state; 401 means the session is absent/invalid, while 403 means the identity is
+valid but lacks authority. Sign-out removes authenticated UI access while public game data remains.
+Follows are unique by subject/game and all database work is transactional. The minimal user row stores
+only `sub` and timestamps; ordinary reads update `last_seen_at` at most once per 15-minute window.
+
+Run the isolated proof with generated in-memory credentials and isolated ports/volumes:
+
+```bash
+./scripts/verify-milestone-7.sh
+```
+
+It proves S256 PKCE with no browser secret, two-user ownership isolation, ordinary-user 403,
+operations-user access, logout/public access, narrow CSP on HTML and assets, non-root images, exact
+`3|1` user/follow counts, and scoped cleanup of only `courtpulse-m7-acceptance`.
+
+Troubleshooting:
+
+- Provider unhealthy: inspect `docker compose --profile auth logs identity` and verify the admin
+  variables are non-empty before startup.
+- Login redirect rejected: confirm the browser origin is one of the two local realm origins.
+- Sign-in does not leave CourtPulse: inspect the browser console for CSP failures and ensure
+  `COURTPULSE_AUTH_ISSUER_ORIGIN` exactly matches the external issuer origin.
+- API returns 401 for a fresh token: verify issuer, internal JWKS URI, audience, and container DNS.
+- Operations return 403: only the identity provisioned with `COURTPULSE_TEST_OPS_USER` receives the
+  local `courtpulse:ops` role.
+- This local profile uses HTTP for development. Production requires HTTPS, hardened provider
+  storage and keys, restrictive origins, rotation, monitoring, and an explicit session policy.
+- `sessionStorage` limits persistence to the tab but does not eliminate XSS or token-theft risk;
+  short token lifetimes, dependency review, CSP monitoring, and provider-side session controls remain
+  deployment responsibilities. Silent renewal and refresh-token persistence are intentionally absent.
+- The public game WebSocket carries no user data and remains anonymous. A future user-specific
+  realtime destination must authenticate during the WebSocket handshake without query tokens.
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:
@@ -505,10 +604,8 @@ docker compose down -v
 - LocalStack is test infrastructure, not a production AWS deployment.
 - Email and other external notification delivery remain deliberately deferred; the realtime
   publisher handles only the WebSocket hint types documented in the AsyncAPI contract.
-- The read API has no authentication; its narrow operations endpoint must be protected before a
-  public deployment.
-- The dashboard is read-only; realtime fanout is single-instance and falls back to polling. There
-  are no write APIs, offline mode, authentication, email, live provider integration, corrections,
+- Realtime fanout is single-instance and falls back to polling. There
+  are no personalized rule writes, offline mode, email, live provider integration, corrections,
   Redis multi-replica fanout, Terraform, or Kubernetes.
 
 See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
@@ -516,4 +613,5 @@ See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0003](docs/adr/0003-sqs-fifo-outbox-leasing.md),
 [ADR 0004](docs/adr/0004-read-api-contract-and-query-model.md), and
 [ADR 0005](docs/adr/0005-react-dashboard-and-polling.md), and
-[ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md).
+[ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md), and
+[ADR 0007](docs/adr/0007-oidc-pkce-and-object-ownership.md).
