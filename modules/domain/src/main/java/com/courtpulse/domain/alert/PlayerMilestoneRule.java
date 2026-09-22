@@ -6,18 +6,31 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-public record PlayerMilestoneRule(String ruleId, String playerId, int threshold) implements AlertRule {
+public record PlayerMilestoneRule(
+        String ruleId, String ownerSubject, String playerId, int threshold) implements AlertRule {
+    public PlayerMilestoneRule(String ruleId, String playerId, int threshold) {
+        this(ruleId, null, playerId, threshold);
+    }
+
     public PlayerMilestoneRule {
         ruleId = requireText(ruleId, "ruleId");
         playerId = requireText(playerId, "playerId");
-        if (threshold < 1) {
-            throw new IllegalArgumentException("threshold must be positive");
+        if (ownerSubject != null && (ownerSubject.isBlank() || ownerSubject.length() > 255)) {
+            throw new IllegalArgumentException("ownerSubject must contain at most 255 characters");
+        }
+        if (playerId.length() > 200) {
+            throw new IllegalArgumentException("playerId must be at most 200 characters");
+        }
+        if (threshold < 1 || threshold > 200) {
+            throw new IllegalArgumentException("threshold must be between 1 and 200");
         }
     }
 
     @Override
-    public Optional<Alert> evaluate(
-            GameState previousState, GameState nextState, CanonicalEvent event) {
+    public Optional<Alert> evaluate(RuleEvaluationFacts facts) {
+        GameState previousState = facts.previousState();
+        GameState nextState = facts.nextState();
+        CanonicalEvent event = facts.event();
         int previousPoints = previousState.pointsFor(playerId);
         int nextPoints = nextState.pointsFor(playerId);
         if (previousPoints >= threshold || nextPoints < threshold) {
@@ -29,6 +42,8 @@ public record PlayerMilestoneRule(String ruleId, String playerId, int threshold)
         return Optional.of(new Alert(
                 triggerKey,
                 ruleId,
+                ownerSubject,
+                ruleType(),
                 nextState.gameId(),
                 event.eventId(),
                 "%s reached %d points".formatted(playerId, threshold),
@@ -39,10 +54,15 @@ public record PlayerMilestoneRule(String ruleId, String playerId, int threshold)
                         "verifiedTotal", Integer.toString(nextPoints))));
     }
 
+    @Override
+    public RuleType ruleType() {
+        return RuleType.PLAYER_POINTS;
+    }
+
     private static String requireText(String value, String field) {
         Objects.requireNonNull(value, field + " is required");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException(field + " must not be blank");
+        if (value.isBlank() || !value.equals(value.trim())) {
+            throw new IllegalArgumentException(field + " must not be blank or padded");
         }
         return value;
     }

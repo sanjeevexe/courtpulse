@@ -1,6 +1,7 @@
 package com.courtpulse.persistence;
 
 import com.courtpulse.domain.alert.Alert;
+import com.courtpulse.domain.alert.ScoringRunFacts;
 import com.courtpulse.domain.event.CanonicalEvent;
 import com.courtpulse.domain.event.EventFingerprint;
 import com.courtpulse.domain.event.EventIdentity;
@@ -226,24 +227,49 @@ public final class JdbcGameProcessingRepository {
     public boolean insertAlert(Alert alert, Instant now) {
         int rows = jdbc.sql("""
                         INSERT INTO alert_instances (
-                            id, rule_id, game_id, trigger_key, triggering_event_id,
-                            title, context, status, created_at)
+                            id, rule_id, owner_subject, rule_type, game_id, trigger_key,
+                            triggering_event_id, title, context, status, created_at)
                         VALUES (
-                            :id, :ruleId, :gameId, :triggerKey, :triggeringEventId,
-                            :title, CAST(:context AS JSONB), 'CREATED', :now)
+                            :id, :ruleId, :ownerSubject, :ruleType, :gameId, :triggerKey,
+                            :triggeringEventId, :title, CAST(:context AS JSONB), 'CREATED', :now)
                         ON CONFLICT (rule_id, trigger_key) DO NOTHING
                         """)
-                .params(Map.of(
-                        "id", UUID.randomUUID(),
-                        "ruleId", alert.ruleId(),
-                        "gameId", alert.gameId(),
-                        "triggerKey", alert.triggerKey(),
-                        "triggeringEventId", alert.triggeringEventId(),
-                        "title", alert.title(),
-                        "context", json.write(alert.context()),
-                        "now", SqlTime.offset(now)))
+                .params(alertParameters(alert, now))
                 .update();
         return rows == 1;
+    }
+
+    /** Advances one row on every scoring event, even when no scoring-run rule exists yet. */
+    public ScoringRunFacts advanceScoringRun(CanonicalEvent event) {
+        if (event.points() == 0) {
+            return null;
+        }
+        PreviousRun previous = jdbc.sql("""
+                        SELECT team_id, points, start_sequence
+                        FROM game_scoring_runs
+                        WHERE game_id = :gameId
+                        FOR UPDATE
+                        """)
+                .param("gameId", event.gameId())
+                .query((resultSet, rowNumber) -> new PreviousRun(
+                        resultSet.getString("team_id"), resultSet.getInt("points"),
+                        resultSet.getObject("start_sequence", Long.class)))
+                .single();
+        boolean sameTeam = event.teamId().equals(previous.teamId());
+        int before = sameTeam ? previous.points() : 0;
+        int after = Math.addExact(before, event.points());
+        long start = sameTeam ? previous.startSequence() : event.sequence();
+        jdbc.sql("""
+                        UPDATE game_scoring_runs
+                        SET team_id = :teamId, points = :points, start_sequence = :start
+                        WHERE game_id = :gameId
+                        """)
+                .param("teamId", event.teamId())
+                .param("points", after)
+                .param("start", start)
+                .param("gameId", event.gameId())
+                .update();
+        return new ScoringRunFacts(event.teamId(), before, after, start);
     }
 
     public List<StoredAlert> listAlerts(String gameId) {
@@ -285,6 +311,23 @@ public final class JdbcGameProcessingRepository {
                 new Score(resultSet.getInt("home_score"), resultSet.getInt("away_score")),
                 resultSet.getInt("points"));
     }
+
+    private Map<String, Object> alertParameters(Alert alert, Instant now) {
+        Map<String, Object> values = new java.util.HashMap<>();
+        values.put("id", UUID.randomUUID());
+        values.put("ruleId", alert.ruleId());
+        values.put("ownerSubject", alert.ownerSubject());
+        values.put("ruleType", alert.ruleType().name());
+        values.put("gameId", alert.gameId());
+        values.put("triggerKey", alert.triggerKey());
+        values.put("triggeringEventId", alert.triggeringEventId());
+        values.put("title", alert.title());
+        values.put("context", json.write(alert.context()));
+        values.put("now", SqlTime.offset(now));
+        return values;
+    }
+
+    private record PreviousRun(String teamId, int points, Long startSequence) {}
 
     private record CheckpointRow(
             GameStatus status,

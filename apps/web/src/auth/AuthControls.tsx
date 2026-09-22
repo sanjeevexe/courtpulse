@@ -10,6 +10,8 @@ export function AuthControls() {
     return (
       <div className="auth-controls">
         <Link className="text-link" to="/my-games">My Games</Link>
+        <Link className="text-link" to="/my-rules">My Rules</Link>
+        <Link className="text-link" to="/my-alerts">My Alerts</Link>
         <span className="auth-subject">Signed in as {auth.subject}</span>
         <button
           className="button button--quiet"

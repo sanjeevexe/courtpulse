@@ -156,6 +156,15 @@ class SecurityAndOwnershipIntegrationTest {
                                 .authorities(new SimpleGrantedAuthority("SCOPE_courtpulse:ops"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.processedEvents").value(20));
+        http.perform(get("/api/v1/operations/rules")
+                        .with(jwt().jwt(value -> value.subject("user-a"))))
+                .andExpect(status().isForbidden());
+        http.perform(get("/api/v1/operations/rules")
+                        .with(jwt().jwt(value -> value.subject("operator"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_courtpulse:ops"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.systemRules").value(1))
+                .andExpect(jsonPath("$.ownedRules").value(0));
     }
 
     @Test

@@ -8,6 +8,8 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { AuthProvider } from '../auth/AuthProvider';
 import { AuthCallbackPage } from '../pages/AuthCallbackPage';
 import { MyGamesPage } from '../pages/MyGamesPage';
+import { MyRulesPage } from '../pages/MyRulesPage';
+import { MyAlertsPage } from '../pages/MyAlertsPage';
 
 export function renderApp(route = '/') {
   const queryClient = new QueryClient({
@@ -22,6 +24,8 @@ export function renderApp(route = '/') {
         { path: '/', element: <GameSlatePage /> },
         { path: '/games/:gameId', element: <GameDetailPage /> },
         { path: '/my-games', element: <MyGamesPage /> },
+        { path: '/my-rules', element: <MyRulesPage /> },
+        { path: '/my-alerts', element: <MyAlertsPage /> },
         { path: '/auth/callback', element: <AuthCallbackPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],

@@ -34,7 +34,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.JdbcUserOwnershipRepository;
+import com.courtpulse.persistence.JdbcAlertRuleRepository;
+import com.courtpulse.persistence.MicrometerRuleEngineMetrics;
+import com.courtpulse.persistence.RuleEngineMetrics;
 import com.courtpulse.api.ownership.OwnershipService;
+import com.courtpulse.api.rules.PersonalizedRuleService;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -92,6 +96,28 @@ public class ApiConfiguration {
     @Bean
     JdbcUserOwnershipRepository userOwnershipRepository(JdbcClient jdbc) {
         return new JdbcUserOwnershipRepository(jdbc);
+    }
+
+    @Bean
+    JdbcAlertRuleRepository alertRuleRepository(
+            JdbcClient jdbc, @Qualifier("queryObjectMapper") ObjectMapper objectMapper) {
+        return new JdbcAlertRuleRepository(jdbc, objectMapper);
+    }
+
+    @Bean
+    RuleEngineMetrics ruleEngineMetrics(MeterRegistry meters) {
+        return new MicrometerRuleEngineMetrics(meters);
+    }
+
+    @Bean
+    PersonalizedRuleService personalizedRuleService(
+            JdbcAlertRuleRepository rules,
+            JdbcUserOwnershipRepository users,
+            OpaqueCursorCodec cursors,
+            TransactionTemplate transactions,
+            Clock clock,
+            RuleEngineMetrics metrics) {
+        return new PersonalizedRuleService(rules, users, cursors, transactions, clock, metrics);
     }
 
     @Bean

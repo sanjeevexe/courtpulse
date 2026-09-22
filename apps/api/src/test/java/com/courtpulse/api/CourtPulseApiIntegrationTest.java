@@ -316,7 +316,9 @@ class CourtPulseApiIntegrationTest {
         for (String schema : List.of(
                 "GamePage", "GameSummary", "GameSnapshot", "RecentEvent", "EventPage",
                 "Event", "Score", "AlertPage", "Alert", "Processing", "Me",
-                "FollowedGamePage", "FollowedGame", "AuthenticationConfiguration", "Problem")) {
+                "FollowedGamePage", "FollowedGame", "AuthenticationConfiguration", "Problem",
+                "RulePage", "PlayerPointsRule", "CloseGameRule", "ScoringRunRule",
+                "OwnedAlertPage", "OwnedAlert", "UpdateAlertRule", "RuleOperations")) {
             assertEquals(
                     publicSchema(contract, schema),
                     publicSchema(runtime, schema),
@@ -416,9 +418,29 @@ class CourtPulseApiIntegrationTest {
     private static PublicSchema publicSchema(JsonNode root, String name) {
         JsonNode schema = resolve(root, root.path("components").path("schemas").path(name));
         Map<String, ScalarSchema> properties = new TreeMap<>();
+        Set<String> required = new TreeSet<>();
+        collectPublicSchema(root, schema, required, properties, new HashSet<>());
+        return new PublicSchema(required, properties);
+    }
+
+    private static void collectPublicSchema(
+            JsonNode root,
+            JsonNode unresolved,
+            Set<String> required,
+            Map<String, ScalarSchema> properties,
+            Set<String> visitedRefs) {
+        if (unresolved.has("$ref")) {
+            String ref = unresolved.path("$ref").asText();
+            if (!visitedRefs.add(ref)) {
+                return;
+            }
+        }
+        JsonNode schema = resolve(root, unresolved);
+        required.addAll(valuesSet(schema.path("required")));
         schema.path("properties").properties().forEach(entry ->
                 properties.put(entry.getKey(), scalarSchema(resolve(root, entry.getValue()))));
-        return new PublicSchema(valuesSet(schema.path("required")), properties);
+        schema.path("allOf").forEach(component ->
+                collectPublicSchema(root, component, required, properties, visitedRefs));
     }
 
     private static ScalarSchema scalarSchema(JsonNode schema) {

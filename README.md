@@ -13,13 +13,14 @@ Browser -> non-root Nginx -> React dashboard
                          \-> /ws/v1/games -> versioned realtime hints
 ```
 
-PostgreSQL is the durable source of truth for the versioned public read API and minimal user-owned
-follow state. The API never reads
+PostgreSQL is the durable source of truth for the versioned public read API, owned game follows,
+structured personalized rules, and private alert history. The API never reads
 from SQS and does not need LocalStack to serve requests. The React dashboard consumes only the
 versioned REST contract through a same-origin Nginx boundary. The infrastructure-free and direct
 PostgreSQL replay commands remain available. WebSocket messages are non-authoritative hints; clients
 resynchronize through HTTP after gaps and reconnects. OIDC authentication protects user-owned and
-operational resources; Redis, email, live providers, and cloud deployment remain outside this milestone.
+operational resources. Personalized alerts are private HTTP resources and never enter the public
+WebSocket stream; Redis, email, live providers, and cloud deployment remain outside this milestone.
 
 ## Prerequisites and tests
 
@@ -158,11 +159,15 @@ persistence or queue records are serialized directly.
 | GET | `/api/v1/games/{gameId}/events` | Ordered canonical history; `cursor` or `afterSequence` |
 | GET | `/api/v1/games/{gameId}/alerts` | Ordered durable logical alerts |
 | GET | `/api/v1/operations/processing` | Sanitized aggregate processing and outbox health |
+| GET | `/api/v1/operations/rules` | Sanitized aggregate rule and private-alert counts |
 | GET | `/api/v1/auth/config` | Public, non-secret browser OIDC configuration |
 | GET | `/api/v1/me` | Authenticated user derived from the JWT subject |
 | GET | `/api/v1/me/followed-games` | Authenticated user's followed games |
 | PUT | `/api/v1/me/followed-games/{gameId}` | Idempotently follow a known game |
 | DELETE | `/api/v1/me/followed-games/{gameId}` | Idempotently remove the user's follow |
+| GET, POST | `/api/v1/me/rules` | Page or create the authenticated user's structured rules |
+| GET, PATCH, DELETE | `/api/v1/me/rules/{ruleId}` | Read, version-update, or delete one owned rule |
+| GET | `/api/v1/me/alerts` | Page immutable private alert history |
 
 Game reads and `/ws/v1/games` are public. `/api/v1/me/**` requires a valid bearer token.
 `/api/v1/operations/**` additionally requires the configured `courtpulse:ops` authority. User IDs
@@ -473,6 +478,76 @@ Troubleshooting:
 - The public game WebSocket carries no user data and remains anonymous. A future user-specific
   realtime destination must authenticate during the WebSocket handshake without query tokens.
 
+## Personalized alert rules
+
+CourtPulse supports exactly three structured templates. There is no expression, SQL, script, or
+arbitrary-predicate input.
+
+- `PLAYER_POINTS` fires once when a verified player total crosses from below the configured 1–200
+  threshold to at-or-above it. Remaining above does not repeat the alert.
+- `CLOSE_GAME` fires on entry into a live window: the period must equal the configured period, the
+  remaining clock must be at or below the configured value, and the absolute margin must be at or
+  below the configured value. Exit is silent and a later re-entry creates a distinct alert.
+- `SCORING_RUN` fires when a team's unanswered points cross the configured 1–100 threshold. Made
+  field goals and free throws count, non-scoring events preserve a run, and an opponent score ends
+  it. A later run has a new start-sequence identity.
+
+All evaluations use committed canonical events and verified previous/next game states. Alert context
+is an immutable snapshot, so later rule changes cannot alter its explanation. The event transaction
+atomically commits its checkpoint, processed identity, private alert, and any public system hint.
+Database uniqueness suppresses both duplicate event delivery and duplicate logical trigger keys.
+Personalized alerts create no public WebSocket outbox row, and public game alert reads return only
+null-owner system alerts.
+
+Create a player rule with an access token and a new safe idempotency key:
+
+```bash
+curl -si -X POST http://localhost:8080/api/v1/me/rules \
+  -H 'Authorization: Bearer PASTE_ACCESS_TOKEN' \
+  -H 'Idempotency-Key: demo-player-10' \
+  -H 'Content-Type: application/json' \
+  --data '{"type":"PLAYER_POINTS","gameId":"game_synthetic_001","playerId":"player_ace","pointsThreshold":10}'
+```
+
+An identical retry returns the existing resource. Reusing the key for another normalized request
+returns 409, including after the original rule is toggled. The browser retains the same key after
+an uncertain network failure. Every user may own at most 50 rules, and a game may have at most
+1,000 owned rules across all users; overflow returns 429. PATCH requires both the new `enabled`
+value and the version returned by the
+last read; a stale version returns 409:
+
+```bash
+curl -sS -X PATCH http://localhost:8080/api/v1/me/rules/PASTE_RULE_UUID \
+  -H 'Authorization: Bearer PASTE_ACCESS_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{"enabled":false,"version":1}'
+curl -sS -H 'Authorization: Bearer PASTE_ACCESS_TOKEN' \
+  'http://localhost:8080/api/v1/me/alerts?limit=20'
+```
+
+All rule and private-alert reads use stable owner-scoped keyset order, opaque cursors, and a maximum
+page size of 100. Ownership comes only from JWT `sub`; a foreign UUID is indistinguishable from an
+absent one. Logout, expiration, and identity replacement clear all `me`-scoped browser caches.
+
+Scoring-run state is one durable row per game, advanced on every made score inside the event
+transaction and reconstructed once for pre-V6 processed games. The system demo rule has the same
+stored ID from fresh fixture import and upgrade backfill, while its historical logical trigger
+identity remains `milestone-player-ace-10`.
+
+The protected `/api/v1/operations/rules` endpoint reports aggregate enabled/disabled/system rule and
+private-alert counts without subjects or parameters. Micrometer records bounded lookup, loaded,
+disabled, evaluated, match, create, duplicate, quota, and duration metrics; only rule type and fixed
+outcome/reason values are tags. Reproducible index evidence is in
+[`docs/verification/milestone-8-query-plans.md`](docs/verification/milestone-8-query-plans.md).
+
+The isolated authenticated demonstration provisions two users, creates every template, replays
+through PostgreSQL and SQS, forces consumer redelivery, checks browser ownership and public-channel
+privacy, validates production images, and removes only its named resources:
+
+```bash
+./scripts/verify-milestone-8.sh
+```
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:
@@ -605,13 +680,15 @@ docker compose down -v
 - Email and other external notification delivery remain deliberately deferred; the realtime
   publisher handles only the WebSocket hint types documented in the AsyncAPI contract.
 - Realtime fanout is single-instance and falls back to polling. There
-  are no personalized rule writes, offline mode, email, live provider integration, corrections,
-  Redis multi-replica fanout, Terraform, or Kubernetes.
+  is no personalized realtime channel, offline mode, email, live provider integration, corrections,
+  Redis multi-replica fanout, Terraform, or Kubernetes. Rules cannot target overtime because the
+  current close-game template deliberately bounds eligible periods to 1–4.
 
 See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0002](docs/adr/0002-postgresql-transactional-outbox.md),
 [ADR 0003](docs/adr/0003-sqs-fifo-outbox-leasing.md),
-[ADR 0004](docs/adr/0004-read-api-contract-and-query-model.md), and
-[ADR 0005](docs/adr/0005-react-dashboard-and-polling.md), and
-[ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md), and
-[ADR 0007](docs/adr/0007-oidc-pkce-and-object-ownership.md).
+[ADR 0004](docs/adr/0004-read-api-contract-and-query-model.md),
+[ADR 0005](docs/adr/0005-react-dashboard-and-polling.md),
+[ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md),
+[ADR 0007](docs/adr/0007-oidc-pkce-and-object-ownership.md), and
+[ADR 0008](docs/adr/0008-structured-personalized-alert-rules.md).

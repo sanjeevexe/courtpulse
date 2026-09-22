@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           queryClient.removeQueries({ queryKey: ['me'] });
           if (active) {
             setUser(null);
-            setError('Your session expired. Sign in again to continue with My Games.');
+            setError('Your session expired. Sign in again to continue with private data.');
             setStatus('ERROR');
           }
         });

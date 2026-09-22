@@ -17,6 +17,10 @@ import {
   type GamePage,
   type GameSnapshot,
   type GameSummary,
+  listMyRules,
+  listMyAlerts,
+  type RulePage,
+  type OwnedAlertPage,
 } from './client';
 
 const snapshotEtags = new Map<string, string>();
@@ -85,6 +89,26 @@ export function useAlerts(gameId: string) {
     queryFn: ({ pageParam }) => listAlerts(gameId, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (page: AlertPage) => page.nextCursor ?? undefined,
+  });
+}
+
+export function useMyRules(accessToken: string | null, authenticated: boolean) {
+  return useInfiniteQuery({
+    queryKey: ['me', 'rules'],
+    queryFn: ({ pageParam }) => listMyRules(accessToken ?? '', pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page: RulePage) => page.nextCursor ?? undefined,
+    enabled: authenticated && accessToken !== null,
+  });
+}
+
+export function useMyAlerts(accessToken: string | null, authenticated: boolean) {
+  return useInfiniteQuery({
+    queryKey: ['me', 'alerts'],
+    queryFn: ({ pageParam }) => listMyAlerts(accessToken ?? '', pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page: OwnedAlertPage) => page.nextCursor ?? undefined,
+    enabled: authenticated && accessToken !== null,
   });
 }
 

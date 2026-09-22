@@ -144,6 +144,25 @@ describe('OIDC browser authentication', () => {
     expect(oidc.removeUser).toHaveBeenCalledOnce();
   });
 
+  it('clears every prior identity cache before installing a callback identity', async () => {
+    enableAuthentication();
+    let complete!: (value: typeof authenticatedUser) => void;
+    oidc.signinRedirectCallback.mockImplementation(() => new Promise((resolve) => {
+      complete = resolve;
+    }));
+    const { queryClient } = renderApp('/auth/callback?code=safe-code');
+    queryClient.setQueryData(['me', 'followed-games'], { items: [{ gameId: 'user-a-game' }] });
+    queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'user-a-rule' }] });
+    queryClient.setQueryData(['me', 'alerts'], { items: [{ id: 'user-a-alert' }] });
+
+    await vi.waitFor(() => expect(oidc.signinRedirectCallback).toHaveBeenCalledOnce());
+    complete({ ...authenticatedUser, profile: { sub: 'user-b' } });
+    expect(await screen.findByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+    expect(queryClient.getQueryData(['me', 'followed-games'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'rules'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'alerts'])).toBeUndefined();
+  });
+
   it('shows authenticated state, follows and unfollows, and logs out', async () => {
     enableAuthentication();
     oidc.getUser.mockResolvedValue(authenticatedUser);
@@ -181,11 +200,15 @@ describe('OIDC browser authentication', () => {
     const user = userEvent.setup();
     const { queryClient } = renderApp('/');
     queryClient.setQueryData(['me', 'followed-games'], { items: [{ gameId: 'private-game' }] });
+    queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'private-rule' }] });
+    queryClient.setQueryData(['me', 'alerts'], { items: [{ id: 'private-alert' }] });
 
     await user.click(await screen.findByRole('button', { name: 'Sign out' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('signed out locally');
     expect(document.body).not.toHaveTextContent('provider logout details');
     expect(queryClient.getQueryData(['me', 'followed-games'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'rules'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'alerts'])).toBeUndefined();
     expect(oidc.removeUser).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
@@ -209,9 +232,13 @@ describe('OIDC browser authentication', () => {
     expect(await screen.findByText('Your account is not permitted to change this follow.')).toBeVisible();
 
     queryClient.setQueryData(['me', 'followed-games'], { items: [{ gameId: 'private-game' }] });
+    queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'private-rule' }] });
+    queryClient.setQueryData(['me', 'alerts'], { items: [{ id: 'private-alert' }] });
     act(() => { oidc.expired?.(); });
     expect(await screen.findByText(/session expired/i)).toBeVisible();
     expect(oidc.removeUser).toHaveBeenCalled();
     expect(queryClient.getQueryData(['me', 'followed-games'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'rules'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'alerts'])).toBeUndefined();
   });
 });

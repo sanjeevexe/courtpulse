@@ -1,6 +1,5 @@
 package com.courtpulse.queuereplay;
 
-import com.courtpulse.domain.alert.PlayerMilestoneRule;
 import com.courtpulse.messaging.consumer.CanonicalEventEnvelopeValidator;
 import com.courtpulse.messaging.consumer.GameEventQueueConsumer;
 import com.courtpulse.messaging.publisher.OutboxPublisher;
@@ -12,6 +11,9 @@ import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FixtureIngestionService;
 import com.courtpulse.persistence.JdbcFixtureRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
+import com.courtpulse.persistence.JdbcAlertRuleRepository;
+import com.courtpulse.persistence.RuleEngineMetrics;
+import com.courtpulse.persistence.MicrometerRuleEngineMetrics;
 import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.JdbcOutboxRepository;
@@ -21,8 +23,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -73,6 +75,16 @@ public class QueueReplayConfiguration {
     }
 
     @Bean
+    JdbcAlertRuleRepository alertRuleRepository(JdbcClient jdbc, ObjectMapper mapper) {
+        return new JdbcAlertRuleRepository(jdbc, mapper);
+    }
+
+    @Bean
+    RuleEngineMetrics ruleEngineMetrics(MeterRegistry registry) {
+        return new MicrometerRuleEngineMetrics(registry);
+    }
+
+    @Bean
     JdbcInspectionRepository inspectionRepository(JdbcClient jdbc) {
         return new JdbcInspectionRepository(jdbc);
     }
@@ -89,15 +101,18 @@ public class QueueReplayConfiguration {
     @Bean
     DurableGameProcessor durableGameProcessor(
             JdbcGameProcessingRepository processing,
+            JdbcAlertRuleRepository rules,
             JdbcOutboxRepository outbox,
             TransactionTemplate transactions,
-            Clock clock) {
+            Clock clock,
+            RuleEngineMetrics metrics) {
         return new DurableGameProcessor(
                 processing,
                 outbox,
                 transactions,
-                List.of(new PlayerMilestoneRule("milestone-player-ace-10", "player_ace", 10)),
-                clock);
+                rules,
+                clock,
+                metrics);
     }
 
     @Bean

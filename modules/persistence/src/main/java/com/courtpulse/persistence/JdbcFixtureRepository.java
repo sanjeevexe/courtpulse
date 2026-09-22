@@ -73,6 +73,28 @@ public final class JdbcFixtureRepository {
                         """)
                 .params(Map.of("gameId", game.gameId(), "now", SqlTime.offset(now)))
                 .update();
+
+        UUID systemRuleId = SystemDemoRuleId.forGame(game.gameId());
+        jdbc.sql("""
+                        INSERT INTO alert_rules (
+                            id, owner_subject, game_id, rule_type, enabled, player_id,
+                            points_threshold, version, created_at, updated_at)
+                        VALUES (
+                            :id, NULL, :gameId, 'PLAYER_POINTS', TRUE, 'player_ace',
+                            10, 1, :now, :now)
+                        ON CONFLICT DO NOTHING
+                        """)
+                .param("id", systemRuleId)
+                .param("gameId", game.gameId())
+                .param("now", SqlTime.offset(now))
+                .update();
+        jdbc.sql("""
+                        INSERT INTO game_scoring_runs (game_id, team_id, points, start_sequence)
+                        VALUES (:gameId, NULL, 0, NULL)
+                        ON CONFLICT (game_id) DO NOTHING
+                        """)
+                .param("gameId", game.gameId())
+                .update();
     }
 
     public RawPayloadInsert insertOrObserveRaw(LoadedSourceEvent sourceEvent, Instant now) {

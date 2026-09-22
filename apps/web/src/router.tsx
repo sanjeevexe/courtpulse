@@ -5,6 +5,8 @@ import { GameSlatePage } from './pages/GameSlatePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { MyGamesPage } from './pages/MyGamesPage';
+import { MyRulesPage } from './pages/MyRulesPage';
+import { MyAlertsPage } from './pages/MyAlertsPage';
 
 export const router = createBrowserRouter([
   {
@@ -13,6 +15,8 @@ export const router = createBrowserRouter([
       { path: '/', element: <GameSlatePage /> },
       { path: '/games/:gameId', element: <GameDetailPage /> },
       { path: '/my-games', element: <MyGamesPage /> },
+      { path: '/my-rules', element: <MyRulesPage /> },
+      { path: '/my-alerts', element: <MyAlertsPage /> },
       { path: '/auth/callback', element: <AuthCallbackPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

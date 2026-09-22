@@ -207,6 +207,7 @@ public final class JdbcCourtPulseReadRepository {
                                title, context::TEXT AS context, status, created_at
                         FROM alert_instances
                         WHERE game_id = :gameId
+                          AND owner_subject IS NULL
                         """ + predicate + """
                         ORDER BY created_at DESC, trigger_key ASC
                         LIMIT :fetchSize

@@ -68,13 +68,16 @@ export function GameDetailPage() {
             {snapshotQuery.isFetching ? 'Refreshing…' : 'Refresh score'}
           </button>
           {auth.status === 'AUTHENTICATED' ? (
-            <button
-              className="button button--secondary"
-              disabled={followedQuery.isPending || followMutation.isPending}
-              onClick={() => followMutation.mutate()}
-            >
-              {followMutation.isPending ? 'Saving…' : followed ? 'Unfollow game' : 'Follow game'}
-            </button>
+            <>
+              <Link className="button button--secondary" to={`/my-rules?gameId=${encodeURIComponent(gameId)}`}>Create an alert</Link>
+              <button
+                className="button button--secondary"
+                disabled={followedQuery.isPending || followMutation.isPending}
+                onClick={() => followMutation.mutate()}
+              >
+                {followMutation.isPending ? 'Saving…' : followed ? 'Unfollow game' : 'Follow game'}
+              </button>
+            </>
           ) : null}
         </div>
       </div>

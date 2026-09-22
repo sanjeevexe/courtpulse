@@ -89,6 +89,11 @@ class DurablePostgresIntegrationTest {
         assertEquals(20, counts.canonicalEvents());
         assertEquals(1, counts.gameCheckpoints());
         assertEquals(20, counts.outboxRecords());
+        JdbcClient jdbc = JdbcClient.create(dataSource);
+        assertEquals(SystemDemoRuleId.forGame(fixture.game().gameId()),
+                jdbc.sql("SELECT id FROM alert_rules WHERE game_id = :gameId")
+                        .param("gameId", fixture.game().gameId())
+                        .query(java.util.UUID.class).single());
     }
 
     @Test
@@ -122,6 +127,18 @@ class DurablePostgresIntegrationTest {
         assertEquals(20, services.inspection().counts().processedEvents());
         assertEquals(1, services.inspection().counts().alertInstances());
         assertEquals(1, services.processing().listAlerts(fixture.game().gameId()).size());
+        JdbcClient jdbc = JdbcClient.create(dataSource);
+        String runBeforeRedelivery = jdbc.sql("""
+                        SELECT team_id || '|' || points || '|' || start_sequence
+                        FROM game_scoring_runs WHERE game_id = :gameId
+                        """).param("gameId", fixture.game().gameId()).query(String.class).single();
+        services.processing().listEventIds(fixture.game().gameId())
+                .forEach(services.processor()::processEvent);
+        String runAfterRedelivery = jdbc.sql("""
+                        SELECT team_id || '|' || points || '|' || start_sequence
+                        FROM game_scoring_runs WHERE game_id = :gameId
+                        """).param("gameId", fixture.game().gameId()).query(String.class).single();
+        assertEquals(runBeforeRedelivery, runAfterRedelivery);
     }
 
     @Test

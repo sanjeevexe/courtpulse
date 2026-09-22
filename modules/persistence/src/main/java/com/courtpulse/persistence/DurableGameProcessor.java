@@ -2,12 +2,15 @@ package com.courtpulse.persistence;
 
 import com.courtpulse.domain.alert.Alert;
 import com.courtpulse.domain.alert.AlertRule;
+import com.courtpulse.domain.alert.RuleEvaluationFacts;
+import com.courtpulse.domain.alert.ScoringRunRule;
 import com.courtpulse.domain.event.CanonicalEvent;
 import com.courtpulse.domain.game.GameReducer;
 import com.courtpulse.domain.game.GameState;
 import com.courtpulse.domain.replay.StateChecksum;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +20,8 @@ public final class DurableGameProcessor {
     private final JdbcGameProcessingRepository repository;
     private final JdbcOutboxRepository outbox;
     private final TransactionTemplate transactions;
-    private final List<? extends AlertRule> rules;
+    private final AlertRuleSource rules;
+    private final RuleEngineMetrics metrics;
     private final Clock clock;
 
     public DurableGameProcessor(
@@ -26,11 +30,22 @@ public final class DurableGameProcessor {
             TransactionTemplate transactions,
             List<? extends AlertRule> rules,
             Clock clock) {
+        this(repository, outbox, transactions, new FixedAlertRuleSource(rules), clock, RuleEngineMetrics.NONE);
+    }
+
+    public DurableGameProcessor(
+            JdbcGameProcessingRepository repository,
+            JdbcOutboxRepository outbox,
+            TransactionTemplate transactions,
+            AlertRuleSource rules,
+            Clock clock,
+            RuleEngineMetrics metrics) {
         this.repository = repository;
         this.outbox = outbox;
         this.transactions = transactions;
-        this.rules = List.copyOf(rules);
+        this.rules = rules;
         this.clock = clock;
+        this.metrics = metrics;
     }
 
     public DurableProcessingResult processEvent(String eventId) {
@@ -61,12 +76,19 @@ public final class DurableGameProcessor {
         }
 
         GameState nextState = GameReducer.apply(previousState, event);
+        long lookupStarted = System.nanoTime();
+        AlertRuleBatch ruleBatch = rules.relevantRules(event);
+        metrics.lookup(
+                Duration.ofNanos(System.nanoTime() - lookupStarted),
+                ruleBatch.enabledRules().size(),
+                ruleBatch.disabledCount());
         String checksum = StateChecksum.sha256(nextState);
         Instant now = clock.instant();
         repository.saveCheckpoint(nextState, checksum, now);
         if (!repository.insertProcessed(event, now)) {
             throw new IllegalStateException("Processed-event uniqueness conflict for " + event.identity());
         }
+        var currentRun = repository.advanceScoringRun(event);
         outbox.insert(
                 "GAME_STATE_UPDATED:" + event.eventId(),
                 "GAME",
@@ -81,22 +103,38 @@ public final class DurableGameProcessor {
                 now);
 
         List<Alert> createdAlerts = new ArrayList<>();
-        for (AlertRule rule : rules) {
-            rule.evaluate(previousState, nextState, event).ifPresent(alert -> {
+        for (AlertRule rule : ruleBatch.enabledRules()) {
+            long evaluationStarted = System.nanoTime();
+            RuleEvaluationFacts facts = new RuleEvaluationFacts(
+                    previousState,
+                    nextState,
+                    event,
+                    rule instanceof ScoringRunRule scoringRun && currentRun != null
+                            && scoringRun.teamId().equals(currentRun.teamId())
+                            ? currentRun : null);
+            var evaluated = rule.evaluate(facts);
+            metrics.evaluated(rule.ruleType(), Duration.ofNanos(System.nanoTime() - evaluationStarted));
+            evaluated.ifPresent(alert -> {
+                metrics.matched(rule.ruleType());
                 if (repository.insertAlert(alert, now)) {
                     createdAlerts.add(alert);
-                    outbox.insert(
-                            "ALERT_CREATED:" + alert.triggerKey(),
-                            "ALERT",
-                            alert.triggerKey(),
-                            "ALERT_CREATED",
-                            Map.of(
-                                    "gameId", alert.gameId(),
-                                    "stateVersion", nextState.appliedEventIdentities().size(),
-                                    "ruleId", alert.ruleId(),
-                                    "triggerKey", alert.triggerKey(),
-                                    "triggeringEventId", alert.triggeringEventId()),
-                            now);
+                    metrics.alertCreated(rule.ruleType());
+                    if (alert.ownerSubject() == null) {
+                        outbox.insert(
+                                "ALERT_CREATED:" + alert.triggerKey(),
+                                "ALERT",
+                                alert.triggerKey(),
+                                "ALERT_CREATED",
+                                Map.of(
+                                        "gameId", alert.gameId(),
+                                        "stateVersion", nextState.appliedEventIdentities().size(),
+                                        "ruleId", alert.ruleId(),
+                                        "triggerKey", alert.triggerKey(),
+                                        "triggeringEventId", alert.triggeringEventId()),
+                                now);
+                    }
+                } else {
+                    metrics.duplicateSuppressed(rule.ruleType());
                 }
             });
         }

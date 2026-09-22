@@ -12,6 +12,12 @@ export type FollowedGamePage = components['schemas']['FollowedGamePage'];
 export type FollowedGame = components['schemas']['FollowedGame'];
 export type DataStatus = components['schemas']['DataStatus'];
 export type ProblemDetails = components['schemas']['Problem'];
+export type AlertRule = components['schemas']['AlertRule'];
+export type CreateAlertRule = components['schemas']['CreateAlertRule'];
+export type RulePage = components['schemas']['RulePage'];
+export type UpdateAlertRule = components['schemas']['UpdateAlertRule'];
+export type OwnedAlert = components['schemas']['OwnedAlert'];
+export type OwnedAlertPage = components['schemas']['OwnedAlertPage'];
 
 type FailureKind = 'problem' | 'network' | 'timeout' | 'malformed';
 
@@ -174,4 +180,57 @@ export async function unfollowGame(accessToken: string, gameId: string): Promise
     bearer(accessToken, 'DELETE'),
   );
   if (!response.ok) await expectOk<never>(response);
+}
+
+export async function listMyRules(
+  accessToken: string,
+  cursor: string | null,
+  limit = 20,
+): Promise<RulePage> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (cursor) search.set('cursor', cursor);
+  return expectOk<RulePage>(await apiFetch(`/api/v1/me/rules?${search.toString()}`, bearer(accessToken)));
+}
+
+export async function createRule(
+  accessToken: string,
+  idempotencyKey: string,
+  request: CreateAlertRule,
+): Promise<AlertRule> {
+  return expectOk<AlertRule>(await apiFetch('/api/v1/me/rules', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Idempotency-Key': idempotencyKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  }));
+}
+
+export async function updateRule(
+  accessToken: string,
+  ruleId: string,
+  request: UpdateAlertRule,
+): Promise<AlertRule> {
+  return expectOk<AlertRule>(await apiFetch(`/api/v1/me/rules/${encodeURIComponent(ruleId)}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  }));
+}
+
+export async function deleteRule(accessToken: string, ruleId: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/me/rules/${encodeURIComponent(ruleId)}`, bearer(accessToken, 'DELETE'));
+  if (!response.ok) await expectOk<never>(response);
+}
+
+export async function listMyAlerts(
+  accessToken: string,
+  cursor: string | null,
+  limit = 20,
+): Promise<OwnedAlertPage> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (cursor) search.set('cursor', cursor);
+  return expectOk<OwnedAlertPage>(await apiFetch(`/api/v1/me/alerts?${search.toString()}`, bearer(accessToken)));
 }

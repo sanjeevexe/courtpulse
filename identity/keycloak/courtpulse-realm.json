@@ -22,12 +22,13 @@
       "redirectUris": [
         "http://127.0.0.1:4173/auth/callback",
         "http://localhost:4173/auth/callback",
-        "http://127.0.0.1:55173/auth/callback"
+        "http://127.0.0.1:55173/auth/callback",
+        "http://127.0.0.1:56173/auth/callback"
       ],
-      "webOrigins": ["http://127.0.0.1:4173", "http://localhost:4173", "http://127.0.0.1:55173"],
+      "webOrigins": ["http://127.0.0.1:4173", "http://localhost:4173", "http://127.0.0.1:55173", "http://127.0.0.1:56173"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://127.0.0.1:4173##http://localhost:4173##http://127.0.0.1:55173"
+        "post.logout.redirect.uris": "http://127.0.0.1:4173##http://localhost:4173##http://127.0.0.1:55173##http://127.0.0.1:56173"
       },
       "protocolMappers": [
         {

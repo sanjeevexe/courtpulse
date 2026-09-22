@@ -2,6 +2,10 @@ package com.courtpulse.api.http;
 
 import com.courtpulse.query.GameNotFoundException;
 import com.courtpulse.query.InvalidCursorException;
+import com.courtpulse.api.rules.RuleConflictException;
+import com.courtpulse.api.rules.RuleNotFoundException;
+import com.courtpulse.api.rules.RuleQuotaExceededException;
+import com.courtpulse.api.rules.RuleValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
@@ -13,6 +17,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -29,11 +34,40 @@ public final class ApiProblemHandler {
                 exception.getMessage(), request);
     }
 
+    @ExceptionHandler(RuleNotFoundException.class)
+    ResponseEntity<ProblemDetail> ruleNotFound(
+            RuleNotFoundException exception, HttpServletRequest request) {
+        return problem(HttpStatus.NOT_FOUND, "rule_not_found", "Alert rule not found",
+                exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(RuleConflictException.class)
+    ResponseEntity<ProblemDetail> conflict(
+            RuleConflictException exception, HttpServletRequest request) {
+        return problem(HttpStatus.CONFLICT, "rule_conflict", "Alert rule conflict",
+                exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(RuleValidationException.class)
+    ResponseEntity<ProblemDetail> unprocessable(
+            RuleValidationException exception, HttpServletRequest request) {
+        return problem(HttpStatus.UNPROCESSABLE_CONTENT, "invalid_rule", "Invalid alert rule",
+                exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(RuleQuotaExceededException.class)
+    ResponseEntity<ProblemDetail> quota(
+            RuleQuotaExceededException exception, HttpServletRequest request) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, "rule_quota_exceeded", "Alert rule quota exceeded",
+                exception.getMessage(), request);
+    }
+
     @ExceptionHandler({
         InvalidCursorException.class,
         IllegalArgumentException.class,
         ConstraintViolationException.class,
         MethodArgumentNotValidException.class,
+        HttpMessageNotReadableException.class,
         HandlerMethodValidationException.class,
         MethodArgumentTypeMismatchException.class
     })

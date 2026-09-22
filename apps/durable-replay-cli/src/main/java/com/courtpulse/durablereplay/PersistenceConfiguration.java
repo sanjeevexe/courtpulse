@@ -1,11 +1,12 @@
 package com.courtpulse.durablereplay;
 
-import com.courtpulse.domain.alert.PlayerMilestoneRule;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.DurableReplayCoordinator;
 import com.courtpulse.persistence.FixtureIngestionService;
 import com.courtpulse.persistence.JdbcFixtureRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
+import com.courtpulse.persistence.JdbcAlertRuleRepository;
+import com.courtpulse.persistence.RuleEngineMetrics;
 import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxRepository;
 import com.courtpulse.persistence.JdbcReplayRunRepository;
@@ -13,7 +14,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Clock;
-import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -54,6 +54,11 @@ public class PersistenceConfiguration {
     }
 
     @Bean
+    JdbcAlertRuleRepository alertRuleRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
+        return new JdbcAlertRuleRepository(jdbc, objectMapper);
+    }
+
+    @Bean
     JdbcInspectionRepository inspectionRepository(JdbcClient jdbc) {
         return new JdbcInspectionRepository(jdbc);
     }
@@ -75,6 +80,7 @@ public class PersistenceConfiguration {
     @Bean
     DurableGameProcessor durableGameProcessor(
             JdbcGameProcessingRepository repository,
+            JdbcAlertRuleRepository rules,
             JdbcOutboxRepository outbox,
             TransactionTemplate transactions,
             Clock clock) {
@@ -82,8 +88,9 @@ public class PersistenceConfiguration {
                 repository,
                 outbox,
                 transactions,
-                List.of(new PlayerMilestoneRule("milestone-player-ace-10", "player_ace", 10)),
-                clock);
+                rules,
+                clock,
+                RuleEngineMetrics.NONE);
     }
 
     @Bean

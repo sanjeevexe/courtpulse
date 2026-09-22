@@ -13,6 +13,7 @@ dependencies {
     implementation("org.springframework:spring-tx")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+    implementation("io.micrometer:micrometer-core")
 
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
     testImplementation(project(":modules:testkit"))

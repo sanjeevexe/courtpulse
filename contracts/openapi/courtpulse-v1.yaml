@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: CourtPulse Read API
-  version: 1.1.0
-  description: Public durable basketball reads plus OIDC-protected user ownership and operations.
+  version: 1.2.0
+  description: Public durable basketball reads plus OIDC-protected ownership, structured rules, and private alerts.
 servers:
   - url: http://localhost:8080
 paths:
@@ -112,6 +112,21 @@ paths:
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/operations/rules:
+    get:
+      summary: Read sanitized aggregate rule-engine health
+      security: [{oidcBearer: ['courtpulse:ops']}]
+      responses:
+        '200':
+          description: Sanitized aggregate rule counts
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/RuleOperations'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/v1/me:
     get:
       summary: Read the authenticated application user
@@ -196,6 +211,134 @@ paths:
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/rules:
+    get:
+      summary: List alert rules owned by the authenticated user
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100}}
+        - {name: cursor, in: query, required: false, schema: {type: string, maxLength: 2048}}
+      responses:
+        '200':
+          description: Stable owner-scoped rule page
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/RulePage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    post:
+      summary: Create a structured alert rule idempotently
+      security: [{oidcBearer: []}]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 100, pattern: '^[A-Za-z0-9._:-]+$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateAlertRule'}
+      responses:
+        '200':
+          description: Identical idempotent request retained
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            Location: {description: Owned alert rule, schema: {type: string}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/AlertRule'}}}
+        '201':
+          description: Alert rule created
+          headers:
+            X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}
+            Location: {description: Owned alert rule, schema: {type: string}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/AlertRule'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/Unprocessable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/rules/{ruleId}:
+    get:
+      summary: Read one owned alert rule
+      security: [{oidcBearer: []}]
+      parameters: [{$ref: '#/components/parameters/RuleId'}]
+      responses:
+        '200':
+          description: Owned alert rule
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/AlertRule'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/RuleNotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    patch:
+      summary: Enable or disable an owned alert rule with optimistic concurrency
+      security: [{oidcBearer: []}]
+      parameters: [{$ref: '#/components/parameters/RuleId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/UpdateAlertRule'}}}
+      responses:
+        '200':
+          description: Updated alert rule
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/AlertRule'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/RuleNotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    delete:
+      summary: Delete an owned alert rule
+      security: [{oidcBearer: []}]
+      parameters: [{$ref: '#/components/parameters/RuleId'}]
+      responses:
+        '204':
+          description: Alert rule deleted
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/RuleNotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/alerts:
+    get:
+      summary: List private alerts owned by the authenticated user
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100}}
+        - {name: cursor, in: query, required: false, schema: {type: string, maxLength: 2048}}
+      responses:
+        '200':
+          description: Stable owner-scoped alert page
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/OwnedAlertPage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
 components:
   securitySchemes:
     oidcBearer:
@@ -212,6 +355,7 @@ components:
     CorrelationId: {description: Safe request correlation identifier, schema: {type: string}}
   parameters:
     GameId: {name: gameId, in: path, required: true, schema: {type: string, maxLength: 200}}
+    RuleId: {name: ruleId, in: path, required: true, schema: {type: string, format: uuid}}
   responses:
     Unauthorized:
       description: Missing, expired, or invalid bearer token
@@ -227,6 +371,22 @@ components:
       content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
     NotFound:
       description: Unknown game
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    RuleNotFound:
+      description: Alert rule not found or not owned by the authenticated user
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Conflict:
+      description: Idempotency key or optimistic version conflict
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Unprocessable:
+      description: Structurally valid rule cannot be accepted
+      headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    TooManyRequests:
+      description: Per-user alert-rule quota exceeded
       headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
       content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
     MethodNotAllowed:
@@ -375,6 +535,148 @@ components:
         context: {type: object, additionalProperties: {type: string}}
         status: {type: string}
         createdAt: {type: string, format: date-time}
+    RuleType: {type: string, enum: [PLAYER_POINTS, CLOSE_GAME, SCORING_RUN]}
+    CreateAlertRule:
+      oneOf:
+        - {$ref: '#/components/schemas/CreatePlayerPointsRule'}
+        - {$ref: '#/components/schemas/CreateCloseGameRule'}
+        - {$ref: '#/components/schemas/CreateScoringRunRule'}
+      discriminator:
+        propertyName: type
+        mapping:
+          PLAYER_POINTS: '#/components/schemas/CreatePlayerPointsRule'
+          CLOSE_GAME: '#/components/schemas/CreateCloseGameRule'
+          SCORING_RUN: '#/components/schemas/CreateScoringRunRule'
+    CreatePlayerPointsRule:
+      type: object
+      additionalProperties: false
+      required: [type, gameId, playerId, pointsThreshold]
+      properties:
+        type: {type: string, enum: [PLAYER_POINTS]}
+        gameId: {type: string, minLength: 1, maxLength: 200}
+        playerId: {type: string, minLength: 1, maxLength: 200}
+        pointsThreshold: {type: integer, format: int32, minimum: 1, maximum: 200}
+        enabled: {type: boolean, default: true}
+    CreateCloseGameRule:
+      type: object
+      additionalProperties: false
+      required: [type, gameId, maximumMargin, eligiblePeriod, maximumClockMillisRemaining]
+      properties:
+        type: {type: string, enum: [CLOSE_GAME]}
+        gameId: {type: string, minLength: 1, maxLength: 200}
+        maximumMargin: {type: integer, format: int32, minimum: 1, maximum: 20}
+        eligiblePeriod: {type: integer, format: int32, minimum: 1, maximum: 4}
+        maximumClockMillisRemaining: {type: integer, format: int64, minimum: 0, maximum: 720000}
+        enabled: {type: boolean, default: true}
+    CreateScoringRunRule:
+      type: object
+      additionalProperties: false
+      required: [type, gameId, teamId, pointsThreshold]
+      properties:
+        type: {type: string, enum: [SCORING_RUN]}
+        gameId: {type: string, minLength: 1, maxLength: 200}
+        teamId: {type: string, minLength: 1, maxLength: 200}
+        pointsThreshold: {type: integer, format: int32, minimum: 1, maximum: 100}
+        enabled: {type: boolean, default: true}
+    UpdateAlertRule:
+      type: object
+      additionalProperties: false
+      required: [enabled, version]
+      properties:
+        enabled: {type: boolean}
+        version: {type: integer, format: int64, minimum: 1}
+    AlertRule:
+      oneOf:
+        - {$ref: '#/components/schemas/PlayerPointsRule'}
+        - {$ref: '#/components/schemas/CloseGameRule'}
+        - {$ref: '#/components/schemas/ScoringRunRule'}
+      discriminator:
+        propertyName: type
+        mapping:
+          PLAYER_POINTS: '#/components/schemas/PlayerPointsRule'
+          CLOSE_GAME: '#/components/schemas/CloseGameRule'
+          SCORING_RUN: '#/components/schemas/ScoringRunRule'
+    PlayerPointsRule:
+      type: object
+      additionalProperties: false
+      required: [id, type, gameId, enabled, playerId, pointsThreshold, version, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [PLAYER_POINTS]}
+        gameId: {type: string}
+        enabled: {type: boolean}
+        playerId: {type: string}
+        pointsThreshold: {type: integer, format: int32}
+        version: {type: integer, format: int64}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CloseGameRule:
+      type: object
+      additionalProperties: false
+      required: [id, type, gameId, enabled, maximumMargin, eligiblePeriod, maximumClockMillisRemaining, version, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [CLOSE_GAME]}
+        gameId: {type: string}
+        enabled: {type: boolean}
+        maximumMargin: {type: integer, format: int32}
+        eligiblePeriod: {type: integer, format: int32}
+        maximumClockMillisRemaining: {type: integer, format: int64}
+        version: {type: integer, format: int64}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    ScoringRunRule:
+      type: object
+      additionalProperties: false
+      required: [id, type, gameId, enabled, teamId, pointsThreshold, version, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [SCORING_RUN]}
+        gameId: {type: string}
+        enabled: {type: boolean}
+        teamId: {type: string}
+        pointsThreshold: {type: integer, format: int32}
+        version: {type: integer, format: int64}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    RulePage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AlertRule'}}
+        nextCursor: {type: [string, 'null']}
+    OwnedAlertPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/OwnedAlert'}}
+        nextCursor: {type: [string, 'null']}
+    OwnedAlert:
+      type: object
+      additionalProperties: false
+      required: [id, ruleId, ruleType, gameId, triggeringEventId, title, context, status, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        ruleId: {type: string}
+        ruleType: {$ref: '#/components/schemas/RuleType'}
+        gameId: {type: string}
+        triggeringEventId: {type: string}
+        title: {type: string}
+        context: {type: object, additionalProperties: {type: string}}
+        status: {type: string}
+        createdAt: {type: string, format: date-time}
+    RuleOperations:
+      type: object
+      additionalProperties: false
+      required: [ownedRules, enabledOwnedRules, disabledOwnedRules, systemRules, privateAlerts]
+      properties:
+        ownedRules: {type: integer, format: int64}
+        enabledOwnedRules: {type: integer, format: int64}
+        disabledOwnedRules: {type: integer, format: int64}
+        systemRules: {type: integer, format: int64}
+        privateAlerts: {type: integer, format: int64}
     Processing:
       type: object
       required: [pending, publishing, retryScheduled, sent, failed, deferredNotifications, blockedGames, processedEvents, alerts, apiTimestamp]
