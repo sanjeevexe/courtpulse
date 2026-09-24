@@ -131,26 +131,28 @@ public final class RealtimeHub {
     }
 
     public int publish(RealtimeOutboxRecord record) {
+        boolean correctionResync = "RESYNC_REQUIRED".equals(record.eventType());
         RealtimeServerMessage message = message(
                 record.eventType(),
                 record.gameId(),
                 record.stateVersion(),
                 record.eventId(),
                 record.triggerKey(),
-                null,
-                null,
+                correctionResync ? "game_correction" : null,
+                correctionResync ? "Refresh the authoritative HTTP resources" : null,
                 record.outboxId().toString());
         int delivered = 0;
         for (ClientSession client : sessions.values()) {
             if (!record.gameId().equals(client.gameId)) {
                 continue;
             }
-            if (record.stateVersion() < client.highestStateVersion) {
+            if (!correctionResync && record.stateVersion() < client.highestStateVersion) {
                 staleOrDuplicate.increment();
                 continue;
             }
             if (client.offer(message)) {
                 client.highestStateVersion = Math.max(client.highestStateVersion, record.stateVersion());
+                if (correctionResync) resyncs.increment();
                 delivered++;
             }
         }

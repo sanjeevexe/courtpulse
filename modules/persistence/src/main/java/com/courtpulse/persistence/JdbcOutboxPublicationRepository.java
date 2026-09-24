@@ -151,7 +151,8 @@ public final class JdbcOutboxPublicationRepository {
                             SELECT candidate.id
                             FROM outbox candidate
                             WHERE candidate.destination = 'FUTURE_NOTIFICATIONS'
-                              AND candidate.event_type IN ('GAME_STATE_UPDATED', 'ALERT_CREATED')
+                              AND candidate.event_type IN (
+                                  'GAME_STATE_UPDATED', 'ALERT_CREATED', 'RESYNC_REQUIRED')
                               AND (
                                   (candidate.status IN ('PENDING', 'RETRY_SCHEDULED')
                                       AND candidate.next_attempt_at <= :now)
@@ -159,7 +160,7 @@ public final class JdbcOutboxPublicationRepository {
                                   (candidate.status = 'PUBLISHING'
                                       AND candidate.lease_expires_at <= :now)
                               )
-                              AND NOT EXISTS (
+                              AND (candidate.event_type = 'RESYNC_REQUIRED' OR NOT EXISTS (
                                   SELECT 1
                                   FROM outbox older
                                   WHERE older.destination = 'FUTURE_NOTIFICATIONS'
@@ -182,7 +183,7 @@ public final class JdbcOutboxPublicationRepository {
                                             candidate.created_at,
                                             candidate.id)
                                     AND older.status <> 'SENT'
-                              )
+                              ))
                             ORDER BY candidate.message_group_id,
                                      COALESCE(
                                          NULLIF(candidate.payload ->> 'stateVersion', '')::BIGINT,

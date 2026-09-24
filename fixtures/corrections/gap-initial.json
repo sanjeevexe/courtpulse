@@ -1,0 +1,23 @@
+{
+  "fixtureSchemaVersion": 1,
+  "name": "Gap before sequence three",
+  "description": "A separate local game with sequence two missing.",
+  "provenance": "Authored for local CourtPulse gap verification.",
+  "game": {"gameId": "game_gap_001", "homeTeamId": "team_home", "awayTeamId": "team_away"},
+  "events": [
+    {
+      "eventId": "gap-001", "schemaVersion": 1, "gameId": "game_gap_001",
+      "source": "courtpulse-synthetic", "providerEventId": "gap:001", "sequence": 1, "revision": 1,
+      "type": "GAME_STARTED", "period": 1, "clockMillisRemaining": 720000,
+      "occurredAt": "2026-01-01T00:00:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 0, "away": 0}, "points": 0
+    },
+    {
+      "eventId": "gap-003", "schemaVersion": 1, "gameId": "game_gap_001",
+      "source": "courtpulse-synthetic", "providerEventId": "gap:003", "sequence": 3, "revision": 1,
+      "type": "FIELD_GOAL_MADE", "period": 1, "clockMillisRemaining": 600000,
+      "occurredAt": "2026-01-01T00:02:00Z", "teamId": "team_home", "participantIds": ["gap-player"],
+      "scoreAfter": {"home": 2, "away": 0}, "points": 2
+    }
+  ]
+}

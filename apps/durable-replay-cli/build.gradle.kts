@@ -23,6 +23,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(enforcedPlatform("io.zonky.test.postgres:embedded-postgres-binaries-bom:17.10.0"))
     testImplementation("io.zonky.test:embedded-postgres:2.2.2")
+    testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
 }
 
 application {

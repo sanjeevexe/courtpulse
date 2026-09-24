@@ -2,12 +2,19 @@ package com.courtpulse.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.courtpulse.testkit.SyntheticFixtureResources;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.time.Clock;
+
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -98,6 +105,45 @@ class FlywayV6UpgradeIntegrationTest {
                     """).param("schema", schema).query(Long.class).single());
             assertEquals(0L, new JdbcDeliveryWorkRepository(jdbc)
                     .operations(java.time.Instant.now()).backlog());
+        } finally {
+            administrator.sql("DROP SCHEMA " + schema + " CASCADE").update();
+        }
+    }
+
+    @Test
+    void upgradesPopulatedV7CheckpointAndEventHistoryToV8WithoutRewritingThem() {
+        String schema = "correction_upgrade_" + UUID.randomUUID().toString().replace("-", "");
+        JdbcClient administrator = JdbcClient.create(baseDataSource());
+        administrator.sql("CREATE SCHEMA " + schema).update();
+        try {
+            DataSource dataSource = dataSource(schema);
+            Flyway.configure().dataSource(dataSource).schemas(schema).target("7").load().migrate();
+            JdbcClient jdbc = JdbcClient.create(dataSource);
+            var mapper = JsonMapper.builder().addModule(new JavaTimeModule()).build();
+            var transactions = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+            var fixtures = new JdbcFixtureRepository(jdbc, mapper);
+            var outbox = new JdbcOutboxRepository(jdbc, mapper);
+            var processing = new JdbcGameProcessingRepository(jdbc, mapper);
+            var fixture = SyntheticFixtureResources.loadMilestoneGame();
+            new FixtureIngestionService(fixtures, outbox, transactions, Clock.systemUTC())
+                    .importFixture(fixture);
+            String before = processing.readCheckpoint(fixture.game().gameId()).toString();
+
+            Flyway.configure().dataSource(dataSource).schemas(schema).load().migrate();
+
+            assertEquals(before, processing.readCheckpoint(fixture.game().gameId()).toString());
+            assertEquals(20L, jdbc.sql("SELECT count(*) FROM canonical_events")
+                    .query(Long.class).single());
+            assertEquals(20L, jdbc.sql("SELECT count(*) FROM raw_provider_payloads")
+                    .query(Long.class).single());
+            assertEquals(0L, jdbc.sql("SELECT count(*) FROM processed_events")
+                    .query(Long.class).single());
+            assertEquals(0L, jdbc.sql("SELECT count(*) FROM game_reconciliations")
+                    .query(Long.class).single());
+            assertEquals(1L, jdbc.sql("""
+                            SELECT count(*) FROM information_schema.tables
+                            WHERE table_schema = :schema AND table_name = 'reconciliation_selected_events'
+                            """).param("schema", schema).query(Long.class).single());
         } finally {
             administrator.sql("DROP SCHEMA " + schema + " CASCADE").update();
         }

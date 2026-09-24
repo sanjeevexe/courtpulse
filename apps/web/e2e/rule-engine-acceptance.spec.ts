@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Request, type Response } from '@playwright/test';
 
 const acceptance = process.env.COURTPULSE_RULE_ACCEPTANCE === '1';
 const deliveryAcceptance = process.env.COURTPULSE_DELIVERY_ACCEPTANCE === '1';
@@ -71,6 +71,47 @@ async function startPublicSocket(page: Page) {
   ).some((frame) => frame.includes('SUBSCRIPTION_ACKNOWLEDGED')))).toBe(true);
 }
 
+async function createRuleAndVerify(page: Page, ordinal: number, confirmation: Locator) {
+  let sent = 0;
+  let failed = 0;
+  const statuses: number[] = [];
+  const isCreate = (url: string, method: string) =>
+    method === 'POST' && new URL(url).pathname === '/api/v1/me/rules';
+  const onRequest = (request: Request) => {
+    if (isCreate(request.url(), request.method())) {
+      sent++;
+      console.log(`rule-create-${String(ordinal)}: request sent`);
+    }
+  };
+  const onResponse = (response: Response) => {
+    if (isCreate(response.url(), response.request().method())) {
+      statuses.push(response.status());
+      console.log(`rule-create-${String(ordinal)}: response ${String(response.status())}`);
+    }
+  };
+  const onFailure = (request: Request) => {
+    if (isCreate(request.url(), request.method())) failed++;
+  };
+  page.on('request', onRequest);
+  page.on('response', onResponse);
+  page.on('requestfailed', onFailure);
+  try {
+    await page.getByRole('button', { name: 'Create rule' }).click();
+    await expect(confirmation).toBeVisible();
+  } catch (error) {
+    const phase = sent === 0 ? 'request-never-sent'
+      : statuses.some((status) => status >= 400) || failed > 0 ? 'request-failed'
+        : statuses.some((status) => status >= 200 && status < 300)
+          ? 'request-succeeded-ui-unconfirmed' : 'request-sent-no-response';
+    console.error(`rule-create-${String(ordinal)}: ${phase}; requests=${String(sent)}; responses=${statuses.join(',') || 'none'}; networkFailures=${String(failed)}`);
+    throw error;
+  } finally {
+    page.off('request', onRequest);
+    page.off('response', onResponse);
+    page.off('requestfailed', onFailure);
+  }
+}
+
 test('two real OIDC users create private rules before queue replay and see isolated alerts', async ({ page }) => {
   test.setTimeout(360_000);
   await page.goto('/');
@@ -90,21 +131,18 @@ test('two real OIDC users create private rules before queue replay and see isola
   await page.goto(`/my-rules?gameId=${gameId}`);
   await expect(page.getByLabel('Game ID')).toHaveValue(gameId);
   await page.getByLabel('Player ID').fill('player_ace');
-  await page.getByRole('button', { name: 'Create rule' }).click();
-  await expect(page.getByText('player_ace · 10 points')).toBeVisible();
+  await createRuleAndVerify(page, 1, page.getByText('player_ace · 10 points'));
 
   await page.getByLabel('Template').selectOption('CLOSE_GAME');
   await page.getByLabel('Maximum margin').fill('3');
   await page.getByLabel('Eligible period').fill('4');
   await page.getByLabel('Clock seconds remaining').fill('720');
-  await page.getByRole('button', { name: 'Create rule' }).click();
-  await expect(page.getByText(/Within 3 points · period 4/)).toBeVisible();
+  await createRuleAndVerify(page, 2, page.getByText(/Within 3 points · period 4/));
 
   await page.getByLabel('Template').selectOption('SCORING_RUN');
   await page.getByLabel('Team ID').fill('team_home');
   await page.getByLabel('Unanswered points').fill('5');
-  await page.getByRole('button', { name: 'Create rule' }).click();
-  await expect(page.getByText('team_home · 5 unanswered')).toBeVisible();
+  await createRuleAndVerify(page, 3, page.getByText('team_home · 5 unanswered'));
   await expect(page.locator('article.rule-card')).toHaveCount(3);
   if (deliveryAcceptance) {
     await page.goto('/notification-settings');

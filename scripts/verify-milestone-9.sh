@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 repository="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project='courtpulse-m9-acceptance'
-artifact_dir="${repository}/build/verification/milestone-9"
 suffix="$(openssl rand -hex 4)"
+artifact_dir="${repository}/build/verification/milestone-9/${suffix}"
 export COURTPULSE_COMPOSE_PROJECT="${project}"
 
 export COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
@@ -126,31 +126,100 @@ queue_url="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-url \
 # The automatic worker has already delivered three messages; pause it so one
 # deterministic consumer owns each receive during the poison-path assertion.
 "${compose[@]}" stop delivery-worker >"${artifact_dir}/worker-paused-for-dlq.txt"
+docker inspect --format '{{.State.Status}} finished={{.State.FinishedAt}}' \
+  "${project}-delivery-worker-1" >"${artifact_dir}/worker-stopped-state.txt"
 dlq_url="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-url \
   --queue-name alert-deliveries-dlq.fifo --query QueueUrl --output text | tr -d '\r')"
+queue_arn="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-attributes \
+  --queue-url "${queue_url}" --attribute-names QueueArn \
+  --query 'Attributes.QueueArn' --output text | tr -d '\r')"
 dlq_arn="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-attributes \
   --queue-url "${dlq_url}" --attribute-names QueueArn \
   --query 'Attributes.QueueArn' --output text | tr -d '\r')"
+printf 'source_url=%s\nsource_arn=%s\ndlq_url=%s\ndlq_arn=%s\n' \
+  "${queue_url}" "${queue_arn}" "${dlq_url}" "${dlq_arn}" \
+  >"${artifact_dir}/delivery-queue-identity.txt"
+observe_delivery_queues() {
+  local label="$1"
+  local source_counts dlq_counts
+  source_counts="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-attributes \
+    --queue-url "${queue_url}" --attribute-names ApproximateNumberOfMessages \
+      ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed \
+    --query Attributes --output json)"
+  dlq_counts="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-attributes \
+    --queue-url "${dlq_url}" --attribute-names ApproximateNumberOfMessages \
+      ApproximateNumberOfMessagesNotVisible ApproximateNumberOfMessagesDelayed \
+    --query Attributes --output json)"
+  jq -cn --arg at "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" --arg label "${label}" \
+    --argjson source "${source_counts}" --argjson dlq "${dlq_counts}" \
+    '{at:$at,label:$label,source:$source,dlq:$dlq}' \
+    | tee -a "${artifact_dir}/delivery-queue-observations.jsonl"
+}
 delivery_attributes="{\"VisibilityTimeout\":\"2\",\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"${dlq_arn}\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
 "${compose[@]}" exec -T localstack awslocal sqs set-queue-attributes \
   --queue-url "${queue_url}" --attributes "${delivery_attributes}"
 "${compose[@]}" exec -T localstack awslocal sqs get-queue-attributes \
   --queue-url "${queue_url}" --attribute-names VisibilityTimeout RedrivePolicy \
   >"${artifact_dir}/delivery-queue-attributes.json"
+[[ "$(jq -r '.Attributes.VisibilityTimeout' "${artifact_dir}/delivery-queue-attributes.json")" == 2 ]]
+[[ "$(jq -r '.Attributes.RedrivePolicy | fromjson | .maxReceiveCount' \
+  "${artifact_dir}/delivery-queue-attributes.json")" == 3 ]]
+[[ "$(jq -r '.Attributes.RedrivePolicy | fromjson | .deadLetterTargetArn' \
+  "${artifact_dir}/delivery-queue-attributes.json")" == "${dlq_arn}" ]]
+before_poison="$(observe_delivery_queues 'before_poison_send')"
+[[ "$(jq -r '.source.ApproximateNumberOfMessages' <<<"${before_poison}")" == 0 ]]
+[[ "$(jq -r '.source.ApproximateNumberOfMessagesNotVisible' <<<"${before_poison}")" == 0 ]]
 "${compose[@]}" exec -T localstack awslocal sqs send-message \
   --queue-url "${queue_url}" --message-body 'malformed-delivery-identity' \
   --message-group-id 'poison-delivery' --message-deduplication-id "poison-${suffix}" \
   >"${artifact_dir}/poison-send.txt"
-for attempt in {1..5}; do
-  "${repository}/gradlew" :apps:queue-replay-cli:run --args='--delivery-drain' --console=plain \
+poison_message_id="$(jq -r '.MessageId' "${artifact_dir}/poison-send.txt")"
+printf 'message_id=%s\nmessage_group=poison-delivery\n' "${poison_message_id}" \
+  >"${artifact_dir}/poison-identity.txt"
+observe_delivery_queues 'after_poison_send' >/dev/null
+deadline=$((SECONDS + 120))
+attempt=0
+highest_receive=0
+dlq_count=0
+while ((SECONDS < deadline)); do
+  snapshot="$(observe_delivery_queues "before_poll_${attempt}")"
+  source_visible="$(jq -r '.source.ApproximateNumberOfMessages // "0"' <<<"${snapshot}")"
+  source_inflight="$(jq -r '.source.ApproximateNumberOfMessagesNotVisible // "0"' <<<"${snapshot}")"
+  dlq_count="$(jq -r '.dlq.ApproximateNumberOfMessages // "0"' <<<"${snapshot}")"
+  if [[ "${dlq_count}" == 1 && "${source_visible}" == 0 && "${source_inflight}" == 0 ]]; then
+    break
+  fi
+  if [[ "${source_visible}" == 0 ]]; then
+    sleep 2
+    continue
+  fi
+  attempt=$((attempt + 1))
+  LOGGING_LEVEL_COM_COURTPULSE_MESSAGING_DELIVERY=DEBUG \
+    LOGGING_LEVEL_COM_COURTPULSE_MESSAGING_SQS=DEBUG \
+    "${repository}/gradlew" :apps:queue-replay-cli:run --args='--delivery-drain' --console=plain \
     >"${artifact_dir}/poison-drain-${attempt}.txt"
-  dlq_count="$("${compose[@]}" exec -T localstack awslocal sqs get-queue-attributes \
-    --queue-url "${dlq_url}" --attribute-names ApproximateNumberOfMessages \
-    --query 'Attributes.ApproximateNumberOfMessages' --output text | tr -d '\r')"
-  if [[ "${dlq_count}" == 1 ]]; then break; fi
-  if [[ "${attempt}" == 5 ]]; then echo 'Malformed delivery did not reach DLQ' >&2; exit 1; fi
-  sleep 2
+  rg -Fq "SQS queue polled queueUrl=${queue_url} " \
+    "${artifact_dir}/poison-drain-${attempt}.txt" || {
+      echo 'Delivery CLI polled a different queue or did not poll' >&2; exit 1;
+    }
+  receive_count="$(rg -o "Delivery queue message received messageId=${poison_message_id} receiveCount=[0-9]+" \
+    "${artifact_dir}/poison-drain-${attempt}.txt" | rg -o '[0-9]+$' | tail -1 || true)"
+  if [[ -n "${receive_count}" ]]; then
+    printf 'at=%s attempt=%s message_id=%s receive_count=%s\n' \
+      "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "${attempt}" "${poison_message_id}" "${receive_count}" \
+      >>"${artifact_dir}/poison-receives.txt"
+    if ((receive_count <= highest_receive)); then
+      echo "Poison receive count did not advance: ${receive_count}" >&2; exit 1
+    fi
+    highest_receive="${receive_count}"
+  fi
+  observe_delivery_queues "after_drain_${attempt}" >/dev/null
 done
+if [[ "${dlq_count}" != 1 || "${source_visible}" != 0 || "${source_inflight}" != 0 \
+    || "${highest_receive}" -lt 3 ]]; then
+  echo "Malformed delivery did not demonstrate redrive: source_visible=${source_visible}, source_inflight=${source_inflight}, dlq=${dlq_count}, highest_receive=${highest_receive}" >&2
+  exit 1
+fi
 printf '%s\n' "${dlq_count}" >"${artifact_dir}/delivery-dlq-depth.txt"
 [[ "$(database -c "SELECT count(*) FROM delivery_attempts")" == 3 ]]
 

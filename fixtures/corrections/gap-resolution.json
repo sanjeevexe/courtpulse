@@ -1,0 +1,16 @@
+{
+  "fixtureSchemaVersion": 1,
+  "name": "Missing sequence two",
+  "description": "The omitted non-scoring play that makes the gap game's history contiguous.",
+  "provenance": "Authored for local CourtPulse gap verification.",
+  "game": {"gameId": "game_gap_001", "homeTeamId": "team_home", "awayTeamId": "team_away"},
+  "events": [
+    {
+      "eventId": "gap-002", "schemaVersion": 1, "gameId": "game_gap_001",
+      "source": "courtpulse-synthetic", "providerEventId": "gap:002", "sequence": 2, "revision": 1,
+      "type": "PERIOD_STARTED", "period": 1, "clockMillisRemaining": 660000,
+      "occurredAt": "2026-01-01T00:01:00Z", "teamId": null, "participantIds": [],
+      "scoreAfter": {"home": 0, "away": 0}, "points": 0
+    }
+  ]
+}

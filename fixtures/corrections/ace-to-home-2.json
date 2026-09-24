@@ -1,0 +1,20 @@
+{
+  "fixtureSchemaVersion": 1,
+  "name": "Corrected synthetic game event 11",
+  "description": "A provider revision reattributes one home basket without changing the score.",
+  "provenance": "Authored for local CourtPulse correction verification.",
+  "game": {
+    "gameId": "game_synthetic_001",
+    "homeTeamId": "team_home",
+    "awayTeamId": "team_away"
+  },
+  "events": [
+    {
+      "eventId": "event-011-rev-2", "schemaVersion": 1, "gameId": "game_synthetic_001",
+      "source": "courtpulse-synthetic", "providerEventId": "synthetic:011", "sequence": 11, "revision": 2,
+      "type": "FIELD_GOAL_MADE", "period": 3, "clockMillisRemaining": 640000,
+      "occurredAt": "2026-01-01T00:25:20Z", "teamId": "team_home", "participantIds": ["player_home_2"],
+      "scoreAfter": {"home": 10, "away": 7}, "points": 2
+    }
+  ]
+}

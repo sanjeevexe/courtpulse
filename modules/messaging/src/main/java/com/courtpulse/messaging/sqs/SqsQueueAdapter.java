@@ -8,6 +8,8 @@ import com.courtpulse.messaging.queue.ReceivedQueueMessage;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
@@ -18,6 +20,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SqsException;
 
 public final class SqsQueueAdapter implements QueuePort {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SqsQueueAdapter.class);
     private final SqsClient client;
     private final String queueUrl;
     private final boolean closeClient;
@@ -63,7 +66,7 @@ public final class SqsQueueAdapter implements QueuePort {
     @Override
     public List<ReceivedQueueMessage> receive(int maxMessages, Duration waitTime) {
         int waitSeconds = Math.toIntExact(Math.min(20, Math.max(0, waitTime.toSeconds())));
-        return client.receiveMessage(ReceiveMessageRequest.builder()
+        List<ReceivedQueueMessage> received = client.receiveMessage(ReceiveMessageRequest.builder()
                         .queueUrl(queueUrl)
                         .maxNumberOfMessages(Math.min(10, Math.max(1, maxMessages)))
                         .waitTimeSeconds(waitSeconds)
@@ -77,6 +80,8 @@ public final class SqsQueueAdapter implements QueuePort {
                         Integer.parseInt(message.attributesAsStrings()
                                 .getOrDefault("ApproximateReceiveCount", "1"))))
                 .toList();
+        LOGGER.debug("SQS queue polled queueUrl={} received={}", queueUrl, received.size());
+        return received;
     }
 
     @Override

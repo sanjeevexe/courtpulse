@@ -115,6 +115,27 @@ class RealtimeHubTest {
     }
 
     @Test
+    void correctionResyncBypassesOrdinaryVersionSuppression() throws Exception {
+        CourtPulseQueryService queries = mock(CourtPulseQueryService.class);
+        GameSnapshotReadModel current = snapshot("game-1", 20);
+        when(queries.game("game-1")).thenReturn(current);
+        RealtimeHub hub = hub(queries, 32);
+        SessionCapture capture = capture("session-correction", 3);
+        hub.open(capture.session());
+        hub.subscribe(capture.session(), subscription("game-1", 20));
+        hub.publish(record(21));
+        hub.publish(new RealtimeOutboxRecord(UUID.randomUUID(), "RESYNC_REQUIRED",
+                "game-1", 20, null, null, 1, CLOCK.instant()));
+
+        assertTrue(capture.latch().await(1, TimeUnit.SECONDS));
+        assertTrue(capture.messages().stream().anyMatch(value ->
+                value.contains("\"messageType\":\"RESYNC_REQUIRED\"")
+                        && value.contains("\"code\":\"game_correction\"")));
+        assertFalse(capture.messages().stream().anyMatch(value -> value.contains("ownerSubject")));
+        hub.close(capture.session());
+    }
+
+    @Test
     void unknownGameReturnsSanitizedProtocolProblem() throws Exception {
         CourtPulseQueryService queries = mock(CourtPulseQueryService.class);
         when(queries.game("missing")).thenThrow(new GameNotFoundException("missing"));

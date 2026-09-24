@@ -157,6 +157,48 @@ public final class JdbcGameProcessingRepository {
                 .single() == 1L;
     }
 
+    /** A historical queue redelivery is not another correction request. */
+    public boolean isSuperseded(CanonicalEvent event) {
+        return jdbc.sql("""
+                        SELECT COALESCE(MAX(selected.revision), 0)
+                        FROM processed_events processed
+                        JOIN canonical_events selected ON selected.event_id = processed.event_id
+                        WHERE processed.consumer_name = :consumer AND processed.game_id = :gameId
+                          AND selected.sequence_number = :sequence
+                        """)
+                .param("consumer", CONSUMER_NAME).param("gameId", event.gameId())
+                .param("sequence", event.sequence()).query(Integer.class).single() >= event.revision();
+    }
+
+    public boolean reconciliationActive(String gameId) {
+        return jdbc.sql("""
+                        SELECT count(*) FROM game_reconciliations
+                        WHERE game_id = :gameId AND status IN ('PENDING', 'REBUILDING', 'BLOCKED')
+                        """).param("gameId", gameId).query(Long.class).single() != 0;
+    }
+
+    /** Called with the checkpoint lock held, so a forward worker cannot race the request. */
+    public void requestReconciliation(CanonicalEvent event, Instant now) {
+        jdbc.sql("""
+                        INSERT INTO game_reconciliations (
+                            game_id, status, first_affected_sequence, correction_event_id,
+                            requested_at, updated_at)
+                        VALUES (:gameId, 'PENDING', :sequence, :eventId, :now, :now)
+                        ON CONFLICT (game_id) DO UPDATE
+                        SET status = 'PENDING',
+                            first_affected_sequence = CASE
+                                WHEN game_reconciliations.status IN ('COMPLETED', 'UNCHANGED')
+                                    THEN :sequence
+                                ELSE LEAST(game_reconciliations.first_affected_sequence, :sequence) END,
+                            correction_event_id = :eventId,
+                            requested_revision = game_reconciliations.requested_revision + 1,
+                            requested_at = :now, updated_at = :now, completed_at = NULL,
+                            last_error_code = NULL
+                        WHERE game_reconciliations.correction_event_id IS DISTINCT FROM :eventId
+                        """).param("gameId", event.gameId()).param("sequence", event.sequence())
+                .param("eventId", event.eventId()).param("now", SqlTime.offset(now)).update();
+    }
+
     public void saveCheckpoint(GameState state, String checksum, Instant now) {
         List<String> recentEventIds = state.recentEvents().stream()
                 .map(CanonicalEvent::eventId)
@@ -224,6 +266,11 @@ public final class JdbcGameProcessingRepository {
                         "now", SqlTime.offset(now)))
                 .update();
         return rows == 1;
+    }
+
+    public long checkpointVersion(String gameId) {
+        return jdbc.sql("SELECT state_version FROM game_checkpoints WHERE game_id = :gameId")
+                .param("gameId", gameId).query(Long.class).single();
     }
 
     public boolean insertAlert(Alert alert, Instant now) {

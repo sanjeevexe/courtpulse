@@ -40,6 +40,7 @@ import com.courtpulse.persistence.JdbcUserOwnershipRepository;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
 import com.courtpulse.persistence.JdbcAlertDeliveryRepository;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.persistence.JdbcReconciliationOperationsRepository;
 import com.courtpulse.api.notifications.NotificationService;
 import com.courtpulse.persistence.MicrometerRuleEngineMetrics;
 import com.courtpulse.persistence.RuleEngineMetrics;
@@ -118,6 +119,11 @@ public class ApiConfiguration {
     @Bean
     JdbcDeliveryWorkRepository deliveryWorkRepository(JdbcClient jdbc) {
         return new JdbcDeliveryWorkRepository(jdbc);
+    }
+
+    @Bean
+    JdbcReconciliationOperationsRepository reconciliationOperationsRepository(JdbcClient jdbc) {
+        return new JdbcReconciliationOperationsRepository(jdbc);
     }
 
     @Bean

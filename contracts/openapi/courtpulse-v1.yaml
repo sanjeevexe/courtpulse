@@ -142,6 +142,21 @@ paths:
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/operations/reconciliations:
+    get:
+      summary: Read aggregate correction and reconciliation health
+      security: [{oidcBearer: ['courtpulse:ops']}]
+      responses:
+        '200':
+          description: Aggregate reconciliation counts
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReconciliationOperations'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/v1/me:
     get:
       summary: Read the authenticated application user
@@ -828,6 +843,18 @@ components:
         leaseRecoveries: {type: integer, format: int64}
         dlqDepth: {type: integer, format: int64}
         dlqObservedAt: {type: [string, 'null'], format: date-time}
+    ReconciliationOperations:
+      type: object
+      additionalProperties: false
+      required: [pending, rebuilding, blocked, completed, unchanged, failedAttempts, oldestPendingAgeSeconds]
+      properties:
+        pending: {type: integer, format: int64}
+        rebuilding: {type: integer, format: int64}
+        blocked: {type: integer, format: int64}
+        completed: {type: integer, format: int64}
+        unchanged: {type: integer, format: int64}
+        failedAttempts: {type: integer, format: int64}
+        oldestPendingAgeSeconds: {type: [integer, 'null'], format: int64}
     Processing:
       type: object
       required: [pending, publishing, retryScheduled, sent, failed, deferredNotifications, blockedGames, processedEvents, alerts, apiTimestamp]

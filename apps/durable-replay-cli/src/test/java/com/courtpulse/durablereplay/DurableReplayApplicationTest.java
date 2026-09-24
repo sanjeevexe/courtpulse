@@ -13,26 +13,41 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.postgresql.ds.PGSimpleDataSource;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 class DurableReplayApplicationTest {
     @Test
     void commandRunsThenRestartsAgainstTheSamePostgresDatabase() throws Exception {
-        try (EmbeddedPostgres postgres = EmbeddedPostgres.builder().start()) {
+        EmbeddedPostgres postgres = null;
+        PostgreSQLContainer dockerPostgres = null;
+        try {
+            String url;
+            String username;
+            String password;
+            try {
+                postgres = EmbeddedPostgres.builder().start();
+                url = "jdbc:postgresql://localhost:%d/postgres".formatted(postgres.getPort());
+                username = "postgres";
+                password = "postgres";
+            } catch (IllegalStateException embeddedUnavailable) {
+                dockerPostgres = new PostgreSQLContainer("postgres:17.6-alpine");
+                dockerPostgres.start();
+                url = dockerPostgres.getJdbcUrl();
+                username = dockerPostgres.getUsername();
+                password = dockerPostgres.getPassword();
+            }
             Map<String, Object> databaseProperties = Map.of(
-                    "spring.datasource.url",
-                    "jdbc:postgresql://localhost:%d/postgres".formatted(postgres.getPort()),
-                    "spring.datasource.username",
-                    "postgres",
-                    "spring.datasource.password",
-                    "postgres",
+                    "spring.datasource.url", url,
+                    "spring.datasource.username", username,
+                    "spring.datasource.password", password,
                     "logging.level.root",
                     "ERROR");
 
             runApplication(databaseProperties, "--reset");
             PGSimpleDataSource dataSource = new PGSimpleDataSource();
             dataSource.setURL((String) databaseProperties.get("spring.datasource.url"));
-            dataSource.setUser("postgres");
-            dataSource.setPassword("postgres");
+            dataSource.setUser(username);
+            dataSource.setPassword(password);
             JdbcClient jdbc = JdbcClient.create(dataSource);
 
             assertEquals(20L, count(jdbc, "canonical_events"));
@@ -73,6 +88,9 @@ class DurableReplayApplicationTest {
                     jdbc.sql("SELECT final_state_checksum FROM replay_runs")
                             .query(String.class)
                             .single());
+        } finally {
+            if (postgres != null) postgres.close();
+            if (dockerPostgres != null) dockerPostgres.stop();
         }
     }
 

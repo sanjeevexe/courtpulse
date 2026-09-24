@@ -20,6 +20,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import javax.sql.DataSource;
+import org.postgresql.ds.PGSimpleDataSource;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,14 +39,27 @@ class EmbeddedPostgresLocalVerificationTest {
     private static final Clock CLOCK =
             Clock.fixed(Instant.parse("2026-01-01T01:00:00Z"), ZoneOffset.UTC);
     private static EmbeddedPostgres postgres;
+    private static PostgreSQLContainer dockerPostgres;
     private static DataSource dataSource;
 
     private Services services;
 
     @BeforeAll
     static void startPostgresAndMigrate() throws IOException {
-        postgres = EmbeddedPostgres.builder().start();
-        dataSource = postgres.getPostgresDatabase();
+        try {
+            postgres = EmbeddedPostgres.builder().start();
+            dataSource = postgres.getPostgresDatabase();
+        } catch (IllegalStateException embeddedUnavailable) {
+            // macOS can exhaust its small System V shared-memory allocation even while
+            // Docker-backed PostgreSQL remains healthy. Keep the same verification running.
+            dockerPostgres = new PostgreSQLContainer("postgres:17.6-alpine");
+            dockerPostgres.start();
+            PGSimpleDataSource source = new PGSimpleDataSource();
+            source.setURL(dockerPostgres.getJdbcUrl());
+            source.setUser(dockerPostgres.getUsername());
+            source.setPassword(dockerPostgres.getPassword());
+            dataSource = source;
+        }
         Flyway.configure().dataSource(dataSource).load().migrate();
     }
 
@@ -52,6 +67,9 @@ class EmbeddedPostgresLocalVerificationTest {
     static void stopPostgres() throws IOException {
         if (postgres != null) {
             postgres.close();
+        }
+        if (dockerPostgres != null) {
+            dockerPostgres.stop();
         }
     }
 

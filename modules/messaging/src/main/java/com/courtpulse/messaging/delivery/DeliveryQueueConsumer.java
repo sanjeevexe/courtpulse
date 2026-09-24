@@ -9,10 +9,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /** A poison message never blocks another delivery: each FIFO group is the delivery ID. */
 public final class DeliveryQueueConsumer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DeliveryQueueConsumer.class);
     private final JdbcDeliveryWorkRepository work;
     private final QueuePort queue;
     private final EmailSender email;
@@ -35,11 +38,15 @@ public final class DeliveryQueueConsumer {
         transactions.executeWithoutResult(status -> work.recoverExpired(clock.instant()));
         int completed = 0;
         for (ReceivedQueueMessage message : queue.receive(10, Duration.ofSeconds(2))) {
+            LOGGER.debug("Delivery queue message received messageId={} receiveCount={}",
+                    message.providerMessageId(), message.receiveCount());
             UUID deliveryId;
             try {
                 deliveryId = UUID.fromString(message.body());
             } catch (IllegalArgumentException exception) {
                 // Leave malformed messages for SQS redrive to the dedicated DLQ.
+                LOGGER.debug("Malformed delivery identity left for queue redrive messageId={}",
+                        message.providerMessageId());
                 continue;
             }
             ClaimedEmailDelivery delivery = transactions.execute(status ->

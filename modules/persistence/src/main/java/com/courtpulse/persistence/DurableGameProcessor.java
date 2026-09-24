@@ -75,6 +75,17 @@ public final class DurableGameProcessor {
                     StateChecksum.sha256(previousState));
         }
 
+        if (repository.isSuperseded(event)) {
+            return new DurableProcessingResult(false, previousState, List.of(),
+                    StateChecksum.sha256(previousState));
+        }
+        if (repository.reconciliationActive(event.gameId())
+                || event.sequence() != previousState.lastAppliedSequence() + 1) {
+            repository.requestReconciliation(event, clock.instant());
+            return new DurableProcessingResult(false, previousState, List.of(),
+                    StateChecksum.sha256(previousState));
+        }
+
         GameState nextState = GameReducer.apply(previousState, event);
         long lookupStarted = System.nanoTime();
         AlertRuleBatch ruleBatch = rules.relevantRules(event);
@@ -85,6 +96,7 @@ public final class DurableGameProcessor {
         String checksum = StateChecksum.sha256(nextState);
         Instant now = clock.instant();
         repository.saveCheckpoint(nextState, checksum, now);
+        long stateVersion = repository.checkpointVersion(event.gameId());
         if (!repository.insertProcessed(event, now)) {
             throw new IllegalStateException("Processed-event uniqueness conflict for " + event.identity());
         }
@@ -97,7 +109,7 @@ public final class DurableGameProcessor {
                 Map.of(
                         "eventId", event.eventId(),
                         "gameId", event.gameId(),
-                        "stateVersion", nextState.appliedEventIdentities().size(),
+                        "stateVersion", stateVersion,
                         "sequence", event.sequence(),
                         "stateChecksum", checksum),
                 now);
@@ -127,7 +139,7 @@ public final class DurableGameProcessor {
                                 "ALERT_CREATED",
                                 Map.of(
                                         "gameId", alert.gameId(),
-                                        "stateVersion", nextState.appliedEventIdentities().size(),
+                                        "stateVersion", stateVersion,
                                         "ruleId", alert.ruleId(),
                                         "triggerKey", alert.triggerKey(),
                                         "triggeringEventId", alert.triggeringEventId()),

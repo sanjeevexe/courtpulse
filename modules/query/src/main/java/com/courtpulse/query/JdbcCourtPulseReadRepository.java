@@ -61,12 +61,16 @@ public final class JdbcCourtPulseReadRepository {
                                checkpoint.away_score, checkpoint.period,
                                checkpoint.clock_millis_remaining, checkpoint.last_sequence,
                                checkpoint.updated_at, checkpoint.state_checksum,
-                               EXISTS (
+                               (EXISTS (
                                    SELECT 1 FROM outbox blocked
                                    WHERE blocked.destination = 'GAME_EVENTS'
                                      AND blocked.message_group_id = game.id
                                      AND blocked.status = 'FAILED'
-                               ) AS processing_blocked
+                               ) OR EXISTS (
+                                   SELECT 1 FROM game_reconciliations reconciliation
+                                   WHERE reconciliation.game_id = game.id
+                                     AND reconciliation.status = 'BLOCKED'
+                               )) AS processing_blocked
                         FROM games game
                         JOIN game_checkpoints checkpoint ON checkpoint.game_id = game.id
                         WHERE 1 = 1
@@ -88,12 +92,16 @@ public final class JdbcCourtPulseReadRepository {
                                checkpoint.player_points::TEXT AS player_points,
                                checkpoint.recent_event_ids::TEXT AS recent_event_ids,
                                checkpoint.updated_at, checkpoint.state_checksum,
-                               EXISTS (
+                               (EXISTS (
                                    SELECT 1 FROM outbox blocked
                                    WHERE blocked.destination = 'GAME_EVENTS'
                                      AND blocked.message_group_id = game.id
                                      AND blocked.status = 'FAILED'
-                               ) AS processing_blocked
+                               ) OR EXISTS (
+                                   SELECT 1 FROM game_reconciliations reconciliation
+                                   WHERE reconciliation.game_id = game.id
+                                     AND reconciliation.status = 'BLOCKED'
+                               )) AS processing_blocked
                         FROM games game
                         JOIN game_checkpoints checkpoint ON checkpoint.game_id = game.id
                         WHERE game.id = :gameId
@@ -177,6 +185,14 @@ public final class JdbcCourtPulseReadRepository {
                                home_score, away_score, points
                         FROM canonical_events
                         WHERE game_id = :gameId
+                          AND (NOT EXISTS (
+                              SELECT 1 FROM game_reconciliations reconciliation
+                              WHERE reconciliation.game_id = :gameId
+                          ) OR event_id IN (
+                              SELECT processed.event_id FROM processed_events processed
+                              WHERE processed.consumer_name = 'durable-game-processor-v1'
+                                AND processed.game_id = :gameId
+                          ))
                         """ + predicate + """
                         ORDER BY sequence_number, revision, event_id
                         LIMIT :fetchSize

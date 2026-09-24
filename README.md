@@ -592,6 +592,43 @@ database acknowledgement can produce a duplicate email. See [ADR 0009](docs/adr/
 The isolated real-Keycloak/PostgreSQL/LocalStack/Mailpit acceptance is
 `./scripts/verify-milestone-9.sh`; it removes only its named `courtpulse-m9-acceptance` stack.
 
+## Corrections and reconciliation
+
+Flyway V8 preserves all raw and canonical revisions and records each per-game reconciliation
+attempt and selected event/raw-payload provenance. New or late events park the forward processor
+and request a rebuild. The worker chooses the highest valid revision per contiguous sequence and
+replaces checkpoint, processed identities, scoring run, and alert validity in one transaction.
+Gaps, unresolved same-revision conflicts, and histories with no valid candidate become `BLOCKED`;
+the worker does not hot-retry them. Importing new evidence makes the game eligible again. A stale
+`REBUILDING` claim is retried after five minutes. Raw conflicting observations remain in the
+private audit table instead of overwriting the first accepted identity.
+
+Run the local worker with:
+
+```bash
+docker compose --profile reconciliation up -d --build reconciliation-worker
+```
+
+For an explicit bounded pass or a fixture correction, use:
+
+```bash
+./gradlew :apps:queue-replay-cli:run --args='--reconciliation-run'
+./gradlew :apps:queue-replay-cli:run --args='--correction-fixture=fixtures/corrections/ace-to-home-2.json'
+```
+
+The public game snapshot ETag includes its checksum, and selected event history hides superseded
+revisions. A successful changed rebuild emits a public `RESYNC_REQUIRED` WebSocket hint with the
+fixed `game_correction` reason; connected clients reload HTTP state even if the play count is
+unchanged. Owner-only alerts may become `CORRECTED`. Sent emails and attempt history remain; only
+pending/retry-scheduled email work is cancelled. New logical alerts get the normal unique delivery
+intent. Operators with `courtpulse:ops` can read aggregate
+`GET /api/v1/operations/reconciliations`; it includes no owner or private rule data.
+
+Use [the reconciliation runbook](docs/runbooks/reconciliation.md) for blocked work. The isolated
+real-PostgreSQL/Keycloak/LocalStack/Mailpit/browser proof is
+`./scripts/verify-milestone-10.sh`; it creates a uniquely named Compose project and removes only
+that project's volumes. See [ADR 0010](docs/adr/0010-corrections-and-reconciliation.md).
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:
@@ -719,12 +756,12 @@ docker compose down -v
 
 ## Current limitations
 
-- The synthetic fixture is the only provider; corrections, overtime, and live feeds are deferred.
+- The synthetic fixture is the only provider; live provider refetch and overtime are deferred.
 - LocalStack is test infrastructure, not a production AWS deployment.
 - External email providers beyond local Mailpit remain deferred; the realtime publisher still
   handles only the WebSocket hint types documented in the AsyncAPI contract.
 - Realtime fanout is single-instance and falls back to polling. There
-  is no personalized realtime channel, offline mode, external email provider, live provider integration, corrections,
+  is no personalized realtime channel, offline mode, external email provider, live provider integration,
   Redis multi-replica fanout, Terraform, or Kubernetes. Rules cannot target overtime because the
   current close-game template deliberately bounds eligible periods to 1–4.
 
@@ -736,4 +773,5 @@ See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0006](docs/adr/0006-websocket-hints-and-http-resynchronization.md),
 [ADR 0007](docs/adr/0007-oidc-pkce-and-object-ownership.md), and
 [ADR 0008](docs/adr/0008-structured-personalized-alert-rules.md), and
-[ADR 0009](docs/adr/0009-reliable-alert-delivery.md).
+[ADR 0009](docs/adr/0009-reliable-alert-delivery.md), and
+[ADR 0010](docs/adr/0010-corrections-and-reconciliation.md).

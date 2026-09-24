@@ -14,6 +14,7 @@ import com.courtpulse.messaging.delivery.LocalSmtpEmailSender;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FixtureIngestionService;
+import com.courtpulse.persistence.GameReconciliationService;
 import com.courtpulse.persistence.JdbcFixtureRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
@@ -125,6 +126,16 @@ public class QueueReplayConfiguration {
                 rules,
                 clock,
                 metrics);
+    }
+
+    @Bean
+    GameReconciliationService gameReconciliationService(
+            JdbcClient jdbc, JdbcFixtureRepository fixtures,
+            JdbcGameProcessingRepository processing, JdbcOutboxRepository outbox,
+            JdbcAlertRuleRepository rules, TransactionTemplate transactions, Clock clock,
+            ObjectMapper mapper) {
+        return new GameReconciliationService(
+                jdbc, fixtures, processing, outbox, rules, transactions, clock, mapper);
     }
 
     @Bean

@@ -68,25 +68,32 @@ public final class JdbcDeliveryWorkRepository {
     public int recoverExpired(Instant now) {
         var at = SqlTime.offset(now);
         List<ExpiredLease> expired = jdbc.sql("""
-                        SELECT id, attempts FROM alert_deliveries
-                        WHERE channel = 'EMAIL' AND status = 'LEASED' AND lease_until <= :now
-                        ORDER BY lease_until, id LIMIT 100 FOR UPDATE SKIP LOCKED
+                        SELECT delivery.id, delivery.attempts, alert.status AS alert_status
+                        FROM alert_deliveries delivery
+                        JOIN alert_instances alert ON alert.id = delivery.alert_id
+                        WHERE delivery.channel = 'EMAIL' AND delivery.status = 'LEASED'
+                          AND delivery.lease_until <= :now
+                        ORDER BY delivery.lease_until, delivery.id LIMIT 100
+                        FOR UPDATE OF delivery SKIP LOCKED
                         """)
                 .param("now", at)
                 .query((row, number) -> new ExpiredLease(
-                        row.getObject("id", UUID.class), row.getInt("attempts")))
+                        row.getObject("id", UUID.class), row.getInt("attempts"),
+                        "CORRECTED".equals(row.getString("alert_status"))))
                 .list();
         for (ExpiredLease lease : expired) {
             boolean exhausted = lease.attempts() >= 5;
+            boolean cancelled = lease.corrected();
             jdbc.sql("""
                             UPDATE alert_deliveries
                             SET status = :status, lease_owner = NULL, lease_until = NULL,
-                                next_attempt_at = :next, last_error_code = 'lease_expired',
+                                next_attempt_at = :next, last_error_code = :errorCode,
                                 updated_at = :now
                             WHERE id = :id AND status = 'LEASED'
                             """)
-                    .param("status", exhausted ? "FAILED" : "RETRY_SCHEDULED")
-                    .param("next", exhausted ? null : at)
+                    .param("status", cancelled ? "CANCELLED" : exhausted ? "FAILED" : "RETRY_SCHEDULED")
+                    .param("next", cancelled || exhausted ? null : at)
+                    .param("errorCode", cancelled ? "alert_corrected" : "lease_expired")
                     .param("now", at).param("id", lease.id()).update();
             jdbc.sql("""
                             INSERT INTO delivery_attempts(
@@ -102,10 +109,11 @@ public final class JdbcDeliveryWorkRepository {
                             UPDATE delivery_outbox
                             SET status = :status, next_attempt_at = :now,
                                 lease_owner = NULL, lease_until = NULL,
-                                last_error_code = 'lease_expired'
+                                last_error_code = :errorCode
                             WHERE delivery_id = :id AND status <> 'FAILED'
                             """)
-                    .param("status", exhausted ? "FAILED" : "RETRY_SCHEDULED")
+                    .param("status", cancelled || exhausted ? "FAILED" : "RETRY_SCHEDULED")
+                    .param("errorCode", cancelled ? "alert_corrected" : "lease_expired")
                     .param("now", at).param("id", lease.id()).update();
         }
         int exhaustedPublications = jdbc.sql("""
@@ -204,13 +212,16 @@ public final class JdbcDeliveryWorkRepository {
     public ClaimedEmailDelivery claimDelivery(
             UUID deliveryId, String owner, Instant now, Duration leaseDuration) {
         UUID claimed = jdbc.sql("""
-                        UPDATE alert_deliveries
+                        UPDATE alert_deliveries delivery
                         SET status = 'LEASED', attempts = attempts + 1,
                             lease_owner = :owner, lease_until = :leaseUntil, updated_at = :now
-                        WHERE id = :id AND channel = 'EMAIL' AND attempts < 5
-                          AND status IN ('PENDING', 'RETRY_SCHEDULED')
-                          AND next_attempt_at <= :now
-                        RETURNING id
+                        FROM alert_instances alert
+                        WHERE delivery.id = :id AND delivery.alert_id = alert.id
+                          AND alert.status = 'CREATED' AND delivery.channel = 'EMAIL'
+                          AND delivery.attempts < 5
+                          AND delivery.status IN ('PENDING', 'RETRY_SCHEDULED')
+                          AND delivery.next_attempt_at <= :now
+                        RETURNING delivery.id
                         """)
                 .params(Map.of("id", deliveryId, "owner", owner,
                         "now", SqlTime.offset(now),
@@ -253,6 +264,14 @@ public final class JdbcDeliveryWorkRepository {
             case "CANCELLED" -> "CANCELLED";
             default -> throw new IllegalArgumentException("Unknown delivery outcome");
         };
+        String alertStatus = jdbc.sql("""
+                        SELECT alert.status FROM alert_instances alert
+                        JOIN alert_deliveries delivery ON delivery.alert_id = alert.id
+                        WHERE delivery.id = :id FOR SHARE OF alert
+                        """).param("id", delivery.id()).query(String.class).single();
+        boolean corrected = "CORRECTED".equals(alertStatus) && !"SENT".equals(outcome);
+        if (corrected) status = "CANCELLED";
+        Instant effectiveNext = corrected ? null : nextAttempt;
         int updated = jdbc.sql("""
                         UPDATE alert_deliveries SET status = :status, lease_owner = NULL,
                             lease_until = NULL, next_attempt_at = :next,
@@ -261,8 +280,8 @@ public final class JdbcDeliveryWorkRepository {
                             updated_at = :now
                         WHERE id = :id AND status = 'LEASED' AND lease_owner = :owner
                         """)
-                .param("status", status).param("next", nextAttempt == null ? null : SqlTime.offset(nextAttempt))
-                .param("providerId", providerId).param("errorCode", errorCode)
+                .param("status", status).param("next", effectiveNext == null ? null : SqlTime.offset(effectiveNext))
+                .param("providerId", providerId).param("errorCode", corrected ? "alert_corrected" : errorCode)
                 .param("now", SqlTime.offset(now)).param("id", delivery.id()).param("owner", owner)
                 .update();
         if (updated != 1) {
@@ -279,7 +298,13 @@ public final class JdbcDeliveryWorkRepository {
                 .param("attempt", delivery.attempt()).param("outcome", outcome)
                 .param("errorCode", errorCode).param("providerId", providerId)
                 .param("now", SqlTime.offset(now)).update();
-        if (nextAttempt != null) {
+        if (corrected) {
+            jdbc.sql("""
+                            UPDATE delivery_outbox SET status = 'FAILED', lease_owner = NULL,
+                                lease_until = NULL, last_error_code = 'alert_corrected'
+                            WHERE delivery_id = :deliveryId AND status <> 'FAILED'
+                            """).param("deliveryId", delivery.id()).update();
+        } else if (nextAttempt != null) {
             jdbc.sql("""
                             UPDATE delivery_outbox
                             SET status = 'RETRY_SCHEDULED', next_attempt_at = :next,
@@ -303,5 +328,5 @@ public final class JdbcDeliveryWorkRepository {
         return true;
     }
 
-    private record ExpiredLease(UUID id, int attempts) {}
+    private record ExpiredLease(UUID id, int attempts, boolean corrected) {}
 }

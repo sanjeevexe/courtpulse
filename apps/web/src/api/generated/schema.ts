@@ -349,6 +349,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operations/reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read aggregate correction and reconciliation health */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Aggregate reconciliation counts */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReconciliationOperations"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -1348,6 +1391,22 @@ export interface components {
             dlqDepth: number;
             /** Format: date-time */
             dlqObservedAt: string | null;
+        };
+        ReconciliationOperations: {
+            /** Format: int64 */
+            pending: number;
+            /** Format: int64 */
+            rebuilding: number;
+            /** Format: int64 */
+            blocked: number;
+            /** Format: int64 */
+            completed: number;
+            /** Format: int64 */
+            unchanged: number;
+            /** Format: int64 */
+            failedAttempts: number;
+            /** Format: int64 */
+            oldestPendingAgeSeconds: number | null;
         };
         Processing: {
             /** Format: int64 */

@@ -16,6 +16,7 @@ import com.courtpulse.messaging.delivery.DeliveryQueuePublisher;
 import com.courtpulse.messaging.delivery.DeliveryQueueConsumer;
 import com.courtpulse.persistence.DatabaseCounts;
 import com.courtpulse.persistence.FixtureIngestionService;
+import com.courtpulse.persistence.GameReconciliationService;
 import com.courtpulse.persistence.ImportResult;
 import com.courtpulse.persistence.JdbcFixtureRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
@@ -24,6 +25,7 @@ import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.OutboxStatusCounts;
 import com.courtpulse.providers.fixture.LoadedFixture;
+import com.courtpulse.providers.fixture.FixtureLoader;
 import com.courtpulse.testkit.SyntheticFixtureResources;
 import java.time.Duration;
 import java.time.Instant;
@@ -50,6 +52,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
     private static final Set<String> SUPPORTED = Set.of(
             "reset-import", "publish", "drain", "run", "inspect", "help",
             "pace-ms",
+            "correction-fixture", "reconcile-game", "reconciliation-run", "reconciliation-daemon",
             "simulate-publisher-after-send", "simulate-consumer-before-commit",
             "simulate-consumer-after-commit");
     private static final Set<String> DELIVERY_OPTIONS = Set.of(
@@ -57,6 +60,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
 
     private final JdbcFixtureRepository fixtures;
     private final FixtureIngestionService ingestion;
+    private final GameReconciliationService reconciliation;
     private final OutboxPublisher publisher;
     private final GameEventQueueConsumer consumer;
     private final QueuePort queue;
@@ -78,6 +82,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
     public QueueReplayCommand(
             JdbcFixtureRepository fixtures,
             FixtureIngestionService ingestion,
+            GameReconciliationService reconciliation,
             OutboxPublisher publisher,
             GameEventQueueConsumer consumer,
             @Qualifier("gameEventsQueue") QueuePort queue,
@@ -97,6 +102,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
             @Value("${courtpulse.consumer.worker-concurrency}") int workerConcurrency) {
         this.fixtures = fixtures;
         this.ingestion = ingestion;
+        this.reconciliation = reconciliation;
         this.publisher = publisher;
         this.consumer = consumer;
         this.queue = queue;
@@ -124,6 +130,34 @@ public final class QueueReplayCommand implements ApplicationRunner {
         Options options = Options.parse(arguments);
         if (options.help()) {
             printUsage();
+            return;
+        }
+        if (options.reconciliationDaemon()) {
+            runReconciliationDaemon();
+            return;
+        }
+        if (options.correctionFixture() != null || options.reconcileGame() != null
+                || options.reconciliationRun()) {
+            if (options.correctionFixture() != null) {
+                try (var input = Files.newInputStream(Path.of(options.correctionFixture()))) {
+                    var submitted = reconciliation.submit(new FixtureLoader().load(input));
+                    System.out.printf("Correction submitted: accepted=%d duplicates=%d conflicts=%d%n",
+                            submitted.accepted(), submitted.duplicates(), submitted.conflicts());
+                } catch (IOException exception) {
+                    throw new IllegalArgumentException("Cannot read correction fixture", exception);
+                }
+            }
+            if (options.reconcileGame() != null) {
+                var result = reconciliation.reconcile(options.reconcileGame());
+                System.out.printf("Reconciliation: status=%s selected=%d checksum=%s error=%s%n",
+                        result.status(), result.selectedEvents(), result.checksum(), result.errorCode());
+            }
+            if (options.reconciliationRun()) {
+                var results = reconciliation.reconcileAvailable(50);
+                System.out.printf("Reconciliation pass: considered=%d completed=%d blocked=%d%n",
+                        results.size(), results.stream().filter(r -> "COMPLETED".equals(r.status())).count(),
+                        results.stream().filter(r -> "BLOCKED".equals(r.status())).count());
+            }
             return;
         }
         if (options.deliveryDaemon()) {
@@ -240,6 +274,29 @@ public final class QueueReplayCommand implements ApplicationRunner {
         }
     }
 
+    private void runReconciliationDaemon() {
+        AtomicBoolean running = new AtomicBoolean(true);
+        Thread worker = Thread.currentThread();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            running.set(false);
+            worker.interrupt();
+        }, "reconciliation-shutdown"));
+        Path heartbeat = Path.of("/tmp/courtpulse-reconciliation-worker.heartbeat");
+        while (running.get()) {
+            reconciliation.reconcileAvailable(10);
+            try {
+                Files.writeString(heartbeat, Instant.now().toString(),
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                Thread.sleep(1_000);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (IOException exception) {
+                throw new IllegalStateException("Reconciliation worker heartbeat failed", exception);
+            }
+        }
+    }
+
     private static void pauseAfterAcceptedBatch(long paceMillis, long accepted) {
         if (paceMillis == 0 || accepted == 0) {
             return;
@@ -324,6 +381,8 @@ public final class QueueReplayCommand implements ApplicationRunner {
         System.out.println("       [--pace-ms=0..10000] (use consumer batch size 1 for event-by-event pacing)");
         System.out.println("       [--delivery-publish | --delivery-drain | --delivery-run] (local Mailpit only)");
         System.out.println("       [--delivery-daemon] (bounded continuous worker; SIGTERM stops it)");
+        System.out.println("       [--correction-fixture=/path/fixture.json] [--reconcile-game=game-id]");
+        System.out.println("       [--reconciliation-run | --reconciliation-daemon]");
     }
 
     private record Options(
@@ -340,7 +399,11 @@ public final class QueueReplayCommand implements ApplicationRunner {
             boolean deliveryPublish,
             boolean deliveryDrain,
             boolean deliveryRun,
-            boolean deliveryDaemon) {
+            boolean deliveryDaemon,
+            String correctionFixture,
+            String reconcileGame,
+            boolean reconciliationRun,
+            boolean reconciliationDaemon) {
         static Options parse(ApplicationArguments arguments) {
             List<String> unknown = arguments.getOptionNames().stream()
                     .filter(option -> !SUPPORTED.contains(option) && !DELIVERY_OPTIONS.contains(option))
@@ -366,7 +429,11 @@ public final class QueueReplayCommand implements ApplicationRunner {
                     arguments.containsOption("delivery-publish"),
                     arguments.containsOption("delivery-drain"),
                     arguments.containsOption("delivery-run"),
-                    arguments.containsOption("delivery-daemon"));
+                    arguments.containsOption("delivery-daemon"),
+                    oneValue(arguments, "correction-fixture"),
+                    oneValue(arguments, "reconcile-game"),
+                    arguments.containsOption("reconciliation-run"),
+                    arguments.containsOption("reconciliation-daemon"));
             if (options.consumerBeforeCommit && options.consumerAfterCommit) {
                 throw new IllegalArgumentException("Choose only one consumer failure injection");
             }
@@ -380,6 +447,13 @@ public final class QueueReplayCommand implements ApplicationRunner {
                     && (options.resetImport || options.publish || options.drain || options.run || options.inspect))) {
                 throw new IllegalArgumentException("Choose one delivery action without game replay actions");
             }
+            if ((options.correctionFixture != null || options.reconcileGame != null
+                    || options.reconciliationRun || options.reconciliationDaemon)
+                    && (deliveryModes != 0 || options.resetImport || options.publish || options.drain
+                            || options.run || options.inspect || options.publisherCrash
+                            || options.consumerBeforeCommit || options.consumerAfterCommit)) {
+                throw new IllegalArgumentException("Correction actions cannot be combined with replay actions");
+            }
             boolean publishes = options.run || options.publish;
             boolean drains = options.run || options.drain;
             if (options.publisherCrash && !publishes) {
@@ -389,10 +463,21 @@ public final class QueueReplayCommand implements ApplicationRunner {
                 throw new IllegalArgumentException("Consumer failure injection requires --run or --drain");
             }
             if (!options.help && !options.resetImport && !publishes && !drains && !options.inspect
-                    && deliveryModes == 0) {
+                    && deliveryModes == 0 && options.correctionFixture == null
+                    && options.reconcileGame == null && !options.reconciliationRun
+                    && !options.reconciliationDaemon) {
                 throw new IllegalArgumentException("Choose an action; use --help");
             }
             return options;
+        }
+
+        private static String oneValue(ApplicationArguments arguments, String name) {
+            if (!arguments.containsOption(name)) return null;
+            List<String> values = arguments.getOptionValues(name);
+            if (values == null || values.size() != 1 || values.getFirst().isBlank()) {
+                throw new IllegalArgumentException("--" + name + " requires exactly one value");
+            }
+            return values.getFirst();
         }
 
         private static long parsePace(ApplicationArguments arguments) {
