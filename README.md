@@ -629,6 +629,65 @@ real-PostgreSQL/Keycloak/LocalStack/Mailpit/browser proof is
 `./scripts/verify-milestone-10.sh`; it creates a uniquely named Compose project and removes only
 that project's volumes. See [ADR 0010](docs/adr/0010-corrections-and-reconciliation.md).
 
+## Live provider ingestion and overtime
+
+The `live` Compose profile runs two continuous workers: `processor-worker` (outbox publisher plus
+FIFO consumers, the deployed form of `--run`) and `ingestor-worker`, which polls one live provider
+through `LiveGameProvider`. The only adapter is BALLDONTLIE v1. Its games and teams endpoints are
+free, but **play-by-play requires the paid GOAT tier**, so by default the ingestor talks to the
+local `provider-simulator` (profile `simulator`): a fictional overtime game served in BALLDONTLIE's
+documented response shapes on a 60x clock, with a scorer correction after play 120.
+
+```bash
+export COURTPULSE_DB_PASSWORD='courtpulse-local-dev'
+docker compose --profile live --profile simulator --profile reconciliation up -d --build
+docker compose --profile live --profile simulator ps
+curl -sS http://localhost:8080/api/v1/games | jq '.items[] | {gameId, homeTeamName, status, dataStatus}'
+```
+
+Within a few minutes `bdl-game-990001` goes from `SCHEDULED` to `LIVE`, through overtime, to a
+79-77 final, and the correction moves one three-pointer between two players. The simulator's
+control API (loopback only, same key) can pause, release, throttle, or break the feed:
+
+```bash
+curl -sS -H 'Authorization: local-simulator-key' http://127.0.0.1:18090/__simulator/state
+curl -sS -X POST -H 'Authorization: local-simulator-key' 'http://127.0.0.1:18090/__simulator/outage?seconds=60'
+curl -sS -X POST -H 'Authorization: local-simulator-key' 'http://127.0.0.1:18090/__simulator/rate-limit?count=5&retryAfter=2'
+```
+
+To use real games, buy the tier you need, review BALLDONTLIE's terms, and point the ingestor at it
+(omit the `simulator` profile). Match the quota to the tier (free 5, ALL-STAR 60, GOAT 600 requests
+per minute) and optionally limit polling to a few teams:
+
+```bash
+export COURTPULSE_PROVIDER_BASE_URL='https://api.balldontlie.io'
+export COURTPULSE_BALLDONTLIE_API_KEY='PASTE_YOUR_KEY'
+export COURTPULSE_PROVIDER_REQUESTS_PER_MINUTE=60
+export COURTPULSE_INGEST_TEAM_IDS='14,10'
+docker compose --profile live up -d processor-worker ingestor-worker
+docker compose run --rm ingestor-worker --ingest-game=18446820
+```
+
+`--ingest-game` backfills one completed game once, which is how a real recorded game can be
+replayed through the whole pipeline. Each poll stores new plays as raw evidence plus canonical
+events through the outbox, turns a changed play into the next revision for reconciliation, and
+records unmappable, reverted, or vanished plays as operator incidents instead of guessing. Games
+stay polled for six hours after they end because providers revise box scores. Freshness is the last
+successful poll per game, so halftime stays `LIVE` and an outage turns the game `STALE`. Operators
+can read `GET /api/v1/operations/providers` for circuit state, quota use, freshness, and incident
+counts. Periods run to ten (six overtimes, five-minute clocks) and close-game rules can target an
+overtime period (5 = OT1). See [ADR 0013](docs/adr/0013-live-provider-ingestion.md).
+
+The isolated proof drives the production adapter against the simulator in manual mode: discovery
+with team names, 429s honored without data loss, an outage that turns the game `STALE`, opens the
+circuit, and recovers to `LIVE`, an overtime final, a correction that marks one alert `CORRECTED`
+and fires one new alert, restarted workers and a one-shot re-ingest that change nothing, and the
+browser view:
+
+```bash
+./scripts/verify-milestone-12.sh
+```
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:
@@ -711,7 +770,7 @@ recent-event history. Operational times and delivery counters are excluded.
 
 ```text
 modules/domain       pure events, reducer, rules, checksum (no infrastructure)
-modules/providers    fixture mapping and raw source evidence
+modules/providers    fixture mapping, live provider boundary, BALLDONTLIE adapter
 modules/persistence  Flyway, JDBC, checkpoints, idempotency, outbox leases
 modules/messaging    queue port, publisher/consumer, AWS SDK v2 SQS adapter
 modules/testkit      reusable synthetic fixture
@@ -719,7 +778,8 @@ modules/query        read models, keyset cursors, data status, bounded JDBC
 modules/observability  validated W3C trace context and span conventions
 apps/replay-cli      infrastructure-free replay
 apps/durable-replay-cli  direct PostgreSQL replay
-apps/queue-replay-cli    bounded PostgreSQL -> FIFO SQS -> PostgreSQL demo
+apps/queue-replay-cli    replay demo plus processor, ingest, delivery, reconciliation daemons
+apps/provider-simulator  local-only BALLDONTLIE-shaped test double (never deployed)
 apps/api             Spring MVC read API, DTOs, OpenAPI, errors, health
 apps/web             React dashboard, typed REST client, Nginx same-origin boundary
 ```
@@ -784,14 +844,14 @@ docker compose down -v
 
 ## Current limitations
 
-- The synthetic fixture is the only provider; live provider refetch and overtime are deferred.
+- Real play-by-play needs a paid BALLDONTLIE tier; the default live profile uses a local simulator.
+  Adapter assumptions (contiguous `order`, an `End Game` play) are verified only against the
+  documented schema until real data is available.
 - LocalStack is test infrastructure, not a production AWS deployment.
 - External email providers beyond local Mailpit remain deferred; the realtime publisher still
   handles only the WebSocket hint types documented in the AsyncAPI contract.
 - Realtime fanout is single-instance and falls back to polling. There
-  is no personalized realtime channel, offline mode, external email provider, live provider integration,
-  Redis multi-replica fanout, Terraform, or Kubernetes. Rules cannot target overtime because the
-  current close-game template deliberately bounds eligible periods to 1–4.
+  is no personalized realtime channel, offline mode, Redis multi-replica fanout, or Kubernetes.
 
 See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0002](docs/adr/0002-postgresql-transactional-outbox.md),
@@ -804,3 +864,4 @@ See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0009](docs/adr/0009-reliable-alert-delivery.md), and
 [ADR 0010](docs/adr/0010-corrections-and-reconciliation.md).
 [ADR 0011](docs/adr/0011-local-observability.md) covers local telemetry.
+[ADR 0013](docs/adr/0013-live-provider-ingestion.md) covers live provider ingestion and overtime.

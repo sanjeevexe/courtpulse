@@ -33,6 +33,10 @@ public final class EventFingerprint {
         append(canonical, "homeScore", Integer.toString(event.scoreAfter().home()));
         append(canonical, "awayScore", Integer.toString(event.scoreAfter().away()));
         append(canonical, "points", Integer.toString(event.points()));
+        // Appended only when present so events without provider text keep their v1 fingerprints.
+        if (event.description() != null) {
+            append(canonical, "description", event.description());
+        }
         return sha256(canonical.toString());
     }
 

@@ -20,9 +20,13 @@ public record GameSnapshotReadModel(
         String stateChecksum,
         List<RecentEventReadModel> recentEvents,
         Instant updatedAt,
-        DataStatus dataStatus) {
+        DataStatus dataStatus,
+        TeamLabels teams,
+        Instant scheduledAt,
+        Map<String, String> playerNames) {
     public GameSnapshotReadModel {
         playerPoints = Map.copyOf(playerPoints);
         recentEvents = List.copyOf(recentEvents);
+        playerNames = Map.copyOf(playerNames);
     }
 }

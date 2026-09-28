@@ -18,7 +18,8 @@ public record CanonicalEventReadModel(
         String teamId,
         List<String> participantIds,
         ScoreReadModel scoreAfter,
-        int points) {
+        int points,
+        String description) {
     public CanonicalEventReadModel {
         participantIds = List.copyOf(participantIds);
     }

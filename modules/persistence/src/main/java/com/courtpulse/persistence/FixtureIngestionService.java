@@ -29,6 +29,7 @@ public final class FixtureIngestionService {
 
     public ImportResult importFixture(LoadedFixture fixture) {
         try (var span = TraceContext.start("fixture ingest", SpanKind.INTERNAL)) {
+            span.span().setAttribute("courtpulse.source.events", fixture.sourceEvents().size());
             return transactions.execute(status -> importInTransaction(fixture));
         }
     }

@@ -25,6 +25,8 @@ import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
 import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.OutboxStatusCounts;
+import com.courtpulse.persistence.ProviderIngestionService;
+import com.courtpulse.providers.live.LiveGameProvider;
 import com.courtpulse.providers.fixture.LoadedFixture;
 import com.courtpulse.providers.fixture.FixtureLoader;
 import com.courtpulse.testkit.SyntheticFixtureResources;
@@ -41,11 +43,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 @Component
@@ -56,6 +60,9 @@ public final class QueueReplayCommand implements ApplicationRunner {
             "correction-fixture", "reconcile-game", "reconciliation-run", "reconciliation-daemon",
             "simulate-publisher-after-send", "simulate-consumer-before-commit",
             "simulate-consumer-after-commit");
+    /** Deployment modes: each runs alone and is what an orchestrator schedules. */
+    private static final Set<String> SERVICE_OPTIONS = Set.of(
+            "processor-daemon", "ingest-daemon", "ingest-game", "migrate", "canary");
     private static final Set<String> DELIVERY_OPTIONS = Set.of(
             "delivery-publish", "delivery-drain", "delivery-run", "delivery-daemon");
 
@@ -80,6 +87,11 @@ public final class QueueReplayCommand implements ApplicationRunner {
     private final String dlqUrl;
     private final Duration drainTimeout;
     private final int workerConcurrency;
+    private final ProviderIngestionService providerIngestion;
+    private final ObjectProvider<LiveGameProvider> liveProvider;
+    private final JdbcClient jdbc;
+    private final LiveIngestDaemon.Settings ingestSettings;
+    private final Duration canaryTimeout;
 
     public QueueReplayCommand(
             JdbcFixtureRepository fixtures,
@@ -102,7 +114,15 @@ public final class QueueReplayCommand implements ApplicationRunner {
             @Qualifier("gameEventsQueueUrl") String queueUrl,
             @Qualifier("gameEventsDlqUrl") String dlqUrl,
             @Value("${courtpulse.demo.drain-timeout}") Duration drainTimeout,
-            @Value("${courtpulse.consumer.worker-concurrency}") int workerConcurrency) {
+            @Value("${courtpulse.consumer.worker-concurrency}") int workerConcurrency,
+            ProviderIngestionService providerIngestion,
+            ObjectProvider<LiveGameProvider> liveProvider,
+            JdbcClient jdbc,
+            @Value("${courtpulse.ingest.poll-interval}") Duration ingestPollInterval,
+            @Value("${courtpulse.ingest.maximum-live-games}") int maximumLiveGames,
+            @Value("${courtpulse.ingest.player-lookups-per-cycle}") int playerLookups,
+            @Value("${courtpulse.ingest.league-zone}") java.time.ZoneId leagueZone,
+            @Value("${courtpulse.canary.timeout}") Duration canaryTimeout) {
         this.fixtures = fixtures;
         this.ingestion = ingestion;
         this.reconciliation = reconciliation;
@@ -127,10 +147,19 @@ public final class QueueReplayCommand implements ApplicationRunner {
             throw new IllegalArgumentException("consumer worker concurrency must be between 1 and 8");
         }
         this.workerConcurrency = workerConcurrency;
+        this.providerIngestion = providerIngestion;
+        this.liveProvider = liveProvider;
+        this.jdbc = jdbc;
+        this.ingestSettings = new LiveIngestDaemon.Settings(
+                ingestPollInterval, maximumLiveGames, playerLookups, leagueZone);
+        this.canaryTimeout = canaryTimeout;
     }
 
     @Override
     public void run(ApplicationArguments arguments) {
+        if (runServiceMode(arguments)) {
+            return;
+        }
         Options options = Options.parse(arguments);
         if (options.help()) {
             printUsage();
@@ -234,6 +263,48 @@ public final class QueueReplayCommand implements ApplicationRunner {
         }
 
         printReport(fixture, imported, publication, consumption, Instant.now().isBefore(deadline));
+    }
+
+    /** Handles the deployment modes, which must be the only option on the command line. */
+    private boolean runServiceMode(ApplicationArguments arguments) {
+        List<String> modes = arguments.getOptionNames().stream().filter(SERVICE_OPTIONS::contains).toList();
+        if (modes.isEmpty()) {
+            return false;
+        }
+        List<String> other = arguments.getOptionNames().stream()
+                .filter(option -> !SERVICE_OPTIONS.contains(option))
+                .filter(option -> !option.startsWith("spring.") && !option.startsWith("logging.")
+                        && !option.startsWith("courtpulse."))
+                .toList();
+        if (modes.size() != 1 || !other.isEmpty() || !arguments.getNonOptionArgs().isEmpty()) {
+            throw new IllegalArgumentException("Deployment modes run alone; use --help");
+        }
+        switch (modes.getFirst()) {
+            case "processor-daemon" -> new ProcessorDaemon(
+                    publisher, consumer, queue, dlq, operationalTelemetry, workerConcurrency).run();
+            case "ingest-daemon" -> new LiveIngestDaemon(requireProvider(), providerIngestion,
+                    operationalTelemetry, ingestSettings, java.time.Clock.systemUTC()).run();
+            case "ingest-game" -> new LiveIngestDaemon(requireProvider(), providerIngestion,
+                    operationalTelemetry, ingestSettings, java.time.Clock.systemUTC())
+                    .ingestOne(Options.oneValue(arguments, "ingest-game"));
+            case "migrate" -> System.out.println("Schema is at Flyway version " + jdbc.sql("""
+                    SELECT version FROM flyway_schema_history
+                    WHERE success AND version IS NOT NULL
+                    ORDER BY installed_rank DESC LIMIT 1
+                    """).query(String.class).single());
+            case "canary" -> new ReplayCanary(ingestion, processing, canaryTimeout).run();
+            default -> throw new IllegalStateException("Unhandled deployment mode");
+        }
+        return true;
+    }
+
+    private LiveGameProvider requireProvider() {
+        LiveGameProvider provider = liveProvider.getIfAvailable();
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "No live provider configured: set COURTPULSE_PROVIDER=balldontlie and COURTPULSE_BALLDONTLIE_API_KEY");
+        }
+        return provider;
     }
 
     private void runDeliveries(Options options) {
@@ -413,6 +484,8 @@ public final class QueueReplayCommand implements ApplicationRunner {
         System.out.println("       [--delivery-daemon] (bounded continuous worker; SIGTERM stops it)");
         System.out.println("       [--correction-fixture=/path/fixture.json] [--reconcile-game=game-id]");
         System.out.println("       [--reconciliation-run | --reconciliation-daemon]");
+        System.out.println("Deployment modes (one at a time): --processor-daemon | --ingest-daemon");
+        System.out.println("       | --ingest-game=<provider game id> | --migrate | --canary");
     }
 
     private record Options(
@@ -501,7 +574,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
             return options;
         }
 
-        private static String oneValue(ApplicationArguments arguments, String name) {
+        static String oneValue(ApplicationArguments arguments, String name) {
             if (!arguments.containsOption(name)) return null;
             List<String> values = arguments.getOptionValues(name);
             if (values == null || values.size() != 1 || values.getFirst().isBlank()) {

@@ -18,11 +18,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 public final class RealtimeHub {
     private static final Logger LOGGER = LoggerFactory.getLogger(RealtimeHub.class);
+    private static final byte[] PING_PAYLOAD = "courtpulse".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
     private final ConcurrentHashMap<String, ClientSession> sessions = new ConcurrentHashMap<>();
     private final AtomicInteger subscriptionCount = new AtomicInteger();
@@ -167,6 +170,21 @@ public final class RealtimeHub {
         return delivered;
     }
 
+    /**
+     * Queues a ping on every open session. Browsers answer automatically, and the traffic keeps
+     * proxies (nginx, load balancers) from closing a quiet subscription between game events. A
+     * session whose buffer is already full is left to the data-path slow-client policy.
+     */
+    public int keepAlive() {
+        int queued = 0;
+        for (ClientSession client : sessions.values()) {
+            if (client.ping()) {
+                queued++;
+            }
+        }
+        return queued;
+    }
+
     public int activeSessions() {
         return sessions.size();
     }
@@ -231,7 +249,7 @@ public final class RealtimeHub {
 
     private final class ClientSession {
         private final WebSocketSession socket;
-        private final ArrayBlockingQueue<String> outbound;
+        private final ArrayBlockingQueue<WebSocketMessage<?>> outbound;
         private volatile String gameId;
         private volatile long highestStateVersion;
         private volatile boolean running = true;
@@ -246,8 +264,7 @@ public final class RealtimeHub {
             writer = Thread.ofVirtual().name("courtpulse-ws-" + socket.getId()).start(() -> {
                 while (running && socket.isOpen()) {
                     try {
-                        String payload = outbound.take();
-                        socket.sendMessage(new TextMessage(payload));
+                        socket.sendMessage(outbound.take());
                     } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
                         return;
@@ -263,7 +280,7 @@ public final class RealtimeHub {
             if (!running || !socket.isOpen()) {
                 return false;
             }
-            if (outbound.offer(protocol.encode(message))) {
+            if (outbound.offer(new TextMessage(protocol.encode(message)))) {
                 return true;
             }
             slowDisconnects.increment();
@@ -274,6 +291,11 @@ public final class RealtimeHub {
             }
             close(socket);
             return false;
+        }
+
+        private boolean ping() {
+            return running && socket.isOpen()
+                    && outbound.offer(new PingMessage(java.nio.ByteBuffer.wrap(PING_PAYLOAD)));
         }
 
         private void stop() {

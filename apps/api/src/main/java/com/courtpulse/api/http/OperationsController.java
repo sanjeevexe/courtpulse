@@ -4,6 +4,7 @@ import com.courtpulse.query.CourtPulseQueryService;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.DeliveryOperations;
+import com.courtpulse.persistence.JdbcProviderRepository;
 import com.courtpulse.persistence.JdbcReconciliationOperationsRepository;
 import com.courtpulse.persistence.ReconciliationOperations;
 import java.time.Clock;
@@ -23,15 +24,18 @@ public class OperationsController {
     private final JdbcAlertRuleRepository rules;
     private final JdbcDeliveryWorkRepository deliveries;
     private final JdbcReconciliationOperationsRepository reconciliations;
+    private final JdbcProviderRepository providers;
     private final Clock clock;
 
     public OperationsController(CourtPulseQueryService queries, JdbcAlertRuleRepository rules,
             JdbcDeliveryWorkRepository deliveries,
-            JdbcReconciliationOperationsRepository reconciliations, Clock clock) {
+            JdbcReconciliationOperationsRepository reconciliations,
+            JdbcProviderRepository providers, Clock clock) {
         this.queries = queries;
         this.rules = rules;
         this.deliveries = deliveries;
         this.reconciliations = reconciliations;
+        this.providers = providers;
         this.clock = clock;
     }
 
@@ -84,5 +88,23 @@ public class OperationsController {
     @GetMapping("/reconciliations")
     public ReconciliationOperations reconciliations() {
         return reconciliations.summary(clock.instant());
+    }
+
+    @Operation(summary = "Read aggregate live-provider client and freshness health")
+    @SecurityRequirement(name = "oidcBearer", scopes = "courtpulse:ops")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Provider circuit, quota, freshness, and incident counts"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Operational authority required")
+    })
+    @GetMapping("/providers")
+    public ApiDto.ProviderOperations providers() {
+        return new ApiDto.ProviderOperations(providers.operations(clock.instant()).providers().stream()
+                .map(source -> new ApiDto.ProviderSource(source.source(), source.circuitState(),
+                        source.requestsTotal(), source.rateLimitedTotal(), source.failuresTotal(),
+                        source.consecutiveFailures(), source.lastErrorCode(), source.lastSuccessAgeSeconds(),
+                        source.scheduledGames(), source.liveGames(), source.finalGames(),
+                        source.stalestLiveFeedAgeSeconds(), source.dataIncidents()))
+                .toList());
     }
 }

@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { DataStatusBadge } from '../components/DataStatusBadge';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
-import { formatClock, formatDateTime, formatPeriod, readableEventType, shortTeam } from '../lib/format';
+import { formatClock, formatDateTime, formatPeriod, playerLabel, readableEventType, teamLabel } from '../lib/format';
 import { connectionLabel, useGameRealtime } from '../realtime/hooks';
 
 export function GameDetailPage() {
@@ -101,13 +101,13 @@ export function GameDetailPage() {
         <div className="scoreboard__matchup">
           <section className="score-team score-team--away" aria-label="Away team score">
             <span>Away</span>
-            <h1>{shortTeam(game.awayTeamId)}</h1>
+            <h1>{teamLabel(game.awayTeamId, game.awayTeamName)}</h1>
             <strong>{game.awayScore}</strong>
           </section>
           <div className="score-divider" aria-hidden="true"><span>at</span></div>
           <section className="score-team score-team--home" aria-label="Home team score">
             <span>Home</span>
-            <h1>{shortTeam(game.homeTeamId)}</h1>
+            <h1>{teamLabel(game.homeTeamId, game.homeTeamName)}</h1>
             <strong>{game.homeScore}</strong>
           </section>
         </div>
@@ -126,7 +126,7 @@ export function GameDetailPage() {
             <div className="player-list">
               {players.map(([player, points]) => (
                 <div className="player-row" key={player}>
-                  <span>{player.replaceAll('_', ' ')}</span>
+                  <span>{playerLabel(player, game.playerNames)}</span>
                   <strong>{points}<small> PTS</small></strong>
                 </div>
               ))}
@@ -142,7 +142,7 @@ export function GameDetailPage() {
             {game.recentEvents.map((event) => (
               <li key={event.eventId}>
                 <span>#{event.sequence}</span>
-                <strong>{readableEventType(event.eventType)}</strong>
+                <strong title={event.description ?? undefined}>{event.description ?? readableEventType(event.eventType)}</strong>
                 <small>{event.scoreAfter.away}–{event.scoreAfter.home}</small>
               </li>
             ))}
@@ -170,10 +170,15 @@ export function GameDetailPage() {
                   <span>{formatClock(event.clockMillisRemaining)}</span>
                 </div>
                 <div className="event-copy">
-                  <strong>{readableEventType(event.eventType)}</strong>
+                  <strong>{event.description ?? readableEventType(event.eventType)}</strong>
                   <span>
-                    {event.teamId ? shortTeam(event.teamId) : 'Game'}
-                    {event.participantIds.length > 0 ? ` · ${event.participantIds.join(', ')}` : ''}
+                    {event.description ? `${readableEventType(event.eventType)} · ` : ''}
+                    {event.teamId
+                      ? teamLabel(event.teamId, event.teamId === game.homeTeamId ? game.homeTeamName : event.teamId === game.awayTeamId ? game.awayTeamName : null)
+                      : 'Game'}
+                    {event.participantIds.length > 0
+                      ? ` · ${event.participantIds.map((id) => playerLabel(id, game.playerNames)).join(', ')}`
+                      : ''}
                     {event.points > 0 ? ` · ${String(event.points)} pts` : ''}
                   </span>
                 </div>

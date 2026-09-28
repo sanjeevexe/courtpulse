@@ -13,6 +13,7 @@ import { useMyRules } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
+import { formatPeriod } from '../lib/format';
 
 type RuleKind = CreateAlertRule['type'];
 
@@ -97,9 +98,9 @@ export function MyRulesPage() {
       const parsedPeriod = Number(period);
       const seconds = Number(clockSeconds);
       if (!Number.isInteger(parsedMargin) || parsedMargin < 1 || parsedMargin > 20
-          || !Number.isInteger(parsedPeriod) || parsedPeriod < 1 || parsedPeriod > 4
+          || !Number.isInteger(parsedPeriod) || parsedPeriod < 1 || parsedPeriod > 10
           || !Number.isInteger(seconds) || seconds < 0 || seconds > 720) {
-        return setValidation('Margin must be 1–20, period 1–4, and clock seconds 0–720.');
+        return setValidation('Margin must be 1–20, period 1–10 (5+ is overtime), and clock seconds 0–720.');
       }
       createMutation.mutate({
         type, gameId: gameId.trim(), maximumMargin: parsedMargin, eligiblePeriod: parsedPeriod,
@@ -136,7 +137,7 @@ export function MyRulesPage() {
           ) : (
             <div className="rule-form__row">
               <label>Maximum margin<input type="number" min="1" max="20" value={margin} onChange={(event) => setMargin(event.target.value)} /></label>
-              <label>Eligible period<input type="number" min="1" max="4" value={period} onChange={(event) => setPeriod(event.target.value)} /></label>
+              <label>Eligible period (1–4, OT1 = 5)<input type="number" min="1" max="10" value={period} onChange={(event) => setPeriod(event.target.value)} /></label>
               <label>Clock seconds remaining<input type="number" min="0" max="720" value={clockSeconds} onChange={(event) => setClockSeconds(event.target.value)} /></label>
             </div>
           )}
@@ -187,5 +188,5 @@ function ruleLabel(type: AlertRule['type']) {
 function ruleSummary(rule: AlertRule) {
   if (rule.type === 'PLAYER_POINTS') return `${rule.playerId} · ${String(rule.pointsThreshold)} points`;
   if (rule.type === 'SCORING_RUN') return `${rule.teamId} · ${String(rule.pointsThreshold)} unanswered`;
-  return `Within ${String(rule.maximumMargin)} points · period ${String(rule.eligiblePeriod)} · ${String(rule.maximumClockMillisRemaining / 1000)}s or less`;
+  return `Within ${String(rule.maximumMargin)} points · ${formatPeriod(rule.eligiblePeriod)} · ${String(rule.maximumClockMillisRemaining / 1000)}s or less`;
 }

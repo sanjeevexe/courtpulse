@@ -22,6 +22,7 @@ export COURTPULSE_WEB_HOST_PORT="${COURTPULSE_WEB_HOST_PORT:-14173}"
 export COURTPULSE_MAILPIT_SMTP_HOST_PORT="${COURTPULSE_MAILPIT_SMTP_HOST_PORT:-11025}"
 export COURTPULSE_MAILPIT_UI_HOST_PORT="${COURTPULSE_MAILPIT_UI_HOST_PORT:-18025}"
 export COURTPULSE_GRAFANA_HOST_PORT="${COURTPULSE_GRAFANA_HOST_PORT:-13000}"
+export COURTPULSE_SIMULATOR_HOST_PORT="${COURTPULSE_SIMULATOR_HOST_PORT:-18190}"
 
 cd "$repo_root"
 project="${COURTPULSE_OBSERVABILITY_PROJECT:-courtpulse-observability}"
@@ -31,4 +32,5 @@ if [[ ! "$project" =~ ^courtpulse-observability(-[a-z0-9]+)?$ ]]; then
 fi
 exec docker compose -p "$project" \
   -f compose.yaml -f compose.observability.yaml \
-  --profile delivery --profile reconciliation --profile observability "$@"
+  --profile delivery --profile reconciliation --profile observability \
+  --profile live --profile simulator "$@"

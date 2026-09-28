@@ -392,6 +392,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operations/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read aggregate live-provider client and freshness health */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Provider circuit, quota, freshness, and incident counts */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProviderOperations"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -1130,6 +1173,12 @@ export interface components {
             updatedAt: string;
             stateChecksum?: string | null;
             dataStatus: components["schemas"]["DataStatus"];
+            homeTeamName?: string | null;
+            homeTeamAbbreviation?: string | null;
+            awayTeamName?: string | null;
+            awayTeamAbbreviation?: string | null;
+            /** Format: date-time */
+            scheduledAt?: string | null;
         };
         GameSnapshot: {
             gameId: string;
@@ -1158,6 +1207,15 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             dataStatus: components["schemas"]["DataStatus"];
+            homeTeamName?: string | null;
+            homeTeamAbbreviation?: string | null;
+            awayTeamName?: string | null;
+            awayTeamAbbreviation?: string | null;
+            /** Format: date-time */
+            scheduledAt?: string | null;
+            playerNames: {
+                [key: string]: string;
+            };
         };
         RecentEvent: {
             eventId: string;
@@ -1169,6 +1227,7 @@ export interface components {
             /** Format: date-time */
             occurredAt: string;
             scoreAfter: components["schemas"]["Score"];
+            description?: string | null;
         };
         EventPage: {
             items: components["schemas"]["Event"][];
@@ -1197,6 +1256,7 @@ export interface components {
             scoreAfter: components["schemas"]["Score"];
             /** Format: int32 */
             points: number;
+            description?: string | null;
         };
         Score: {
             /** Format: int32 */
@@ -1391,6 +1451,35 @@ export interface components {
             dlqDepth: number;
             /** Format: date-time */
             dlqObservedAt: string | null;
+        };
+        ProviderOperations: {
+            providers: components["schemas"]["ProviderSource"][];
+        };
+        ProviderSource: {
+            source: string;
+            /** @enum {string} */
+            circuitState: "CLOSED" | "OPEN" | "HALF_OPEN";
+            /** Format: int64 */
+            requestsTotal: number;
+            /** Format: int64 */
+            rateLimitedTotal: number;
+            /** Format: int64 */
+            failuresTotal: number;
+            /** Format: int32 */
+            consecutiveFailures: number;
+            lastErrorCode?: string | null;
+            /** Format: int64 */
+            lastSuccessAgeSeconds?: number | null;
+            /** Format: int64 */
+            scheduledGames: number;
+            /** Format: int64 */
+            liveGames: number;
+            /** Format: int64 */
+            finalGames: number;
+            /** Format: int64 */
+            stalestLiveFeedAgeSeconds?: number | null;
+            /** Format: int64 */
+            dataIncidents: number;
         };
         ReconciliationOperations: {
             /** Format: int64 */

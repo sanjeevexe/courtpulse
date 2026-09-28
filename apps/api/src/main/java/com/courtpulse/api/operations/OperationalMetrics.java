@@ -55,6 +55,19 @@ public final class OperationalMetrics implements MeterBinder {
                 () -> snapshot().deliveryFailures(), "worker", "delivery");
         gauge(registry, "courtpulse.worker.consecutive.failures",
                 () -> snapshot().reconciliationFailures(), "worker", "reconciliation");
+        gauge(registry, "courtpulse.worker.heartbeat.age.seconds",
+                () -> snapshot().processorWorkerAge(), "worker", "processor");
+        gauge(registry, "courtpulse.worker.heartbeat.age.seconds",
+                () -> snapshot().ingestorWorkerAge(), "worker", "ingestor");
+        gauge(registry, "courtpulse.provider.requests", () -> snapshot().providerRequests());
+        gauge(registry, "courtpulse.provider.rate.limited", () -> snapshot().providerRateLimited());
+        gauge(registry, "courtpulse.provider.failures", () -> snapshot().providerFailures());
+        gauge(registry, "courtpulse.provider.circuit.open", () -> snapshot().providerCircuitOpen());
+        gauge(registry, "courtpulse.provider.games", () -> snapshot().providerLiveGames(),
+                "lifecycle", "live");
+        gauge(registry, "courtpulse.provider.games", () -> snapshot().providerFinalGames(),
+                "lifecycle", "final");
+        gauge(registry, "courtpulse.provider.data.incidents", () -> snapshot().providerIncidents());
     }
 
     private void gauge(MeterRegistry registry, String name,
@@ -71,9 +84,14 @@ public final class OperationalMetrics implements MeterBinder {
             if (cached != null && now < expiresAt) return cached;
             result = jdbc.sql("""
                     SELECT
-                      COALESCE((SELECT EXTRACT(EPOCH FROM (:now - max(last_observed_at)))
-                        FROM raw_provider_payloads), -1) AS feed_age,
-                      (SELECT count(*) FROM games WHERE status = 'LIVE') AS live_games,
+                      COALESCE((SELECT EXTRACT(EPOCH FROM
+                          (:now - min(COALESCE(observation.last_success_at, observation.updated_at))))
+                        FROM provider_game_observations observation WHERE observation.lifecycle = 'LIVE'),
+                        (SELECT EXTRACT(EPOCH FROM (:now - max(last_observed_at)))
+                          FROM raw_provider_payloads), -1) AS feed_age,
+                      (SELECT count(*) FROM games game WHERE game.status = 'LIVE' OR EXISTS (
+                        SELECT 1 FROM provider_game_observations observation
+                        WHERE observation.game_id = game.id AND observation.lifecycle = 'LIVE')) AS live_games,
                       COALESCE((SELECT EXTRACT(EPOCH FROM (:now - min(event.created_at)))
                         FROM canonical_events event
                         WHERE NOT EXISTS (SELECT 1 FROM processed_events processed
@@ -116,7 +134,18 @@ public final class OperationalMetrics implements MeterBinder {
                       COALESCE((SELECT consecutive_failures FROM worker_heartbeats
                         WHERE worker_type = 'delivery'), 0) AS delivery_failures,
                       COALESCE((SELECT consecutive_failures FROM worker_heartbeats
-                        WHERE worker_type = 'reconciliation'), 0) AS reconciliation_failures
+                        WHERE worker_type = 'reconciliation'), 0) AS reconciliation_failures,
+                      COALESCE((SELECT EXTRACT(EPOCH FROM (:now - observed_at))
+                        FROM worker_heartbeats WHERE worker_type = 'processor'), -1) AS processor_worker_age,
+                      COALESCE((SELECT EXTRACT(EPOCH FROM (:now - observed_at))
+                        FROM worker_heartbeats WHERE worker_type = 'ingestor'), -1) AS ingestor_worker_age,
+                      COALESCE((SELECT sum(requests_total) FROM provider_health), 0) AS provider_requests,
+                      COALESCE((SELECT sum(rate_limited_total) FROM provider_health), 0) AS provider_rate_limited,
+                      COALESCE((SELECT sum(failures_total) FROM provider_health), 0) AS provider_failures,
+                      (SELECT count(*) FROM provider_health WHERE circuit_state = 'OPEN') AS provider_circuit_open,
+                      (SELECT count(*) FROM provider_game_observations WHERE lifecycle = 'LIVE') AS provider_live_games,
+                      (SELECT count(*) FROM provider_game_observations WHERE lifecycle = 'FINAL') AS provider_final_games,
+                      (SELECT count(*) FROM provider_data_incidents) AS provider_incidents
                     """).param("now", java.time.OffsetDateTime.ofInstant(clock.instant(),
                             java.time.ZoneOffset.UTC))
                     .query((row, n) -> new Snapshot(
@@ -131,7 +160,16 @@ public final class OperationalMetrics implements MeterBinder {
                             row.getDouble("delivery_worker_age"),
                             row.getDouble("reconciliation_worker_age"),
                             row.getDouble("delivery_failures"),
-                            row.getDouble("reconciliation_failures"))).single();
+                            row.getDouble("reconciliation_failures"),
+                            row.getDouble("processor_worker_age"),
+                            row.getDouble("ingestor_worker_age"),
+                            row.getDouble("provider_requests"),
+                            row.getDouble("provider_rate_limited"),
+                            row.getDouble("provider_failures"),
+                            row.getDouble("provider_circuit_open"),
+                            row.getDouble("provider_live_games"),
+                            row.getDouble("provider_final_games"),
+                            row.getDouble("provider_incidents"))).single();
             cached = result;
             expiresAt = now + java.time.Duration.ofSeconds(5).toNanos();
             return result;
@@ -144,5 +182,8 @@ public final class OperationalMetrics implements MeterBinder {
             double gameQueue, double gameDlq, double deliveryQueue, double deliveryDlq,
             double queueObservationAge, double blocked, double pending, double completed,
             double deliveryWorkerAge, double reconciliationWorkerAge,
-            double deliveryFailures, double reconciliationFailures) {}
+            double deliveryFailures, double reconciliationFailures,
+            double processorWorkerAge, double ingestorWorkerAge, double providerRequests,
+            double providerRateLimited, double providerFailures, double providerCircuitOpen,
+            double providerLiveGames, double providerFinalGames, double providerIncidents) {}
 }

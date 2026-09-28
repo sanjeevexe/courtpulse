@@ -57,7 +57,7 @@ groups:
           summary: A private alert delivery reached a terminal failure
           runbook: docs/runbooks/observability.md#delivery-failures
       - alert: CourtPulseWorkerStale
-        expr: courtpulse_worker_heartbeat_age_seconds{worker=~"delivery|reconciliation"} > 60
+        expr: courtpulse_worker_heartbeat_age_seconds{worker=~"delivery|reconciliation|processor|ingestor"} > 60
         for: 1m
         labels:
           severity: critical
@@ -72,3 +72,18 @@ groups:
         annotations:
           summary: Queue depth observations have stopped
           runbook: docs/runbooks/observability.md#worker-stale
+      - alert: CourtPulseProviderCircuitOpen
+        expr: courtpulse_provider_circuit_open > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: The live provider client stopped calling upstream after repeated failures
+          runbook: docs/runbooks/observability.md#provider-outage-or-throttling
+      - alert: CourtPulseProviderDataIncident
+        expr: delta(courtpulse_provider_data_incidents[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Provider evidence was rejected, reverted, or removed and needs review
+          runbook: docs/runbooks/observability.md#provider-data-incident

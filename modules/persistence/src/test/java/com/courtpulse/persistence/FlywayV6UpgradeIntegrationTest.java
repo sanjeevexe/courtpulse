@@ -128,13 +128,15 @@ class FlywayV6UpgradeIntegrationTest {
                     fixture.game(), now);
             for (var item : fixture.sourceEvents()) {
                 var raw = fixtures.insertOrObserveRaw(item, now);
-                fixtures.insertCanonical(item.canonicalEvent(), raw.id(), now);
+                insertV7Canonical(jdbc, item.canonicalEvent(), raw.id(), now);
             }
-            String before = processing.readCheckpoint(fixture.game().gameId()).toString();
+            // Current repositories may use later columns, so compare durable rows directly.
+            String before = durableRows(jdbc);
 
             Flyway.configure().dataSource(dataSource).schemas(schema).load().migrate();
 
-            assertEquals(before, processing.readCheckpoint(fixture.game().gameId()).toString());
+            assertEquals(before, durableRows(jdbc));
+            assertEquals(0L, processing.readCheckpoint(fixture.game().gameId()).lastAppliedSequence());
             assertEquals(20L, jdbc.sql("SELECT count(*) FROM canonical_events")
                     .query(Long.class).single());
             assertEquals(20L, jdbc.sql("SELECT count(*) FROM raw_provider_payloads")
@@ -150,6 +152,46 @@ class FlywayV6UpgradeIntegrationTest {
         } finally {
             administrator.sql("DROP SCHEMA " + schema + " CASCADE").update();
         }
+    }
+
+    /** The V1-V7 canonical_events column set; deliberately independent of current repositories. */
+    private static void insertV7Canonical(JdbcClient jdbc, com.courtpulse.domain.event.CanonicalEvent event,
+            UUID rawPayloadId, java.time.Instant now) {
+        jdbc.sql("""
+                        INSERT INTO canonical_events (
+                            event_id, schema_version, source, game_id, provider_event_id,
+                            sequence_number, revision, event_type, period, clock_millis_remaining,
+                            occurred_at, team_id, participant_ids, home_score, away_score, points,
+                            raw_payload_id, canonical_payload, created_at)
+                        VALUES (:eventId, 1, :source, :gameId, :providerEventId, :sequence, :revision,
+                            :type, :period, :clock, :occurredAt, :teamId, CAST(:participants AS JSONB),
+                            :home, :away, :points, :rawId, '{}'::JSONB, :now)
+                        """)
+                .param("eventId", event.eventId()).param("source", event.source())
+                .param("gameId", event.gameId()).param("providerEventId", event.providerEventId())
+                .param("sequence", event.sequence()).param("revision", event.revision())
+                .param("type", event.type().name()).param("period", event.period())
+                .param("clock", event.clockMillisRemaining())
+                .param("occurredAt", java.time.OffsetDateTime.ofInstant(event.occurredAt(), java.time.ZoneOffset.UTC))
+                .param("teamId", event.teamId())
+                .param("participants", "[" + event.participantIds().stream()
+                        .map(id -> "\"" + id + "\"").collect(java.util.stream.Collectors.joining(",")) + "]")
+                .param("home", event.scoreAfter().home()).param("away", event.scoreAfter().away())
+                .param("points", event.points()).param("rawId", rawPayloadId)
+                .param("now", java.time.OffsetDateTime.ofInstant(now, java.time.ZoneOffset.UTC))
+                .update();
+    }
+
+    private static String durableRows(JdbcClient jdbc) {
+        return jdbc.sql("""
+                        SELECT (SELECT string_agg(concat_ws('|', event_id, sequence_number, revision,
+                                    event_type, period, clock_millis_remaining, home_score, away_score,
+                                    points, participant_ids::TEXT), ';' ORDER BY sequence_number)
+                                FROM canonical_events)
+                            || '#' || (SELECT concat_ws('|', status, period, last_sequence, home_score,
+                                    away_score, player_points::TEXT, state_version)
+                                FROM game_checkpoints)
+                        """).query(String.class).single();
     }
 
     private static DataSource dataSource(String schema) {

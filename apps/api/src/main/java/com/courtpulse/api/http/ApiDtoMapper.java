@@ -20,7 +20,9 @@ final class ApiDtoMapper {
                 value.gameId(), value.source(), value.homeTeamId(), value.awayTeamId(), value.status(),
                 value.stateVersion(), value.homeScore(), value.awayScore(), value.period(),
                 value.clockMillisRemaining(), value.lastAppliedSequence(), value.updatedAt(),
-                value.stateChecksum(), value.dataStatus());
+                value.stateChecksum(), value.dataStatus(), value.teams().homeTeamName(),
+                value.teams().homeTeamAbbreviation(), value.teams().awayTeamName(),
+                value.teams().awayTeamAbbreviation(), value.scheduledAt());
     }
 
     static ApiDto.GameSnapshot snapshot(GameSnapshotReadModel value) {
@@ -31,9 +33,12 @@ final class ApiDtoMapper {
                 value.stateChecksum(), value.recentEvents().stream()
                         .map(event -> new ApiDto.RecentEvent(
                                 event.eventId(), event.sequence(), event.revision(), event.eventType(),
-                                event.occurredAt(), new ApiDto.Score(event.homeScore(), event.awayScore())))
+                                event.occurredAt(), new ApiDto.Score(event.homeScore(), event.awayScore()),
+                                event.description()))
                         .toList(),
-                value.updatedAt(), value.dataStatus());
+                value.updatedAt(), value.dataStatus(), value.teams().homeTeamName(),
+                value.teams().homeTeamAbbreviation(), value.teams().awayTeamName(),
+                value.teams().awayTeamAbbreviation(), value.scheduledAt(), value.playerNames());
     }
 
     static ApiDto.EventPage events(KeysetPage<CanonicalEventReadModel> page) {
@@ -42,7 +47,7 @@ final class ApiDtoMapper {
                 event.providerEventId(), event.sequence(), event.revision(), event.eventType(),
                 event.period(), event.clockMillisRemaining(), event.occurredAt(), event.teamId(),
                 event.participantIds(), new ApiDto.Score(event.scoreAfter().home(), event.scoreAfter().away()),
-                event.points())).toList(), page.nextCursor());
+                event.points(), event.description())).toList(), page.nextCursor());
     }
 
     static ApiDto.AlertPage alerts(KeysetPage<AlertReadModel> page) {

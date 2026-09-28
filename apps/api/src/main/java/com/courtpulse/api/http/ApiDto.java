@@ -54,12 +54,17 @@ public final class ApiDto {
             long lastAppliedSequence,
             Instant updatedAt,
             @Schema(nullable = true) String stateChecksum,
-            DataStatus dataStatus) {}
+            DataStatus dataStatus,
+            @Schema(nullable = true, maxLength = 120) String homeTeamName,
+            @Schema(nullable = true, maxLength = 8) String homeTeamAbbreviation,
+            @Schema(nullable = true, maxLength = 120) String awayTeamName,
+            @Schema(nullable = true, maxLength = 8) String awayTeamAbbreviation,
+            @Schema(nullable = true) Instant scheduledAt) {}
 
     @Schema(requiredProperties = {
         "gameId", "source", "homeTeamId", "awayTeamId", "status", "period",
         "clockMillisRemaining", "homeScore", "awayScore", "playerPoints", "stateVersion",
-        "lastAppliedSequence", "recentEvents", "updatedAt", "dataStatus"
+        "lastAppliedSequence", "recentEvents", "updatedAt", "dataStatus", "playerNames"
     })
     public record GameSnapshot(
             String gameId,
@@ -77,7 +82,13 @@ public final class ApiDto {
             @Schema(nullable = true) String stateChecksum,
             List<RecentEvent> recentEvents,
             Instant updatedAt,
-            DataStatus dataStatus) {}
+            DataStatus dataStatus,
+            @Schema(nullable = true, maxLength = 120) String homeTeamName,
+            @Schema(nullable = true, maxLength = 8) String homeTeamAbbreviation,
+            @Schema(nullable = true, maxLength = 120) String awayTeamName,
+            @Schema(nullable = true, maxLength = 8) String awayTeamAbbreviation,
+            @Schema(nullable = true) Instant scheduledAt,
+            Map<String, String> playerNames) {}
 
     @Schema(requiredProperties = {
         "eventId", "sequence", "revision", "eventType", "occurredAt", "scoreAfter"
@@ -88,7 +99,8 @@ public final class ApiDto {
             int revision,
             String eventType,
             Instant occurredAt,
-            Score scoreAfter) {}
+            Score scoreAfter,
+            @Schema(nullable = true, maxLength = 280) String description) {}
 
     @Schema(requiredProperties = {
         "eventId", "schemaVersion", "gameId", "source", "providerEventId", "sequence",
@@ -110,10 +122,33 @@ public final class ApiDto {
             @Schema(nullable = true) String teamId,
             List<String> participantIds,
             Score scoreAfter,
-            int points) {}
+            int points,
+            @Schema(nullable = true, maxLength = 280) String description) {}
 
     @Schema(requiredProperties = {"home", "away"})
     public record Score(int home, int away) {}
+
+    @Schema(requiredProperties = {"providers"})
+    public record ProviderOperations(List<ProviderSource> providers) {}
+
+    @Schema(requiredProperties = {
+        "source", "circuitState", "requestsTotal", "rateLimitedTotal", "failuresTotal",
+        "consecutiveFailures", "scheduledGames", "liveGames", "finalGames", "dataIncidents"
+    })
+    public record ProviderSource(
+            String source,
+            @Schema(allowableValues = {"CLOSED", "OPEN", "HALF_OPEN"}) String circuitState,
+            long requestsTotal,
+            long rateLimitedTotal,
+            long failuresTotal,
+            int consecutiveFailures,
+            @Schema(nullable = true) String lastErrorCode,
+            @Schema(nullable = true) Long lastSuccessAgeSeconds,
+            long scheduledGames,
+            long liveGames,
+            long finalGames,
+            @Schema(nullable = true) Long stalestLiveFeedAgeSeconds,
+            long dataIncidents) {}
 
     @Schema(requiredProperties = {
         "ruleId", "triggerKey", "gameId", "triggeringEventId", "title", "context",

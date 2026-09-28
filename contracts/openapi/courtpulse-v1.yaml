@@ -157,6 +157,21 @@ paths:
         '406': {$ref: '#/components/responses/NotAcceptable'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/operations/providers:
+    get:
+      summary: Read aggregate live-provider client and freshness health
+      security: [{oidcBearer: ['courtpulse:ops']}]
+      responses:
+        '200':
+          description: Provider circuit, quota, freshness, and incident counts
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ProviderOperations'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/v1/me:
     get:
       summary: Read the authenticated application user
@@ -609,9 +624,14 @@ components:
         updatedAt: {type: string, format: date-time}
         stateChecksum: {type: [string, 'null']}
         dataStatus: {$ref: '#/components/schemas/DataStatus'}
+        homeTeamName: {type: [string, 'null'], maxLength: 120}
+        homeTeamAbbreviation: {type: [string, 'null'], maxLength: 8}
+        awayTeamName: {type: [string, 'null'], maxLength: 120}
+        awayTeamAbbreviation: {type: [string, 'null'], maxLength: 8}
+        scheduledAt: {type: [string, 'null'], format: date-time}
     GameSnapshot:
       type: object
-      required: [gameId, source, homeTeamId, awayTeamId, status, period, clockMillisRemaining, homeScore, awayScore, playerPoints, stateVersion, lastAppliedSequence, recentEvents, updatedAt, dataStatus]
+      required: [gameId, source, homeTeamId, awayTeamId, status, period, clockMillisRemaining, homeScore, awayScore, playerPoints, stateVersion, lastAppliedSequence, recentEvents, updatedAt, dataStatus, playerNames]
       properties:
         gameId: {type: string}
         source: {type: string}
@@ -629,6 +649,12 @@ components:
         recentEvents: {type: array, items: {$ref: '#/components/schemas/RecentEvent'}}
         updatedAt: {type: string, format: date-time}
         dataStatus: {$ref: '#/components/schemas/DataStatus'}
+        homeTeamName: {type: [string, 'null'], maxLength: 120}
+        homeTeamAbbreviation: {type: [string, 'null'], maxLength: 8}
+        awayTeamName: {type: [string, 'null'], maxLength: 120}
+        awayTeamAbbreviation: {type: [string, 'null'], maxLength: 8}
+        scheduledAt: {type: [string, 'null'], format: date-time}
+        playerNames: {type: object, additionalProperties: {type: string}}
     RecentEvent:
       type: object
       required: [eventId, sequence, revision, eventType, occurredAt, scoreAfter]
@@ -639,6 +665,7 @@ components:
         eventType: {type: string}
         occurredAt: {type: string, format: date-time}
         scoreAfter: {$ref: '#/components/schemas/Score'}
+        description: {type: [string, 'null'], maxLength: 280}
     EventPage:
       type: object
       required: [items]
@@ -664,6 +691,7 @@ components:
         participantIds: {type: array, items: {type: string}}
         scoreAfter: {$ref: '#/components/schemas/Score'}
         points: {type: integer, format: int32}
+        description: {type: [string, 'null'], maxLength: 280}
     Score:
       type: object
       required: [home, away]
@@ -716,7 +744,7 @@ components:
         type: {type: string, enum: [CLOSE_GAME]}
         gameId: {type: string, minLength: 1, maxLength: 200}
         maximumMargin: {type: integer, format: int32, minimum: 1, maximum: 20}
-        eligiblePeriod: {type: integer, format: int32, minimum: 1, maximum: 4}
+        eligiblePeriod: {type: integer, format: int32, minimum: 1, maximum: 10}
         maximumClockMillisRemaining: {type: integer, format: int64, minimum: 0, maximum: 720000}
         enabled: {type: boolean, default: true}
     CreateScoringRunRule:
@@ -843,6 +871,28 @@ components:
         leaseRecoveries: {type: integer, format: int64}
         dlqDepth: {type: integer, format: int64}
         dlqObservedAt: {type: [string, 'null'], format: date-time}
+    ProviderOperations:
+      type: object
+      required: [providers]
+      properties:
+        providers: {type: array, items: {$ref: '#/components/schemas/ProviderSource'}}
+    ProviderSource:
+      type: object
+      required: [source, circuitState, requestsTotal, rateLimitedTotal, failuresTotal, consecutiveFailures, scheduledGames, liveGames, finalGames, dataIncidents]
+      properties:
+        source: {type: string}
+        circuitState: {type: string, enum: [CLOSED, OPEN, HALF_OPEN]}
+        requestsTotal: {type: integer, format: int64}
+        rateLimitedTotal: {type: integer, format: int64}
+        failuresTotal: {type: integer, format: int64}
+        consecutiveFailures: {type: integer, format: int32}
+        lastErrorCode: {type: [string, 'null']}
+        lastSuccessAgeSeconds: {type: [integer, 'null'], format: int64}
+        scheduledGames: {type: integer, format: int64}
+        liveGames: {type: integer, format: int64}
+        finalGames: {type: integer, format: int64}
+        stalestLiveFeedAgeSeconds: {type: [integer, 'null'], format: int64}
+        dataIncidents: {type: integer, format: int64}
     ReconciliationOperations:
       type: object
       additionalProperties: false

@@ -322,7 +322,7 @@ class CourtPulseApiIntegrationTest {
                 "OwnedAlertPage", "OwnedAlert", "UpdateAlertRule", "RuleOperations",
                 "NotificationSettings", "UpdateNotificationSettings", "DeliveryHistoryPage",
                 "DeliveryHistoryRecord", "DeliveryAttemptPage", "DeliveryAttemptRecord",
-                "DeliveryOperations")) {
+                "DeliveryOperations", "ProviderOperations", "ProviderSource")) {
             if (!publicSchema(contract, schema).equals(publicSchema(runtime, schema))) {
                 schemaMismatches.add(schema + ": expected " + publicSchema(contract, schema)
                         + "; runtime " + publicSchema(runtime, schema));

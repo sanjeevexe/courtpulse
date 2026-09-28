@@ -12,4 +12,5 @@ include(
     "apps:durable-replay-cli",
     "apps:queue-replay-cli",
     "apps:api",
+    "apps:provider-simulator",
 )

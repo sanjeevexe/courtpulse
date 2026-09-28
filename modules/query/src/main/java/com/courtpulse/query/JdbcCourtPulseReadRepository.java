@@ -61,6 +61,10 @@ public final class JdbcCourtPulseReadRepository {
                                checkpoint.away_score, checkpoint.period,
                                checkpoint.clock_millis_remaining, checkpoint.last_sequence,
                                checkpoint.updated_at, checkpoint.state_checksum,
+                               GREATEST(checkpoint.updated_at, observation.last_success_at) AS fresh_at,
+                               game.scheduled_at,
+                               home.name AS home_team_name, home.abbreviation AS home_team_abbreviation,
+                               away.name AS away_team_name, away.abbreviation AS away_team_abbreviation,
                                (EXISTS (
                                    SELECT 1 FROM outbox blocked
                                    WHERE blocked.destination = 'GAME_EVENTS'
@@ -73,6 +77,9 @@ public final class JdbcCourtPulseReadRepository {
                                )) AS processing_blocked
                         FROM games game
                         JOIN game_checkpoints checkpoint ON checkpoint.game_id = game.id
+                        LEFT JOIN provider_game_observations observation ON observation.game_id = game.id
+                        LEFT JOIN teams home ON home.id = game.home_team_id
+                        LEFT JOIN teams away ON away.id = game.away_team_id
                         WHERE 1 = 1
                         """ + statusPredicate + cursorPredicate + """
                         ORDER BY checkpoint.updated_at DESC, game.id ASC
@@ -92,6 +99,10 @@ public final class JdbcCourtPulseReadRepository {
                                checkpoint.player_points::TEXT AS player_points,
                                checkpoint.recent_event_ids::TEXT AS recent_event_ids,
                                checkpoint.updated_at, checkpoint.state_checksum,
+                               GREATEST(checkpoint.updated_at, observation.last_success_at) AS fresh_at,
+                               game.scheduled_at,
+                               home.name AS home_team_name, home.abbreviation AS home_team_abbreviation,
+                               away.name AS away_team_name, away.abbreviation AS away_team_abbreviation,
                                (EXISTS (
                                    SELECT 1 FROM outbox blocked
                                    WHERE blocked.destination = 'GAME_EVENTS'
@@ -104,6 +115,9 @@ public final class JdbcCourtPulseReadRepository {
                                )) AS processing_blocked
                         FROM games game
                         JOIN game_checkpoints checkpoint ON checkpoint.game_id = game.id
+                        LEFT JOIN provider_game_observations observation ON observation.game_id = game.id
+                        LEFT JOIN teams home ON home.id = game.home_team_id
+                        LEFT JOIN teams away ON away.id = game.away_team_id
                         WHERE game.id = :gameId
                         """)
                 .param("gameId", gameId)
@@ -123,7 +137,10 @@ public final class JdbcCourtPulseReadRepository {
                         read(resultSet.getString("recent_event_ids"), STRING_LIST),
                         instant(resultSet, "updated_at"),
                         resultSet.getString("state_checksum"),
-                        resultSet.getBoolean("processing_blocked")))
+                        resultSet.getBoolean("processing_blocked"),
+                        instant(resultSet, "fresh_at"),
+                        teamLabels(resultSet),
+                        nullableInstant(resultSet, "scheduled_at")))
                 .optional();
         return row.map(value -> new GameSnapshotReadModel(
                 value.gameId(),
@@ -142,7 +159,10 @@ public final class JdbcCourtPulseReadRepository {
                 recentEvents(value.recentEventIds()),
                 value.updatedAt(),
                 dataStatusPolicy.derive(
-                        value.status(), value.updatedAt(), value.processingBlocked())));
+                        value.status(), value.freshAt(), value.processingBlocked()),
+                value.teams(),
+                value.scheduledAt(),
+                playerNames(value.playerPoints().keySet())));
     }
 
     public boolean gameExists(String gameId) {
@@ -182,7 +202,7 @@ public final class JdbcCourtPulseReadRepository {
                                sequence_number, revision, event_type, period,
                                clock_millis_remaining, occurred_at, team_id,
                                participant_ids::TEXT AS participant_ids,
-                               home_score, away_score, points
+                               home_score, away_score, points, description
                         FROM canonical_events
                         WHERE game_id = :gameId
                           AND (NOT EXISTS (
@@ -300,7 +320,10 @@ public final class JdbcCourtPulseReadRepository {
                 resultSet.getLong("last_sequence"),
                 updatedAt,
                 resultSet.getString("state_checksum"),
-                dataStatusPolicy.derive(status, updatedAt, resultSet.getBoolean("processing_blocked")));
+                dataStatusPolicy.derive(status, instant(resultSet, "fresh_at"),
+                        resultSet.getBoolean("processing_blocked")),
+                teamLabels(resultSet),
+                nullableInstant(resultSet, "scheduled_at"));
     }
 
     private CanonicalEventReadModel mapEvent(ResultSet resultSet, int rowNumber) throws SQLException {
@@ -319,7 +342,8 @@ public final class JdbcCourtPulseReadRepository {
                 resultSet.getString("team_id"),
                 read(resultSet.getString("participant_ids"), STRING_LIST),
                 new ScoreReadModel(resultSet.getInt("home_score"), resultSet.getInt("away_score")),
-                resultSet.getInt("points"));
+                resultSet.getInt("points"),
+                resultSet.getString("description"));
     }
 
     private List<RecentEventReadModel> recentEvents(List<String> eventIds) {
@@ -328,7 +352,7 @@ public final class JdbcCourtPulseReadRepository {
         }
         return jdbc.sql("""
                         SELECT event_id, sequence_number, revision, event_type, occurred_at,
-                               home_score, away_score
+                               home_score, away_score, description
                         FROM canonical_events
                         WHERE event_id IN (:eventIds)
                         ORDER BY sequence_number, revision, event_id
@@ -341,8 +365,37 @@ public final class JdbcCourtPulseReadRepository {
                         resultSet.getString("event_type"),
                         instant(resultSet, "occurred_at"),
                         resultSet.getInt("home_score"),
-                        resultSet.getInt("away_score")))
+                        resultSet.getInt("away_score"),
+                        resultSet.getString("description")))
                 .list();
+    }
+
+    /** Names only for players already present in the durable state; bounded by that map. */
+    private Map<String, String> playerNames(java.util.Set<String> playerIds) {
+        if (playerIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> names = new LinkedHashMap<>();
+        jdbc.sql("SELECT id, display_name FROM players WHERE id IN (:ids) ORDER BY id")
+                .param("ids", List.copyOf(playerIds))
+                .query((resultSet, rowNumber) -> Map.entry(
+                        resultSet.getString("id"), resultSet.getString("display_name")))
+                .list()
+                .forEach(entry -> names.put(entry.getKey(), entry.getValue()));
+        return names;
+    }
+
+    private static TeamLabels teamLabels(ResultSet resultSet) throws SQLException {
+        return new TeamLabels(
+                resultSet.getString("home_team_name"),
+                resultSet.getString("home_team_abbreviation"),
+                resultSet.getString("away_team_name"),
+                resultSet.getString("away_team_abbreviation"));
+    }
+
+    private static Instant nullableInstant(ResultSet resultSet, String column) throws SQLException {
+        OffsetDateTime value = resultSet.getObject(column, OffsetDateTime.class);
+        return value == null ? null : value.toInstant();
     }
 
     private <T> T read(String json, TypeReference<T> type) {
@@ -388,5 +441,8 @@ public final class JdbcCourtPulseReadRepository {
             List<String> recentEventIds,
             Instant updatedAt,
             String stateChecksum,
-            boolean processingBlocked) {}
+            boolean processingBlocked,
+            Instant freshAt,
+            TeamLabels teams,
+            Instant scheduledAt) {}
 }

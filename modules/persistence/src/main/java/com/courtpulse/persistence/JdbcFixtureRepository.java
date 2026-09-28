@@ -11,6 +11,8 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 public final class JdbcFixtureRepository {
+    /** Only the redistributable synthetic fixtures carry the fixed system demo rule. */
+    public static final String SYNTHETIC_SOURCE = "courtpulse-synthetic";
     private final JdbcClient jdbc;
     private final PersistenceJson json;
 
@@ -74,6 +76,39 @@ public final class JdbcFixtureRepository {
                 .params(Map.of("gameId", game.gameId(), "now", SqlTime.offset(now)))
                 .update();
 
+        if (SYNTHETIC_SOURCE.equals(source)) {
+            insertSystemDemoRule(game, now);
+        }
+        jdbc.sql("""
+                        INSERT INTO game_scoring_runs (game_id, team_id, points, start_sequence)
+                        VALUES (:gameId, NULL, 0, NULL)
+                        ON CONFLICT (game_id) DO NOTHING
+                        """)
+                .param("gameId", game.gameId())
+                .update();
+    }
+
+    /** Provider games also record their provider ID and tip-off time for discovery and display. */
+    public void ensureProviderGame(
+            String source, FixtureGame game, String providerGameId, Instant scheduledAt, Instant now) {
+        ensureGame(source, game, now);
+        jdbc.sql("""
+                        UPDATE games
+                        SET provider_game_id = :providerGameId,
+                            scheduled_at = COALESCE(:scheduledAt, scheduled_at),
+                            updated_at = :now
+                        WHERE id = :id
+                          AND (provider_game_id IS DISTINCT FROM :providerGameId
+                               OR scheduled_at IS DISTINCT FROM COALESCE(:scheduledAt, scheduled_at))
+                        """)
+                .param("id", game.gameId())
+                .param("providerGameId", providerGameId)
+                .param("scheduledAt", scheduledAt == null ? null : SqlTime.offset(scheduledAt))
+                .param("now", SqlTime.offset(now))
+                .update();
+    }
+
+    private void insertSystemDemoRule(FixtureGame game, Instant now) {
         UUID systemRuleId = SystemDemoRuleId.forGame(game.gameId());
         jdbc.sql("""
                         INSERT INTO alert_rules (
@@ -87,13 +122,6 @@ public final class JdbcFixtureRepository {
                 .param("id", systemRuleId)
                 .param("gameId", game.gameId())
                 .param("now", SqlTime.offset(now))
-                .update();
-        jdbc.sql("""
-                        INSERT INTO game_scoring_runs (game_id, team_id, points, start_sequence)
-                        VALUES (:gameId, NULL, 0, NULL)
-                        ON CONFLICT (game_id) DO NOTHING
-                        """)
-                .param("gameId", game.gameId())
                 .update();
     }
 
@@ -163,12 +191,13 @@ public final class JdbcFixtureRepository {
                             event_id, schema_version, source, game_id, provider_event_id,
                             sequence_number, revision, event_type, period, clock_millis_remaining,
                             occurred_at, team_id, participant_ids, home_score, away_score, points,
-                            raw_payload_id, canonical_payload, created_at)
+                            raw_payload_id, canonical_payload, created_at, description)
                         VALUES (
                             :eventId, :schemaVersion, :source, :gameId, :providerEventId,
                             :sequence, :revision, :eventType, :period, :clock,
                             :occurredAt, :teamId, CAST(:participants AS JSONB), :homeScore,
-                            :awayScore, :points, :rawPayloadId, CAST(:canonicalPayload AS JSONB), :now)
+                            :awayScore, :points, :rawPayloadId, CAST(:canonicalPayload AS JSONB), :now,
+                            :description)
                         ON CONFLICT (source, game_id, provider_event_id, revision) DO NOTHING
                         """)
                 .params(parameters(event, rawPayloadId, now))
@@ -216,6 +245,7 @@ public final class JdbcFixtureRepository {
         parameters.put("awayScore", event.scoreAfter().away());
         parameters.put("points", event.points());
         parameters.put("rawPayloadId", rawPayloadId);
+        parameters.put("description", event.description());
         parameters.put("canonicalPayload", json.write(event));
         parameters.put("now", SqlTime.offset(now));
         return parameters;

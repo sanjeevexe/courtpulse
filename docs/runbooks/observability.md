@@ -69,6 +69,29 @@ processing; a fresh heartbeat with stale queue observations points to SQS observ
 failure. Restart only the affected worker after recording its state. Its leases and
 idempotency constraints provide recovery, but verify that backlog drains afterward.
 
+## Provider outage or throttling
+
+`CourtPulseProviderCircuitOpen` means the live client stopped calling the provider after five
+consecutive failures; it probes again after 60 seconds. Read `GET /api/v1/operations/providers`
+with an operations token: `lastErrorCode` distinguishes `http_429` (quota), `http_401`/`http_403`
+(wrong key or a tier without play-by-play), `http_5xx`/`timeout` (provider trouble), and
+`rate_limited_local` (CourtPulse is waiting out a `Retry-After`). Live games turn `STALE` in the
+UI while polls fail; that is correct behavior, not an incident to hide. Do not raise
+`COURTPULSE_PROVIDER_REQUESTS_PER_MINUTE` above the purchased tier to "catch up": the ingestor
+refetches whole games, so nothing is lost by waiting. For 401/403, rotate or re-enter the key
+(`scripts/aws/set-provider-key.sh` in AWS) and confirm the tier includes play-by-play.
+
+## Provider data incident
+
+`CourtPulseProviderDataIncident` fires when provider evidence could not be accepted as-is. Inspect
+`provider_data_incidents` with a read-only session (`reason`, `detail`, `provider_event_id`; the
+bounded `payload` is licensed data, so do not paste it into tickets). `MAPPING_REJECTED` blocks the
+game at that sequence until the provider fixes the play; check the `detail` code against ADR 0013's
+mapping rules before changing any mapper. `REVERTED_CONTENT` means the provider went back to an
+older body; decide with the reconciliation runbook whether a new revision is warranted.
+`PLAY_REMOVED` means an identity vanished from the feed; CourtPulse keeps the stored evidence and
+state until an operator decides otherwise.
+
 ## Controlled verification
 
 Run `scripts/verify-observability.sh` for an isolated gap-and-worker failure exercise.

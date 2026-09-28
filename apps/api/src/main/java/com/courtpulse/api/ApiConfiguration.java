@@ -4,6 +4,7 @@ import com.courtpulse.query.CourtPulseQueryService;
 import com.courtpulse.api.realtime.RealtimeHub;
 import com.courtpulse.api.realtime.RealtimeOutboxPublisher;
 import com.courtpulse.api.realtime.RealtimeProtocol;
+import com.courtpulse.api.realtime.RealtimeKeepAliveScheduler;
 import com.courtpulse.api.realtime.RealtimePublicationScheduler;
 import com.courtpulse.api.realtime.RealtimeWebSocketHandler;
 import com.courtpulse.query.DataStatusPolicy;
@@ -40,6 +41,7 @@ import com.courtpulse.persistence.JdbcUserOwnershipRepository;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
 import com.courtpulse.persistence.JdbcAlertDeliveryRepository;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.persistence.JdbcProviderRepository;
 import com.courtpulse.persistence.JdbcReconciliationOperationsRepository;
 import com.courtpulse.api.notifications.NotificationService;
 import com.courtpulse.api.operations.OperationalMetrics;
@@ -125,6 +127,11 @@ public class ApiConfiguration {
     @Bean
     JdbcReconciliationOperationsRepository reconciliationOperationsRepository(JdbcClient jdbc) {
         return new JdbcReconciliationOperationsRepository(jdbc);
+    }
+
+    @Bean
+    JdbcProviderRepository providerRepository(JdbcClient jdbc) {
+        return new JdbcProviderRepository(jdbc);
     }
 
     @Bean
@@ -247,6 +254,11 @@ public class ApiConfiguration {
             matchIfMissing = true)
     RealtimePublicationScheduler realtimePublicationScheduler(RealtimeOutboxPublisher publisher) {
         return new RealtimePublicationScheduler(publisher);
+    }
+
+    @Bean
+    RealtimeKeepAliveScheduler realtimeKeepAliveScheduler(RealtimeHub hub) {
+        return new RealtimeKeepAliveScheduler(hub);
     }
 
     @Bean

@@ -1,0 +1,5038 @@
+{
+ "fixtureSchemaVersion": 1,
+ "provider": "balldontlie",
+ "providerSchema": "BALLDONTLIE v1 games/plays/players response shapes as documented on 2026-09-28",
+ "provenance": "Entirely synthetic and authored for CourtPulse by generate_synthetic_overtime_game.py (seed 20260928). Fictional teams, players, plays, and times; safe to redistribute.",
+ "game": {
+  "id": 990001,
+  "date": "2026-01-15",
+  "season": 2025,
+  "status": "Final",
+  "status_state": "post",
+  "period": 5,
+  "time": "Final",
+  "postseason": false,
+  "postponed": false,
+  "home_team_score": 79,
+  "visitor_team_score": 77,
+  "datetime": "2026-01-15T00:10:00.000Z",
+  "home_team": {
+   "id": 90001,
+   "conference": "East",
+   "division": "Atlantic",
+   "city": "Harbor City",
+   "name": "Herons",
+   "full_name": "Harbor City Herons",
+   "abbreviation": "HCH"
+  },
+  "visitor_team": {
+   "id": 90002,
+   "conference": "West",
+   "division": "Pacific",
+   "city": "Summit Valley",
+   "name": "Sentinels",
+   "full_name": "Summit Valley Sentinels",
+   "abbreviation": "SVS"
+  }
+ },
+ "players": [
+  {
+   "id": 9000101,
+   "first_name": "Ada",
+   "last_name": "Lane",
+   "position": "G",
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   }
+  },
+  {
+   "id": 9000102,
+   "first_name": "Bo",
+   "last_name": "Okafor",
+   "position": "G",
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   }
+  },
+  {
+   "id": 9000103,
+   "first_name": "Cy",
+   "last_name": "Marsh",
+   "position": "G",
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   }
+  },
+  {
+   "id": 9000104,
+   "first_name": "Dee",
+   "last_name": "Vance",
+   "position": "G",
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   }
+  },
+  {
+   "id": 9000105,
+   "first_name": "Eli",
+   "last_name": "Brook",
+   "position": "G",
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   }
+  },
+  {
+   "id": 9000201,
+   "first_name": "Fin",
+   "last_name": "Castor",
+   "position": "G",
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   }
+  },
+  {
+   "id": 9000202,
+   "first_name": "Gus",
+   "last_name": "Ember",
+   "position": "G",
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   }
+  },
+  {
+   "id": 9000203,
+   "first_name": "Hal",
+   "last_name": "Quill",
+   "position": "G",
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   }
+  },
+  {
+   "id": 9000204,
+   "first_name": "Ivo",
+   "last_name": "Stone",
+   "position": "G",
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   }
+  },
+  {
+   "id": 9000205,
+   "first_name": "Jay",
+   "last_name": "Wren",
+   "position": "G",
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   }
+  }
+ ],
+ "plays": [
+  {
+   "game_id": 990001,
+   "order": 1,
+   "type": "Jumpball",
+   "text": "Eli Brook vs. Jay Wren (Ada Lane gains possession)",
+   "home_score": 0,
+   "away_score": 0,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "12:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:11:10.000Z",
+   "participants": [
+    9000105,
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 2,
+   "type": "Jump Shot",
+   "text": "Cy Marsh misses 21-foot jumper",
+   "home_score": 0,
+   "away_score": 0,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "11:31",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:11:47.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 3,
+   "type": "Defensive Rebound",
+   "text": "Gus Ember defensive rebound",
+   "home_score": 0,
+   "away_score": 0,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "11:31",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:12:28.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 4,
+   "type": "Full Timeout",
+   "text": "Summit Valley Sentinels Full timeout",
+   "home_score": 0,
+   "away_score": 0,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "11:02",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:13:15.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 5,
+   "type": "Driving Layup Shot",
+   "text": "Cy Marsh makes driving layup",
+   "home_score": 2,
+   "away_score": 0,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "10:33",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:13:52.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 6,
+   "type": "Jump Shot",
+   "text": "Ivo Stone makes 17-foot jumper",
+   "home_score": 2,
+   "away_score": 2,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "10:04",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:14:52.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 7,
+   "type": "Jump Shot",
+   "text": "Eli Brook misses 21-foot jumper",
+   "home_score": 2,
+   "away_score": 2,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:16:00.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 8,
+   "type": "Defensive Rebound",
+   "text": "Fin Castor defensive rebound",
+   "home_score": 2,
+   "away_score": 2,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:16:38.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 9,
+   "type": "Bad Pass Turnover",
+   "text": "Gus Ember bad pass (turnover)",
+   "home_score": 2,
+   "away_score": 2,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "9:07",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:17:48.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 10,
+   "type": "Jump Shot",
+   "text": "Ada Lane makes 17-foot jumper",
+   "home_score": 4,
+   "away_score": 2,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "8:38",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:18:41.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 11,
+   "type": "Jump Shot",
+   "text": "Hal Quill makes 17-foot jumper",
+   "home_score": 4,
+   "away_score": 4,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "8:09",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:19:29.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 12,
+   "type": "Jump Shot",
+   "text": "Bo Okafor makes 17-foot jumper",
+   "home_score": 6,
+   "away_score": 4,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "7:40",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:20:10.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 13,
+   "type": "Jump Shot",
+   "text": "Gus Ember makes 17-foot jumper",
+   "home_score": 6,
+   "away_score": 6,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "7:12",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:21:07.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 14,
+   "type": "3-Point Jump Shot",
+   "text": "Cy Marsh makes 25-foot three point jumper",
+   "home_score": 9,
+   "away_score": 6,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "6:43",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:21:42.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 15,
+   "type": "Bad Pass Turnover",
+   "text": "Hal Quill bad pass (turnover)",
+   "home_score": 9,
+   "away_score": 6,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "6:14",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:22:20.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 16,
+   "type": "Shooting Foul",
+   "text": "Gus Ember shooting foul",
+   "home_score": 9,
+   "away_score": 6,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "5:45",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:22:55.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 17,
+   "type": "Free Throw - 1 of 2",
+   "text": "Bo Okafor makes free throw 1 of 2",
+   "home_score": 10,
+   "away_score": 6,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "5:45",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:23:57.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 18,
+   "type": "Free Throw - 2 of 2",
+   "text": "Bo Okafor makes free throw 2 of 2",
+   "home_score": 11,
+   "away_score": 6,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "5:45",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:24:37.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 19,
+   "type": "3-Point Jump Shot",
+   "text": "Hal Quill makes 25-foot three point jumper",
+   "home_score": 11,
+   "away_score": 9,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "5:16",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:25:20.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 20,
+   "type": "Jump Shot",
+   "text": "Ada Lane misses 21-foot jumper",
+   "home_score": 11,
+   "away_score": 9,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:25:59.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 21,
+   "type": "Defensive Rebound",
+   "text": "Jay Wren defensive rebound",
+   "home_score": 11,
+   "away_score": 9,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:27:09.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 22,
+   "type": "3-Point Jump Shot",
+   "text": "Hal Quill makes 25-foot three point jumper",
+   "home_score": 11,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "4:19",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:27:50.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 23,
+   "type": "Driving Layup Shot",
+   "text": "Ada Lane makes driving layup",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "3:50",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:28:59.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 24,
+   "type": "Jump Shot",
+   "text": "Gus Ember misses 21-foot jumper",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "3:21",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:30:08.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 25,
+   "type": "Defensive Rebound",
+   "text": "Ada Lane defensive rebound",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "3:21",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:31:00.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 26,
+   "type": "Jump Shot",
+   "text": "Bo Okafor misses 21-foot jumper",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "2:52",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:32:09.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 27,
+   "type": "Defensive Rebound",
+   "text": "Ivo Stone defensive rebound",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "2:52",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:32:46.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 28,
+   "type": "Jump Shot",
+   "text": "Jay Wren misses 21-foot jumper",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "2:24",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:33:31.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 29,
+   "type": "Defensive Rebound",
+   "text": "Cy Marsh defensive rebound",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "2:24",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:34:12.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 30,
+   "type": "Shooting Foul",
+   "text": "Fin Castor shooting foul",
+   "home_score": 13,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "1:55",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:34:57.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 31,
+   "type": "Free Throw - 1 of 2",
+   "text": "Bo Okafor makes free throw 1 of 2",
+   "home_score": 14,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "1:55",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:35:37.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 32,
+   "type": "Free Throw - 2 of 2",
+   "text": "Bo Okafor makes free throw 2 of 2",
+   "home_score": 15,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "1:55",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:36:35.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 33,
+   "type": "Jump Shot",
+   "text": "Hal Quill misses 21-foot jumper",
+   "home_score": 15,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "1:26",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:37:26.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 34,
+   "type": "Defensive Rebound",
+   "text": "Bo Okafor defensive rebound",
+   "home_score": 15,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "1:26",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:38:15.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 35,
+   "type": "Jump Shot",
+   "text": "Ada Lane makes 17-foot jumper",
+   "home_score": 17,
+   "away_score": 12,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "0:57",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:39:17.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 36,
+   "type": "Jump Shot",
+   "text": "Hal Quill makes 17-foot jumper",
+   "home_score": 17,
+   "away_score": 14,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "0:28",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:39:53.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 37,
+   "type": "End Period",
+   "text": "End of the 1st Quarter",
+   "home_score": 17,
+   "away_score": 14,
+   "period": 1,
+   "period_display": "1st Quarter",
+   "clock": "0:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": null,
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:40:42.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 38,
+   "type": "3-Point Jump Shot",
+   "text": "Bo Okafor makes 25-foot three point jumper",
+   "home_score": 20,
+   "away_score": 14,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "11:31",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:41:24.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 39,
+   "type": "Bad Pass Turnover",
+   "text": "Ivo Stone bad pass (turnover)",
+   "home_score": 20,
+   "away_score": 14,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "11:02",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:42:22.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 40,
+   "type": "3-Point Jump Shot",
+   "text": "Ada Lane makes 25-foot three point jumper",
+   "home_score": 23,
+   "away_score": 14,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "10:33",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:43:32.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 41,
+   "type": "Jump Shot",
+   "text": "Fin Castor makes 17-foot jumper",
+   "home_score": 23,
+   "away_score": 16,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "10:04",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:44:33.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 42,
+   "type": "Jump Shot",
+   "text": "Eli Brook misses 21-foot jumper",
+   "home_score": 23,
+   "away_score": 16,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:45:41.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 43,
+   "type": "Defensive Rebound",
+   "text": "Ivo Stone defensive rebound",
+   "home_score": 23,
+   "away_score": 16,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:46:40.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 44,
+   "type": "3-Point Jump Shot",
+   "text": "Jay Wren makes 25-foot three point jumper",
+   "home_score": 23,
+   "away_score": 19,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "9:07",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:47:39.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 45,
+   "type": "3-Point Jump Shot",
+   "text": "Ada Lane makes 25-foot three point jumper",
+   "home_score": 26,
+   "away_score": 19,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "8:38",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:48:43.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 46,
+   "type": "Jump Shot",
+   "text": "Hal Quill makes 17-foot jumper",
+   "home_score": 26,
+   "away_score": 21,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "8:09",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:49:43.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 47,
+   "type": "Jump Shot",
+   "text": "Eli Brook misses 21-foot jumper",
+   "home_score": 26,
+   "away_score": 21,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "7:40",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:50:33.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 48,
+   "type": "Defensive Rebound",
+   "text": "Fin Castor defensive rebound",
+   "home_score": 26,
+   "away_score": 21,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "7:40",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:51:15.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 49,
+   "type": "3-Point Jump Shot",
+   "text": "Jay Wren makes 25-foot three point jumper",
+   "home_score": 26,
+   "away_score": 24,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "7:12",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:52:09.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 50,
+   "type": "Bad Pass Turnover",
+   "text": "Ada Lane bad pass (turnover)",
+   "home_score": 26,
+   "away_score": 24,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "6:43",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:53:13.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 51,
+   "type": "Driving Layup Shot",
+   "text": "Gus Ember makes driving layup",
+   "home_score": 26,
+   "away_score": 26,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "6:14",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:54:11.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 52,
+   "type": "Jump Shot",
+   "text": "Cy Marsh makes 17-foot jumper",
+   "home_score": 28,
+   "away_score": 26,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "5:45",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:55:02.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 53,
+   "type": "Jump Shot",
+   "text": "Jay Wren misses 21-foot jumper",
+   "home_score": 28,
+   "away_score": 26,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "5:16",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:55:38.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 54,
+   "type": "Defensive Rebound",
+   "text": "Eli Brook defensive rebound",
+   "home_score": 28,
+   "away_score": 26,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "5:16",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:56:43.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 55,
+   "type": "Bad Pass Turnover",
+   "text": "Eli Brook bad pass (turnover)",
+   "home_score": 28,
+   "away_score": 26,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:57:23.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 56,
+   "type": "Driving Layup Shot",
+   "text": "Ivo Stone makes driving layup",
+   "home_score": 28,
+   "away_score": 28,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "4:19",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:58:12.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 57,
+   "type": "Jump Shot",
+   "text": "Dee Vance misses 21-foot jumper",
+   "home_score": 28,
+   "away_score": 28,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "3:50",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:59:08.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 58,
+   "type": "Defensive Rebound",
+   "text": "Hal Quill defensive rebound",
+   "home_score": 28,
+   "away_score": 28,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "3:50",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:59:49.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 59,
+   "type": "Jump Shot",
+   "text": "Ivo Stone makes 17-foot jumper",
+   "home_score": 28,
+   "away_score": 30,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "3:21",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:00:56.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 60,
+   "type": "Shooting Foul",
+   "text": "Ivo Stone shooting foul",
+   "home_score": 28,
+   "away_score": 30,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "2:52",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:01:43.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 61,
+   "type": "Free Throw - 1 of 2",
+   "text": "Ada Lane makes free throw 1 of 2",
+   "home_score": 29,
+   "away_score": 30,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "2:52",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:02:25.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 62,
+   "type": "Free Throw - 2 of 2",
+   "text": "Ada Lane misses free throw 2 of 2",
+   "home_score": 29,
+   "away_score": 30,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "2:52",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:03:20.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 63,
+   "type": "Full Timeout",
+   "text": "Summit Valley Sentinels Full timeout",
+   "home_score": 29,
+   "away_score": 30,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "2:24",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:03:59.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 64,
+   "type": "3-Point Jump Shot",
+   "text": "Cy Marsh makes 25-foot three point jumper",
+   "home_score": 32,
+   "away_score": 30,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "1:55",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:05:04.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 65,
+   "type": "Jump Shot",
+   "text": "Hal Quill makes 17-foot jumper",
+   "home_score": 32,
+   "away_score": 32,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "1:26",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:06:06.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 66,
+   "type": "Jump Shot",
+   "text": "Dee Vance makes 17-foot jumper",
+   "home_score": 34,
+   "away_score": 32,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "0:57",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:07:15.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 67,
+   "type": "3-Point Jump Shot",
+   "text": "Jay Wren makes 25-foot three point jumper",
+   "home_score": 34,
+   "away_score": 35,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "0:28",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:08:10.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 68,
+   "type": "End Period",
+   "text": "End of the 2nd Quarter",
+   "home_score": 34,
+   "away_score": 35,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "0:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": null,
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:08:53.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 69,
+   "type": "Driving Layup Shot",
+   "text": "Eli Brook makes driving layup",
+   "home_score": 36,
+   "away_score": 35,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "11:31",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:09:37.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 70,
+   "type": "Jump Shot",
+   "text": "Gus Ember misses 21-foot jumper",
+   "home_score": 36,
+   "away_score": 35,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "11:02",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:10:23.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 71,
+   "type": "Defensive Rebound",
+   "text": "Ada Lane defensive rebound",
+   "home_score": 36,
+   "away_score": 35,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "11:02",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:11:23.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 72,
+   "type": "Driving Layup Shot",
+   "text": "Ada Lane makes driving layup",
+   "home_score": 38,
+   "away_score": 35,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "10:33",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:12:32.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 73,
+   "type": "Jump Shot",
+   "text": "Gus Ember makes 17-foot jumper",
+   "home_score": 38,
+   "away_score": 37,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "10:04",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:13:13.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 74,
+   "type": "Jump Shot",
+   "text": "Dee Vance misses 21-foot jumper",
+   "home_score": 38,
+   "away_score": 37,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:14:23.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 75,
+   "type": "Defensive Rebound",
+   "text": "Fin Castor defensive rebound",
+   "home_score": 38,
+   "away_score": 37,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:15:03.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 76,
+   "type": "Bad Pass Turnover",
+   "text": "Fin Castor bad pass (turnover)",
+   "home_score": 38,
+   "away_score": 37,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "9:07",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:16:05.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 77,
+   "type": "Jump Shot",
+   "text": "Cy Marsh makes 17-foot jumper",
+   "home_score": 40,
+   "away_score": 37,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "8:38",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:16:46.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 78,
+   "type": "Driving Layup Shot",
+   "text": "Fin Castor makes driving layup",
+   "home_score": 40,
+   "away_score": 39,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "8:09",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:17:51.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 79,
+   "type": "Driving Layup Shot",
+   "text": "Ada Lane makes driving layup",
+   "home_score": 42,
+   "away_score": 39,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "7:40",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:18:43.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 80,
+   "type": "Jump Shot",
+   "text": "Hal Quill makes 17-foot jumper",
+   "home_score": 42,
+   "away_score": 41,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "7:12",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:19:28.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 81,
+   "type": "Jump Shot",
+   "text": "Eli Brook makes 17-foot jumper",
+   "home_score": 44,
+   "away_score": 41,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "6:43",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:20:29.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 82,
+   "type": "Driving Layup Shot",
+   "text": "Jay Wren makes driving layup",
+   "home_score": 44,
+   "away_score": 43,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "6:14",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:21:34.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 83,
+   "type": "Driving Layup Shot",
+   "text": "Dee Vance makes driving layup",
+   "home_score": 46,
+   "away_score": 43,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "5:45",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:22:33.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 84,
+   "type": "Shooting Foul",
+   "text": "Ada Lane shooting foul",
+   "home_score": 46,
+   "away_score": 43,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "5:16",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:23:32.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 85,
+   "type": "Free Throw - 1 of 2",
+   "text": "Hal Quill misses free throw 1 of 2",
+   "home_score": 46,
+   "away_score": 43,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "5:16",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:24:09.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 86,
+   "type": "Free Throw - 2 of 2",
+   "text": "Hal Quill makes free throw 2 of 2",
+   "home_score": 46,
+   "away_score": 44,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "5:16",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:24:50.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 87,
+   "type": "Jump Shot",
+   "text": "Ada Lane misses 21-foot jumper",
+   "home_score": 46,
+   "away_score": 44,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:25:48.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 88,
+   "type": "Defensive Rebound",
+   "text": "Hal Quill defensive rebound",
+   "home_score": 46,
+   "away_score": 44,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:26:58.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 89,
+   "type": "Shooting Foul",
+   "text": "Cy Marsh shooting foul",
+   "home_score": 46,
+   "away_score": 44,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "4:19",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:27:34.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 90,
+   "type": "Free Throw - 1 of 2",
+   "text": "Hal Quill makes free throw 1 of 2",
+   "home_score": 46,
+   "away_score": 45,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "4:19",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:28:42.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 91,
+   "type": "Free Throw - 2 of 2",
+   "text": "Hal Quill makes free throw 2 of 2",
+   "home_score": 46,
+   "away_score": 46,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "4:19",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:29:25.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 92,
+   "type": "Jump Shot",
+   "text": "Ada Lane makes 17-foot jumper",
+   "home_score": 48,
+   "away_score": 46,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "3:50",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:30:26.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 93,
+   "type": "Jump Shot",
+   "text": "Jay Wren misses 21-foot jumper",
+   "home_score": 48,
+   "away_score": 46,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "3:21",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:31:12.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 94,
+   "type": "Defensive Rebound",
+   "text": "Ada Lane defensive rebound",
+   "home_score": 48,
+   "away_score": 46,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "3:21",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:32:21.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 95,
+   "type": "Jump Shot",
+   "text": "Cy Marsh makes 17-foot jumper",
+   "home_score": 50,
+   "away_score": 46,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "2:52",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:33:03.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 96,
+   "type": "Jump Shot",
+   "text": "Gus Ember makes 17-foot jumper",
+   "home_score": 50,
+   "away_score": 48,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "2:24",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:33:54.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 97,
+   "type": "Jump Shot",
+   "text": "Dee Vance misses 21-foot jumper",
+   "home_score": 50,
+   "away_score": 48,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "1:55",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:34:48.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 98,
+   "type": "Defensive Rebound",
+   "text": "Hal Quill defensive rebound",
+   "home_score": 50,
+   "away_score": 48,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "1:55",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:35:47.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 99,
+   "type": "Shooting Foul",
+   "text": "Cy Marsh shooting foul",
+   "home_score": 50,
+   "away_score": 48,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "1:26",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:36:41.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 100,
+   "type": "Free Throw - 1 of 2",
+   "text": "Fin Castor makes free throw 1 of 2",
+   "home_score": 50,
+   "away_score": 49,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "1:26",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:37:31.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 101,
+   "type": "Free Throw - 2 of 2",
+   "text": "Fin Castor makes free throw 2 of 2",
+   "home_score": 50,
+   "away_score": 50,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "1:26",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:38:35.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 102,
+   "type": "Jump Shot",
+   "text": "Cy Marsh misses 21-foot jumper",
+   "home_score": 50,
+   "away_score": 50,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "0:57",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:39:34.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 103,
+   "type": "Defensive Rebound",
+   "text": "Ivo Stone defensive rebound",
+   "home_score": 50,
+   "away_score": 50,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "0:57",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:40:34.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 104,
+   "type": "Jump Shot",
+   "text": "Jay Wren makes 17-foot jumper",
+   "home_score": 50,
+   "away_score": 52,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "0:28",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:41:40.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 105,
+   "type": "End Period",
+   "text": "End of the 3rd Quarter",
+   "home_score": 50,
+   "away_score": 52,
+   "period": 3,
+   "period_display": "3rd Quarter",
+   "clock": "0:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": null,
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:42:46.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 106,
+   "type": "Bad Pass Turnover",
+   "text": "Eli Brook bad pass (turnover)",
+   "home_score": 50,
+   "away_score": 52,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "11:31",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:43:43.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 107,
+   "type": "Jump Shot",
+   "text": "Ivo Stone makes 17-foot jumper",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "11:02",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:44:53.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 108,
+   "type": "Bad Pass Turnover",
+   "text": "Bo Okafor bad pass (turnover)",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "10:33",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:45:28.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 109,
+   "type": "Shooting Foul",
+   "text": "Ada Lane shooting foul",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "10:04",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:46:30.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 110,
+   "type": "Free Throw - 1 of 2",
+   "text": "Jay Wren misses free throw 1 of 2",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "10:04",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:47:38.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 111,
+   "type": "Free Throw - 2 of 2",
+   "text": "Jay Wren misses free throw 2 of 2",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "10:04",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:48:15.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 112,
+   "type": "Jump Shot",
+   "text": "Bo Okafor misses 21-foot jumper",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:49:23.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 113,
+   "type": "Defensive Rebound",
+   "text": "Jay Wren defensive rebound",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "9:36",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:50:03.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 114,
+   "type": "Shooting Foul",
+   "text": "Cy Marsh shooting foul",
+   "home_score": 50,
+   "away_score": 54,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "9:07",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:50:39.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 115,
+   "type": "Free Throw - 1 of 2",
+   "text": "Ivo Stone makes free throw 1 of 2",
+   "home_score": 50,
+   "away_score": 55,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "9:07",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:51:42.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 116,
+   "type": "Free Throw - 2 of 2",
+   "text": "Ivo Stone misses free throw 2 of 2",
+   "home_score": 50,
+   "away_score": 55,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "9:07",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:52:33.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 117,
+   "type": "3-Point Jump Shot",
+   "text": "Dee Vance makes 25-foot three point jumper",
+   "home_score": 53,
+   "away_score": 55,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "8:38",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:53:30.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 118,
+   "type": "3-Point Jump Shot",
+   "text": "Gus Ember makes 25-foot three point jumper",
+   "home_score": 53,
+   "away_score": 58,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "8:09",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:54:32.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 119,
+   "type": "3-Point Jump Shot",
+   "text": "Eli Brook makes 25-foot three point jumper",
+   "home_score": 56,
+   "away_score": 58,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "7:40",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:55:08.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 120,
+   "type": "Shooting Foul",
+   "text": "Cy Marsh shooting foul",
+   "home_score": 56,
+   "away_score": 58,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "7:12",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:56:03.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 121,
+   "type": "Free Throw - 1 of 2",
+   "text": "Gus Ember makes free throw 1 of 2",
+   "home_score": 56,
+   "away_score": 59,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "7:12",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:56:57.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 122,
+   "type": "Free Throw - 2 of 2",
+   "text": "Gus Ember makes free throw 2 of 2",
+   "home_score": 56,
+   "away_score": 60,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "7:12",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:57:35.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 123,
+   "type": "Jump Shot",
+   "text": "Ada Lane makes 17-foot jumper",
+   "home_score": 58,
+   "away_score": 60,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "6:43",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:58:45.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 124,
+   "type": "Shooting Foul",
+   "text": "Bo Okafor shooting foul",
+   "home_score": 58,
+   "away_score": 60,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "6:14",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T01:59:53.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 125,
+   "type": "Free Throw - 1 of 2",
+   "text": "Ivo Stone makes free throw 1 of 2",
+   "home_score": 58,
+   "away_score": 61,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "6:14",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:01:02.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 126,
+   "type": "Free Throw - 2 of 2",
+   "text": "Ivo Stone makes free throw 2 of 2",
+   "home_score": 58,
+   "away_score": 62,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "6:14",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:02:00.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 127,
+   "type": "Jump Shot",
+   "text": "Dee Vance makes 17-foot jumper",
+   "home_score": 60,
+   "away_score": 62,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "5:45",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:02:46.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 128,
+   "type": "3-Point Jump Shot",
+   "text": "Ivo Stone makes 25-foot three point jumper",
+   "home_score": 60,
+   "away_score": 65,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "5:16",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:03:55.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 129,
+   "type": "Jump Shot",
+   "text": "Eli Brook misses 21-foot jumper",
+   "home_score": 60,
+   "away_score": 65,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:05:01.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 130,
+   "type": "Defensive Rebound",
+   "text": "Fin Castor defensive rebound",
+   "home_score": 60,
+   "away_score": 65,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "4:48",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:05:42.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 131,
+   "type": "Shooting Foul",
+   "text": "Ada Lane shooting foul",
+   "home_score": 60,
+   "away_score": 65,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "4:19",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:06:52.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 132,
+   "type": "Free Throw - 1 of 2",
+   "text": "Gus Ember makes free throw 1 of 2",
+   "home_score": 60,
+   "away_score": 66,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "4:19",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:07:35.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 133,
+   "type": "Free Throw - 2 of 2",
+   "text": "Gus Ember misses free throw 2 of 2",
+   "home_score": 60,
+   "away_score": 66,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "4:19",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:08:44.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 134,
+   "type": "Jump Shot",
+   "text": "Bo Okafor misses 21-foot jumper",
+   "home_score": 60,
+   "away_score": 66,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "3:50",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:09:41.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 135,
+   "type": "Defensive Rebound",
+   "text": "Jay Wren defensive rebound",
+   "home_score": 60,
+   "away_score": 66,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "3:50",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:10:28.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 136,
+   "type": "Jump Shot",
+   "text": "Jay Wren makes 17-foot jumper",
+   "home_score": 60,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "3:21",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:11:26.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 137,
+   "type": "Shooting Foul",
+   "text": "Hal Quill shooting foul",
+   "home_score": 60,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "2:52",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:12:07.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 138,
+   "type": "Free Throw - 1 of 2",
+   "text": "Dee Vance makes free throw 1 of 2",
+   "home_score": 61,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "2:52",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:13:15.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 139,
+   "type": "Free Throw - 2 of 2",
+   "text": "Dee Vance makes free throw 2 of 2",
+   "home_score": 62,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "2:52",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:14:14.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 140,
+   "type": "Jump Shot",
+   "text": "Fin Castor misses 21-foot jumper",
+   "home_score": 62,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "2:24",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:14:54.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 141,
+   "type": "Defensive Rebound",
+   "text": "Cy Marsh defensive rebound",
+   "home_score": 62,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "2:24",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:15:35.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 142,
+   "type": "Shooting Foul",
+   "text": "Ivo Stone shooting foul",
+   "home_score": 62,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "1:55",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:16:34.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 143,
+   "type": "Free Throw - 1 of 2",
+   "text": "Eli Brook makes free throw 1 of 2",
+   "home_score": 63,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "1:55",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:17:15.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 144,
+   "type": "Free Throw - 2 of 2",
+   "text": "Eli Brook makes free throw 2 of 2",
+   "home_score": 64,
+   "away_score": 68,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "1:55",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 1,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:17:54.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 145,
+   "type": "Driving Layup Shot",
+   "text": "Ivo Stone makes driving layup",
+   "home_score": 64,
+   "away_score": 70,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "1:26",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:18:29.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 146,
+   "type": "Jump Shot",
+   "text": "Bo Okafor misses 21-foot jumper",
+   "home_score": 64,
+   "away_score": 70,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:57",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:19:15.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 147,
+   "type": "Defensive Rebound",
+   "text": "Fin Castor defensive rebound",
+   "home_score": 64,
+   "away_score": 70,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:57",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:20:21.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 148,
+   "type": "3-Point Jump Shot",
+   "text": "Gus Ember makes 25-foot three point jumper",
+   "home_score": 64,
+   "away_score": 73,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:28",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:21:30.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 149,
+   "type": "3-Point Jump Shot",
+   "text": "Ada Lane makes 26-foot three point jumper",
+   "home_score": 67,
+   "away_score": 73,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:09",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:22:07.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 150,
+   "type": "3-Point Jump Shot",
+   "text": "Ada Lane makes 26-foot three point jumper",
+   "home_score": 70,
+   "away_score": 73,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:06",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:23:02.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 151,
+   "type": "3-Point Jump Shot",
+   "text": "Ada Lane makes 26-foot three point jumper",
+   "home_score": 73,
+   "away_score": 73,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:03",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:23:54.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 152,
+   "type": "End Period",
+   "text": "End of the 4th Quarter",
+   "home_score": 73,
+   "away_score": 73,
+   "period": 4,
+   "period_display": "4th Quarter",
+   "clock": "0:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": null,
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:24:47.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 153,
+   "type": "Jump Shot",
+   "text": "Bo Okafor misses 21-foot jumper",
+   "home_score": 73,
+   "away_score": 73,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "4:32",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:25:29.000Z",
+   "participants": [
+    9000102
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 154,
+   "type": "Defensive Rebound",
+   "text": "Hal Quill defensive rebound",
+   "home_score": 73,
+   "away_score": 73,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "4:32",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:26:31.000Z",
+   "participants": [
+    9000203
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 155,
+   "type": "Jump Shot",
+   "text": "Fin Castor makes 17-foot jumper",
+   "home_score": 73,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "4:05",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:27:37.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 156,
+   "type": "Jump Shot",
+   "text": "Eli Brook misses 21-foot jumper",
+   "home_score": 73,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "3:38",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:28:34.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 157,
+   "type": "Defensive Rebound",
+   "text": "Jay Wren defensive rebound",
+   "home_score": 73,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "3:38",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:29:09.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 158,
+   "type": "Jump Shot",
+   "text": "Gus Ember misses 21-foot jumper",
+   "home_score": 73,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "3:10",
+   "scoring_play": false,
+   "shooting_play": true,
+   "score_value": 0,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:30:10.000Z",
+   "participants": [
+    9000202
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 159,
+   "type": "Defensive Rebound",
+   "text": "Ada Lane defensive rebound",
+   "home_score": 73,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "3:10",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:31:05.000Z",
+   "participants": [
+    9000101
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 160,
+   "type": "Jump Shot",
+   "text": "Cy Marsh makes 17-foot jumper",
+   "home_score": 75,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "2:43",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:31:45.000Z",
+   "participants": [
+    9000103
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 161,
+   "type": "Bad Pass Turnover",
+   "text": "Jay Wren bad pass (turnover)",
+   "home_score": 75,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "2:16",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:32:29.000Z",
+   "participants": [
+    9000205
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 162,
+   "type": "Driving Layup Shot",
+   "text": "Dee Vance makes driving layup",
+   "home_score": 77,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "1:49",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:33:17.000Z",
+   "participants": [
+    9000104
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 163,
+   "type": "Bad Pass Turnover",
+   "text": "Fin Castor bad pass (turnover)",
+   "home_score": 77,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "1:21",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:33:53.000Z",
+   "participants": [
+    9000201
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 164,
+   "type": "Jump Shot",
+   "text": "Eli Brook makes 17-foot jumper",
+   "home_score": 79,
+   "away_score": 75,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "0:54",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:35:01.000Z",
+   "participants": [
+    9000105
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 165,
+   "type": "Jump Shot",
+   "text": "Ivo Stone makes 17-foot jumper",
+   "home_score": 79,
+   "away_score": 77,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "0:27",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 2,
+   "team": {
+    "id": 90002,
+    "conference": "West",
+    "division": "Pacific",
+    "city": "Summit Valley",
+    "name": "Sentinels",
+    "full_name": "Summit Valley Sentinels",
+    "abbreviation": "SVS"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:36:07.000Z",
+   "participants": [
+    9000204
+   ]
+  },
+  {
+   "game_id": 990001,
+   "order": 166,
+   "type": "End Period",
+   "text": "End of the OT",
+   "home_score": 79,
+   "away_score": 77,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "0:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": null,
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:37:10.000Z",
+   "participants": []
+  },
+  {
+   "game_id": 990001,
+   "order": 167,
+   "type": "End Game",
+   "text": "End of Game",
+   "home_score": 79,
+   "away_score": 77,
+   "period": 5,
+   "period_display": "OT",
+   "clock": "0:00",
+   "scoring_play": false,
+   "shooting_play": false,
+   "score_value": null,
+   "team": null,
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T02:37:57.000Z",
+   "participants": []
+  }
+ ],
+ "correction": {
+  "order": 38,
+  "play": {
+   "game_id": 990001,
+   "order": 38,
+   "type": "3-Point Jump Shot",
+   "text": "Ada Lane makes 25-foot three point jumper",
+   "home_score": 20,
+   "away_score": 14,
+   "period": 2,
+   "period_display": "2nd Quarter",
+   "clock": "11:31",
+   "scoring_play": true,
+   "shooting_play": true,
+   "score_value": 3,
+   "team": {
+    "id": 90001,
+    "conference": "East",
+    "division": "Atlantic",
+    "city": "Harbor City",
+    "name": "Herons",
+    "full_name": "Harbor City Herons",
+    "abbreviation": "HCH"
+   },
+   "coordinate_x": null,
+   "coordinate_y": null,
+   "wallclock": "2026-01-15T00:41:24.000Z",
+   "participants": [
+    9000101
+   ]
+  }
+ },
+ "expected": {
+  "finalScore": {
+   "home": 79,
+   "away": 77
+  },
+  "periods": 5,
+  "plays": 167,
+  "playerPoints": {
+   "9000101": 30,
+   "9000102": 9,
+   "9000103": 16,
+   "9000104": 13,
+   "9000105": 11,
+   "9000201": 8,
+   "9000202": 17,
+   "9000203": 19,
+   "9000204": 18,
+   "9000205": 15
+  },
+  "correctedPlayerPoints": {
+   "9000101": 33,
+   "9000102": 6,
+   "9000103": 16,
+   "9000104": 13,
+   "9000105": 11,
+   "9000201": 8,
+   "9000202": 17,
+   "9000203": 19,
+   "9000204": 18,
+   "9000205": 15
+  },
+  "correctedFrom": 9000102,
+  "correctedTo": 9000101
+ }
+}

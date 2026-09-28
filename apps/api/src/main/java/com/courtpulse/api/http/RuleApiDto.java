@@ -61,7 +61,7 @@ public final class RuleApiDto {
             @NotNull @Schema(allowableValues = "CLOSE_GAME") RuleType type,
             @NotBlank @Size(max = 200) String gameId,
             @NotNull @Min(1) @Max(20) Integer maximumMargin,
-            @NotNull @Min(1) @Max(4) Integer eligiblePeriod,
+            @NotNull @Min(1) @Max(10) Integer eligiblePeriod,
             @NotNull @Min(0) @Max(720000) Long maximumClockMillisRemaining,
             Boolean enabled) implements CreateRuleRequest {}
 

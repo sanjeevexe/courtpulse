@@ -7,7 +7,7 @@ import type { EventPage } from '../api/client';
 import { uniqueEvents } from '../api/hooks';
 import { DataStatusBadge } from '../components/DataStatusBadge';
 import { render } from '@testing-library/react';
-import { alertPage, eventPage, events, snapshot } from '../test/fixtures';
+import { alertPage, eventPage, events, providerSnapshot, snapshot } from '../test/fixtures';
 import { renderApp } from '../test/render';
 import { server } from '../test/server';
 
@@ -33,6 +33,18 @@ describe('game detail', () => {
     expect(panel).not.toBeNull();
     expect(within(requiredElement(panel)).getByText('player ace')).toBeVisible();
     expect(within(requiredElement(panel)).getByText(/13/)).toBeVisible();
+  });
+
+  it('shows provider team and player names, overtime, and play text when known', async () => {
+    server.use(http.get('*/api/v1/games/:gameId', () => HttpResponse.json(providerSnapshot)));
+    renderApp('/games/bdl-game-990001');
+    const home = await screen.findByLabelText('Home team score');
+    expect(within(home).getByRole('heading', { name: 'Harbor City Herons' })).toBeVisible();
+    expect(screen.getByText('OT1')).toBeVisible();
+    const players = requiredElement(screen.getByRole('heading', { name: 'Player totals' }).closest('section'));
+    expect(within(players).getByText('Ada Lane')).toBeVisible();
+    expect(within(players).getByText('#9000204')).toBeVisible();
+    expect(screen.getByText('Ada Lane makes 25-foot three point jumper')).toBeVisible();
   });
 
   it('renders events in API sequence order', async () => {

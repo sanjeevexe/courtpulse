@@ -137,7 +137,7 @@ test('two real OIDC users create private rules before queue replay and see isola
   await page.getByLabel('Maximum margin').fill('3');
   await page.getByLabel('Eligible period').fill('4');
   await page.getByLabel('Clock seconds remaining').fill('720');
-  await createRuleAndVerify(page, 2, page.getByText(/Within 3 points · period 4/));
+  await createRuleAndVerify(page, 2, page.getByText(/Within 3 points · Q4/));
 
   await page.getByLabel('Template').selectOption('SCORING_RUN');
   await page.getByLabel('Team ID').fill('team_home');

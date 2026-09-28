@@ -198,12 +198,12 @@ while ((SECONDS < deadline)); do
     LOGGING_LEVEL_COM_COURTPULSE_MESSAGING_SQS=DEBUG \
     "${repository}/gradlew" :apps:queue-replay-cli:run --args='--delivery-drain' --console=plain \
     >"${artifact_dir}/poison-drain-${attempt}.txt"
-  rg -Fq "SQS queue polled queueUrl=${queue_url} " \
+  grep -Fq "SQS queue polled queueUrl=${queue_url} " \
     "${artifact_dir}/poison-drain-${attempt}.txt" || {
       echo 'Delivery CLI polled a different queue or did not poll' >&2; exit 1;
     }
-  receive_count="$(rg -o "Delivery queue message received messageId=${poison_message_id} receiveCount=[0-9]+" \
-    "${artifact_dir}/poison-drain-${attempt}.txt" | rg -o '[0-9]+$' | tail -1 || true)"
+  receive_count="$(grep -Eo "Delivery queue message received messageId=${poison_message_id} receiveCount=[0-9]+" \
+    "${artifact_dir}/poison-drain-${attempt}.txt" | grep -Eo '[0-9]+$' | tail -1 || true)"
   if [[ -n "${receive_count}" ]]; then
     printf 'at=%s attempt=%s message_id=%s receive_count=%s\n' \
       "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "${attempt}" "${poison_message_id}" "${receive_count}" \

@@ -52,6 +52,7 @@ services:
       COURTPULSE_AUTH_AUTHORITIES_CLAIM: ${COURTPULSE_AUTH_AUTHORITIES_CLAIM:-scope}
       COURTPULSE_AUTH_AUTHORITY_PREFIX: ${COURTPULSE_AUTH_AUTHORITY_PREFIX:-SCOPE_}
       COURTPULSE_AUTH_OPERATIONS_AUTHORITY: ${COURTPULSE_AUTH_OPERATIONS_AUTHORITY:-SCOPE_courtpulse:ops}
+      COURTPULSE_LIVE_FRESHNESS_WINDOW: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:-2m}
     depends_on:
       postgres:
         condition: service_healthy
@@ -161,6 +162,83 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "find /tmp/courtpulse-reconciliation-worker.heartbeat -mmin -1 | grep -q heartbeat"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 6
+
+  # Local-only BALLDONTLIE-shaped test double serving one fictional overtime game.
+  provider-simulator:
+    profiles: ["simulator"]
+    build:
+      context: .
+      dockerfile: apps/provider-simulator/Dockerfile
+    environment:
+      SIMULATOR_API_KEY: ${COURTPULSE_SIMULATOR_API_KEY:-local-simulator-key}
+      SIMULATOR_MODE: ${COURTPULSE_SIMULATOR_MODE:-clock}
+      SIMULATOR_SPEED: ${COURTPULSE_SIMULATOR_SPEED:-60}
+      SIMULATOR_START_DELAY_SECONDS: ${COURTPULSE_SIMULATOR_START_DELAY_SECONDS:-20}
+      SIMULATOR_CORRECT_AFTER_ORDER: ${COURTPULSE_SIMULATOR_CORRECT_AFTER_ORDER:-120}
+    ports:
+      - "127.0.0.1:${COURTPULSE_SIMULATOR_HOST_PORT:-18090}:8080"
+
+  # Continuous outbox publisher and FIFO consumer (the deployed form of --run).
+  processor-worker:
+    profiles: ["live"]
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: apps/queue-replay-cli/Dockerfile
+    command: ["--processor-daemon"]
+    environment:
+      COURTPULSE_DB_URL: jdbc:postgresql://postgres:5432/courtpulse
+      COURTPULSE_DB_USERNAME: courtpulse
+      COURTPULSE_DB_PASSWORD: ${COURTPULSE_DB_PASSWORD:?Set COURTPULSE_DB_PASSWORD}
+      COURTPULSE_SQS_ENDPOINT: http://localstack:4566
+      COURTPULSE_CONSUMER_WORKERS: ${COURTPULSE_CONSUMER_WORKERS:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "find /tmp/courtpulse-processor-worker.heartbeat -mmin -1 | grep -q heartbeat"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 6
+
+  # Live provider polling. Defaults target the local simulator; set COURTPULSE_PROVIDER_BASE_URL
+  # to https://api.balldontlie.io and a real COURTPULSE_BALLDONTLIE_API_KEY to use the paid API.
+  ingestor-worker:
+    profiles: ["live"]
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: apps/queue-replay-cli/Dockerfile
+    command: ["--ingest-daemon"]
+    environment:
+      COURTPULSE_DB_URL: jdbc:postgresql://postgres:5432/courtpulse
+      COURTPULSE_DB_USERNAME: courtpulse
+      COURTPULSE_DB_PASSWORD: ${COURTPULSE_DB_PASSWORD:?Set COURTPULSE_DB_PASSWORD}
+      COURTPULSE_SQS_ENDPOINT: http://localstack:4566
+      COURTPULSE_PROVIDER: balldontlie
+      COURTPULSE_PROVIDER_BASE_URL: ${COURTPULSE_PROVIDER_BASE_URL:-http://provider-simulator:8080}
+      COURTPULSE_BALLDONTLIE_API_KEY: ${COURTPULSE_BALLDONTLIE_API_KEY:-local-simulator-key}
+      COURTPULSE_PROVIDER_REQUESTS_PER_MINUTE: ${COURTPULSE_PROVIDER_REQUESTS_PER_MINUTE:-120}
+      COURTPULSE_INGEST_POLL_INTERVAL: ${COURTPULSE_INGEST_POLL_INTERVAL:-5s}
+      COURTPULSE_INGEST_TEAM_IDS: ${COURTPULSE_INGEST_TEAM_IDS:-}
+      COURTPULSE_INGEST_FINAL_REFETCH_INTERVAL: ${COURTPULSE_INGEST_FINAL_REFETCH_INTERVAL:-10m}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      provider-simulator:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD-SHELL", "find /tmp/courtpulse-ingestor-worker.heartbeat -mmin -1 | grep -q heartbeat"]
       interval: 10s
       timeout: 3s
       start_period: 30s

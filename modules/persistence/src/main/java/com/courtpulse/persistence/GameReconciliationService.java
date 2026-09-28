@@ -61,6 +61,7 @@ public final class GameReconciliationService {
             throw new IllegalArgumentException("Correction fixture must contain source events");
         }
         try (var span = TraceContext.start("correction ingest", SpanKind.INTERNAL)) {
+            span.span().setAttribute("courtpulse.source.events", fixture.sourceEvents().size());
             return transactions.execute(status -> submitInTransaction(fixture));
         }
     }

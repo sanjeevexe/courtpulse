@@ -9,4 +9,5 @@ public record RecentEventReadModel(
         String eventType,
         Instant occurredAt,
         int homeScore,
-        int awayScore) {}
+        int awayScore,
+        String description) {}

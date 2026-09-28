@@ -36,6 +36,24 @@ courtpulse:
     worker-concurrency: ${COURTPULSE_CONSUMER_WORKERS:1}
   demo:
     drain-timeout: ${COURTPULSE_DRAIN_TIMEOUT:60s}
+  canary:
+    timeout: ${COURTPULSE_CANARY_TIMEOUT:120s}
+  provider:
+    # none | balldontlie. Play-by-play requires BALLDONTLIE's paid GOAT tier (see ADR 0013).
+    name: ${COURTPULSE_PROVIDER:none}
+    base-url: ${COURTPULSE_PROVIDER_BASE_URL:https://api.balldontlie.io}
+    api-key: ${COURTPULSE_BALLDONTLIE_API_KEY:}
+    requests-per-minute: ${COURTPULSE_PROVIDER_REQUESTS_PER_MINUTE:30}
+    request-timeout: ${COURTPULSE_PROVIDER_TIMEOUT:5s}
+    team-ids: ${COURTPULSE_INGEST_TEAM_IDS:}
+  ingest:
+    poll-interval: ${COURTPULSE_INGEST_POLL_INTERVAL:15s}
+    maximum-live-games: ${COURTPULSE_INGEST_MAX_LIVE_GAMES:15}
+    player-lookups-per-cycle: ${COURTPULSE_INGEST_PLAYER_LOOKUPS:5}
+    league-zone: ${COURTPULSE_PROVIDER_LEAGUE_ZONE:America/New_York}
+    # Providers correct box scores after games end; completed games are re-polled for a while.
+    final-refetch-window: ${COURTPULSE_INGEST_FINAL_REFETCH_WINDOW:6h}
+    final-refetch-interval: ${COURTPULSE_INGEST_FINAL_REFETCH_INTERVAL:10m}
 
 logging:
   level:

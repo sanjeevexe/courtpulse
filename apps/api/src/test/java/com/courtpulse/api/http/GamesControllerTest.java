@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.courtpulse.query.CourtPulseQueryService;
 import com.courtpulse.query.DataStatus;
 import com.courtpulse.query.GameSnapshotReadModel;
+import com.courtpulse.query.TeamLabels;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,9 @@ class GamesControllerTest {
         GameSnapshotReadModel snapshot = new GameSnapshotReadModel(
                 "game-1", "synthetic", "home", "away", "FINAL", 4, 0,
                 18, 14, Map.of("player_ace", 13), 20, 20, "checksum",
-                List.of(), Instant.parse("2026-09-20T16:00:00Z"), DataStatus.FINAL);
+                List.of(), Instant.parse("2026-09-20T16:00:00Z"), DataStatus.FINAL,
+                new TeamLabels("Harbor City Herons", "HCH", "Summit Valley Sentinels", "SVS"),
+                null, Map.of("player_ace", "Ace Rivera"));
         when(queries.game("game-1")).thenReturn(snapshot);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(new GamesController(queries)).build();
 
@@ -33,7 +36,9 @@ class GamesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("ETag", etag))
                 .andExpect(jsonPath("$.homeScore").value(18))
-                .andExpect(jsonPath("$.playerPoints.player_ace").value(13));
+                .andExpect(jsonPath("$.playerPoints.player_ace").value(13))
+                .andExpect(jsonPath("$.playerNames.player_ace").value("Ace Rivera"))
+                .andExpect(jsonPath("$.homeTeamAbbreviation").value("HCH"));
 
         mvc.perform(get("/api/v1/games/game-1").header("If-None-Match", etag))
                 .andExpect(status().isNotModified())

@@ -16,4 +16,6 @@ public record GameSummaryReadModel(
         long lastAppliedSequence,
         Instant updatedAt,
         String stateChecksum,
-        DataStatus dataStatus) {}
+        DataStatus dataStatus,
+        TeamLabels teams,
+        Instant scheduledAt) {}

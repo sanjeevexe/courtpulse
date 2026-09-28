@@ -1,5 +1,6 @@
 package com.courtpulse.domain.event;
 
+import com.courtpulse.domain.game.GamePeriods;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -20,10 +21,23 @@ public record CanonicalEvent(
         String teamId,
         List<String> participantIds,
         Score scoreAfter,
-        int points) {
+        int points,
+        String description) {
 
     public static final int CURRENT_SCHEMA_VERSION = 1;
-    private static final long REGULATION_PERIOD_MILLIS = 12 * 60 * 1_000L;
+    /** Provider play text is display-only evidence; it never drives state or rules. */
+    public static final int MAXIMUM_DESCRIPTION_LENGTH = 280;
+
+    /** Events without provider text, such as the synthetic fixtures. */
+    public CanonicalEvent(
+            String eventId, int schemaVersion, String gameId, String source,
+            String providerEventId, long sequence, int revision, EventType type, int period,
+            long clockMillisRemaining, Instant occurredAt, String teamId,
+            List<String> participantIds, Score scoreAfter, int points) {
+        this(eventId, schemaVersion, gameId, source, providerEventId, sequence, revision, type,
+                period, clockMillisRemaining, occurredAt, teamId, participantIds, scoreAfter,
+                points, null);
+    }
 
     public CanonicalEvent {
         eventId = requireText(eventId, "eventId");
@@ -47,12 +61,24 @@ public record CanonicalEvent(
         if (revision < 1) {
             throw new IllegalArgumentException("revision must be at least 1");
         }
-        if (period < 1 || period > 4) {
-            throw new IllegalArgumentException("period must be between 1 and 4 for this milestone");
-        }
-        if (clockMillisRemaining < 0 || clockMillisRemaining > REGULATION_PERIOD_MILLIS) {
+        if (period < 1 || period > GamePeriods.MAXIMUM_PERIOD) {
             throw new IllegalArgumentException(
-                    "clockMillisRemaining must be between 0 and " + REGULATION_PERIOD_MILLIS);
+                    "period must be between 1 and " + GamePeriods.MAXIMUM_PERIOD);
+        }
+        long periodMillis = GamePeriods.maximumClockMillis(period);
+        if (clockMillisRemaining < 0 || clockMillisRemaining > periodMillis) {
+            throw new IllegalArgumentException(
+                    "clockMillisRemaining must be between 0 and " + periodMillis
+                            + " in period " + period);
+        }
+        if (description != null) {
+            if (description.isBlank() || !description.equals(description.strip())
+                    || description.length() > MAXIMUM_DESCRIPTION_LENGTH
+                    || description.chars().anyMatch(Character::isISOControl)) {
+                throw new IllegalArgumentException(
+                        "description must be trimmed, printable, and at most "
+                                + MAXIMUM_DESCRIPTION_LENGTH + " characters");
+            }
         }
         Objects.requireNonNull(scoreAfter, "scoreAfter is required");
 

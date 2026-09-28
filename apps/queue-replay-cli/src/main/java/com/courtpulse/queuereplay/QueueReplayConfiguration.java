@@ -24,6 +24,17 @@ import com.courtpulse.persistence.MicrometerRuleEngineMetrics;
 import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.JdbcOutboxRepository;
+import com.courtpulse.persistence.JdbcProviderRepository;
+import com.courtpulse.persistence.ProviderIngestionService;
+import com.courtpulse.providers.balldontlie.BallDontLieProvider;
+import com.courtpulse.providers.live.LiveGameProvider;
+import com.courtpulse.providers.live.ProviderCircuitBreaker;
+import com.courtpulse.providers.live.ProviderRateLimiter;
+import java.net.http.HttpClient;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -142,6 +153,43 @@ public class QueueReplayConfiguration {
             ObjectMapper mapper) {
         return new GameReconciliationService(
                 jdbc, fixtures, processing, outbox, rules, transactions, clock, mapper);
+    }
+
+    @Bean
+    JdbcProviderRepository providerRepository(JdbcClient jdbc) {
+        return new JdbcProviderRepository(jdbc);
+    }
+
+    @Bean
+    ProviderIngestionService providerIngestionService(
+            JdbcProviderRepository providers, JdbcFixtureRepository fixtures, JdbcOutboxRepository outbox,
+            GameReconciliationService reconciliation, TransactionTemplate transactions, Clock clock,
+            @Value("${courtpulse.ingest.final-refetch-window}") Duration finalRefetchWindow,
+            @Value("${courtpulse.ingest.final-refetch-interval}") Duration finalRefetchInterval) {
+        return new ProviderIngestionService(providers, fixtures, outbox, reconciliation, transactions, clock,
+                new ProviderIngestionService.FinalRefetch(finalRefetchWindow, finalRefetchInterval));
+    }
+
+    /** Created only when explicitly selected; no provider credential is needed otherwise. */
+    @Bean
+    @ConditionalOnProperty(name = "courtpulse.provider.name", havingValue = "balldontlie")
+    LiveGameProvider ballDontLieProvider(
+            ObjectMapper mapper, Clock clock,
+            @Value("${courtpulse.provider.base-url}") URI baseUrl,
+            @Value("${courtpulse.provider.api-key:}") String apiKey,
+            @Value("${courtpulse.provider.request-timeout}") Duration requestTimeout,
+            @Value("${courtpulse.provider.requests-per-minute}") int requestsPerMinute,
+            @Value("${courtpulse.provider.team-ids:}") String teamIds) {
+        Set<String> teams = Arrays.stream(teamIds.split(","))
+                .map(String::strip).filter(value -> !value.isEmpty()).collect(Collectors.toSet());
+        return new BallDontLieProvider(
+                new BallDontLieProvider.Settings(baseUrl, apiKey, requestTimeout, 8 * 1024 * 1024, teams),
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
+                        .followRedirects(HttpClient.Redirect.NEVER).build(),
+                mapper,
+                new ProviderRateLimiter(requestsPerMinute, Duration.ofSeconds(10), clock, Thread::sleep),
+                new ProviderCircuitBreaker(5, Duration.ofSeconds(60), clock),
+                clock);
     }
 
     @Bean

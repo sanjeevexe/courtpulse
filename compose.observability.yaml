@@ -41,6 +41,32 @@ services:
       otel-collector:
         condition: service_started
 
+  processor-worker:
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -javaagent:/opt/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: courtpulse-processor-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_TRACES_SAMPLER: always_on
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  ingestor-worker:
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -javaagent:/opt/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: courtpulse-ingestor-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_TRACES_SAMPLER: always_on
+    depends_on:
+      otel-collector:
+        condition: service_started
+
   otel-collector:
     image: otel/opentelemetry-collector:0.161.0
     profiles: ["observability"]

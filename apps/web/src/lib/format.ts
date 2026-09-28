@@ -31,3 +31,12 @@ export function readableEventType(value: string): string {
 export function shortTeam(value: string): string {
   return value.replace(/^team[_-]?/i, '').replaceAll('_', ' ').toUpperCase();
 }
+
+/** Provider display name when known; otherwise the stable ID in a readable form. */
+export function teamLabel(teamId: string, name?: string | null): string {
+  return name ?? shortTeam(teamId);
+}
+
+export function playerLabel(playerId: string, names?: Record<string, string>): string {
+  return names?.[playerId] ?? playerId.replace(/^bdl-player-/, '#').replaceAll('_', ' ');
+}

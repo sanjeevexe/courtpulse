@@ -1,5 +1,6 @@
 package com.courtpulse.domain.alert;
 
+import com.courtpulse.domain.game.GamePeriods;
 import com.courtpulse.domain.game.GameState;
 import com.courtpulse.domain.game.GameStatus;
 import java.util.Map;
@@ -17,8 +18,9 @@ public record CloseGameRule(
         if (maximumMargin < 1 || maximumMargin > 20) {
             throw new IllegalArgumentException("maximumMargin must be between 1 and 20");
         }
-        if (eligiblePeriod < 1 || eligiblePeriod > 4) {
-            throw new IllegalArgumentException("eligiblePeriod must be between 1 and 4");
+        if (eligiblePeriod < 1 || eligiblePeriod > GamePeriods.MAXIMUM_PERIOD) {
+            throw new IllegalArgumentException(
+                    "eligiblePeriod must be between 1 and " + GamePeriods.MAXIMUM_PERIOD);
         }
         if (maximumClockMillisRemaining < 0 || maximumClockMillisRemaining > 720_000) {
             throw new IllegalArgumentException("maximumClockMillisRemaining must be between 0 and 720000");

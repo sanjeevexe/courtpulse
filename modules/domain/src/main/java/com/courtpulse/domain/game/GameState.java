@@ -33,8 +33,9 @@ public record GameState(
         if (homeTeamId.equals(awayTeamId)) {
             throw new IllegalArgumentException("Home and away teams must be different");
         }
-        if (period < 0 || period > 4) {
-            throw new IllegalArgumentException("period must be between 0 and 4");
+        if (period < 0 || period > GamePeriods.MAXIMUM_PERIOD) {
+            throw new IllegalArgumentException(
+                    "period must be between 0 and " + GamePeriods.MAXIMUM_PERIOD);
         }
         if (clockMillisRemaining < 0 || homeScore < 0 || awayScore < 0 || lastAppliedSequence < 0) {
             throw new IllegalArgumentException("Game state numeric values must be non-negative");

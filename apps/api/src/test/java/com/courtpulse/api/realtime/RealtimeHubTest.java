@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.courtpulse.persistence.RealtimeOutboxRecord;
@@ -25,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
@@ -57,6 +60,21 @@ class RealtimeHubTest {
         assertEquals(1, hub.subscriptionsForGame("game-1"));
         hub.close(first.session());
         hub.close(second.session());
+    }
+
+    @Test
+    void keepAlivePingsOpenSessionsThroughTheirSingleWriter() throws Exception {
+        CourtPulseQueryService queries = mock(CourtPulseQueryService.class);
+        RealtimeHub hub = hub(queries, 32);
+        SessionCapture capture = capture("session-quiet", 0);
+        hub.open(capture.session());
+
+        assertEquals(1, hub.keepAlive());
+
+        verify(capture.session(), timeout(1_000)).sendMessage(any(PingMessage.class));
+        assertTrue(capture.messages().isEmpty(), "a ping is not a protocol message");
+        hub.close(capture.session());
+        assertEquals(0, hub.keepAlive());
     }
 
     @Test

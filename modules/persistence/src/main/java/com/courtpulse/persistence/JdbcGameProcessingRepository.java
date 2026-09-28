@@ -52,7 +52,7 @@ public final class JdbcGameProcessingRepository {
                                sequence_number, revision, event_type, period,
                                clock_millis_remaining, occurred_at, team_id,
                                participant_ids::TEXT AS participant_ids,
-                               home_score, away_score, points
+                               home_score, away_score, points, description
                         FROM canonical_events
                         WHERE event_id = :eventId
                         """)
@@ -108,7 +108,7 @@ public final class JdbcGameProcessingRepository {
                                event.event_type, event.period, event.clock_millis_remaining,
                                event.occurred_at, event.team_id,
                                event.participant_ids::TEXT AS participant_ids,
-                               event.home_score, event.away_score, event.points
+                               event.home_score, event.away_score, event.points, event.description
                         FROM processed_events processed
                         JOIN canonical_events event ON event.event_id = processed.event_id
                         WHERE processed.consumer_name = :consumerName
@@ -365,7 +365,8 @@ public final class JdbcGameProcessingRepository {
                 resultSet.getString("team_id"),
                 json.readStringList(resultSet.getString("participant_ids")),
                 new Score(resultSet.getInt("home_score"), resultSet.getInt("away_score")),
-                resultSet.getInt("points"));
+                resultSet.getInt("points"),
+                resultSet.getString("description"));
     }
 
     private Map<String, Object> alertParameters(Alert alert, UUID alertId, Instant now) {

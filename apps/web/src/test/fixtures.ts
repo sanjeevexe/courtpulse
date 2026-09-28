@@ -70,6 +70,37 @@ export const snapshot: GameSnapshot = {
   })),
   updatedAt: game.updatedAt,
   dataStatus: game.dataStatus,
+  playerNames: {},
+};
+
+/** A live provider game in overtime with display names and play text. */
+export const providerSnapshot: GameSnapshot = {
+  ...snapshot,
+  gameId: 'bdl-game-990001',
+  source: 'balldontlie',
+  homeTeamId: 'bdl-team-90001',
+  awayTeamId: 'bdl-team-90002',
+  status: 'LIVE',
+  period: 5,
+  clockMillisRemaining: 125_000,
+  homeScore: 77,
+  awayScore: 75,
+  playerPoints: { 'bdl-player-9000101': 30, 'bdl-player-9000204': 18 },
+  playerNames: { 'bdl-player-9000101': 'Ada Lane' },
+  homeTeamName: 'Harbor City Herons',
+  homeTeamAbbreviation: 'HCH',
+  awayTeamName: 'Summit Valley Sentinels',
+  awayTeamAbbreviation: 'SVS',
+  dataStatus: 'LIVE',
+  recentEvents: [{
+    eventId: 'bdl-990001-160-r1',
+    sequence: 160,
+    revision: 1,
+    eventType: 'FIELD_GOAL_MADE',
+    occurredAt: '2026-09-20T02:30:00Z',
+    scoreAfter: { home: 77, away: 75 },
+    description: 'Ada Lane makes 25-foot three point jumper',
+  }],
 };
 
 export const alert: GameAlert = {

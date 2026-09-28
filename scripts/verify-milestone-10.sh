@@ -61,7 +61,7 @@ finish() {
   database -c 'SELECT rule_type,count(*) FROM alert_rules GROUP BY rule_type ORDER BY rule_type' \
     >"${artifact_dir}/rule-counts.txt" 2>&1 || true
   if command -v pmset >/dev/null 2>&1; then
-    pmset -g log | rg "^$(date '+%Y-%m-%d') .*?(Sleep +Entering Sleep state|DarkWake +DarkWake from|Wake +Wake from)" \
+    pmset -g log | grep -E "^$(date '+%Y-%m-%d') .*(Sleep +Entering Sleep state|DarkWake +DarkWake from|Wake +Wake from)" \
       >"${artifact_dir}/host-sleep-events.txt" || true
   fi
   database -c "SELECT game_id,status,generation,gap_sequence,last_error_code FROM game_reconciliations ORDER BY game_id" \
