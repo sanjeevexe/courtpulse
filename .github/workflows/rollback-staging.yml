@@ -1,0 +1,186 @@
+# Roll the AWS staging environment back to an earlier image.
+#
+# Without input, every service returns to the image of the previous CI
+# deployment (resolved from the API service's task-definition history). With
+# image_tag (a full git SHA still present in ECR), every service moves to that
+# image. Database migrations are not reverted: CourtPulse migrations follow
+# expand-and-contract so the previous release runs on the newer schema
+# (docs/runbooks/rollback.md). Shares the deploy concurrency group so a
+# rollback never races a deploy.
+name: Roll back staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Full git SHA to roll back to (empty = the previous deployment)
+        type: string
+        required: false
+        default: ""
+      include_web:
+        description: Rebuild and publish the SPA from the same commit
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  resolve:
+    name: Resolve target image
+    if: vars.AWS_DEPLOY_ROLE_ARN != '' && github.ref == 'refs/heads/main'
+    # No environment: this job's OIDC subject is repo:<owner>/<repo>:ref:refs/heads/main.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICES: ${{ vars.ECS_SERVICES }}
+    steps:
+      - name: Check out rollback scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate input
+        env:
+          REQUESTED_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -Eeuo pipefail
+          if [[ -n "$REQUESTED_TAG" && ! "$REQUESTED_TAG" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::image_tag must be empty or a full 40-character lowercase git SHA"
+            exit 1
+          fi
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: courtpulse-rollback-resolve-${{ github.run_id }}
+
+      - name: Resolve the image tag
+        id: resolve
+        env:
+          REQUESTED_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -Eeuo pipefail
+          tag="$(scripts/aws/rollback.sh resolve "$REQUESTED_TAG")"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Rolling staging back to \`${tag}\`." >> "$GITHUB_STEP_SUMMARY"
+
+  web:
+    name: Build web at the target commit
+    needs: resolve
+    if: ${{ inputs.include_web }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the target commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          persist-credentials: false
+
+      - name: Set up Node from apps/web/.nvmrc
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: apps/web/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-dist-rollback-${{ needs.resolve.outputs.tag }}
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  rollback:
+    name: Roll back
+    needs: [resolve, web]
+    if: >-
+      always() && needs.resolve.result == 'success' &&
+      (needs.web.result == 'success' || needs.web.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: staging
+      url: ${{ vars.CLOUDFRONT_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TARGET_TAG: ${{ needs.resolve.outputs.tag }}
+      INCLUDE_WEB: ${{ inputs.include_web }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICES: ${{ vars.ECS_SERVICES }}
+      WEB_BUCKET: ${{ vars.WEB_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      CLOUDFRONT_URL: ${{ vars.CLOUDFRONT_URL }}
+    steps:
+      - name: Check out rollback scripts (current main)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download web build
+        if: ${{ inputs.include_web }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-dist-rollback-${{ needs.resolve.outputs.tag }}
+          path: apps/web/dist
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: courtpulse-rollback-${{ github.run_id }}
+
+      - name: Re-point every service
+        run: scripts/aws/rollback.sh apply "$TARGET_TAG"
+
+      - name: Publish the SPA from the target commit
+        if: ${{ inputs.include_web }}
+        run: |
+          scripts/aws/publish-web.sh apps/web/dist
+          scripts/aws/invalidate-web.sh /index.html
+
+      - name: Smoke test through CloudFront
+        run: scripts/aws/smoke-test.sh "$CLOUDFRONT_URL"
+
+      - name: Summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### Staging rollback: ${JOB_STATUS}"
+            echo "- Image tag: \`${TARGET_TAG}\`"
+            echo "- SPA republished: ${INCLUDE_WEB}"
+            echo "- URL: ${CLOUDFRONT_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -10,6 +10,8 @@ interface PublicAuthConfiguration {
   issuer: string;
   clientId: string;
   scope: string;
+  /** Set only for providers (Amazon Cognito) whose discovery document has no logout endpoint. */
+  endSessionEndpoint?: string | null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -23,6 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [signOutPending, setSignOutPending] = useState(false);
   const signInActive = useRef(false);
   const signOutActive = useRef(false);
+  // Cognito's /logout needs client_id and logout_uri instead of the standard OIDC parameters.
+  const logoutParameters = useRef<Record<string, string> | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -48,7 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           automaticSilentRenew: false,
           userStore: new WebStorageStateStore({ store: window.sessionStorage }),
           stateStore: new WebStorageStateStore({ store: window.sessionStorage }),
+          ...(configuration.endSessionEndpoint
+            ? { metadataSeed: { end_session_endpoint: configuration.endSessionEndpoint } }
+            : {}),
         });
+        logoutParameters.current = configuration.endSessionEndpoint
+          ? { client_id: configuration.clientId, logout_uri: `${window.location.origin}/` }
+          : undefined;
         next.events.addAccessTokenExpired(() => {
           void next.removeUser().catch(() => undefined);
           queryClient.removeQueries({ queryKey: ['me'] });
@@ -128,7 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     queryClient.removeQueries({ queryKey: ['me'] });
     try {
-      await manager.signoutRedirect();
+      await manager.signoutRedirect(
+        logoutParameters.current ? { extraQueryParams: logoutParameters.current } : undefined,
+      );
     } catch {
       setStatus('ERROR');
       setError('You were signed out locally. The identity provider could not be reached.');

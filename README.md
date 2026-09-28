@@ -568,8 +568,11 @@ docker compose --profile delivery ps delivery-worker mailpit
 Mailpit is at `http://localhost:8025` by default. The worker has a heartbeat healthcheck, restarts
 on failure, and stops on SIGTERM. For a deterministic one-shot drain, use
 `./gradlew :apps:queue-replay-cli:run --args='--delivery-run'`; it intentionally does not wait for
-future retries, while the daemon does. Only local Mailpit hosts and ports are accepted. No external
-email service is contacted.
+future retries, while the daemon does. With the default `COURTPULSE_EMAIL_PROVIDER=mailpit`, only
+local Mailpit hosts and ports are accepted and no external email service is contacted. Deployed
+workers set `ses` to send through Amazon SES with task-role credentials from one verified sender
+(`COURTPULSE_EMAIL_FROM`); SES throttling and outages retry, rejected recipients are permanent, and
+`COURTPULSE_PUBLIC_BASE_URL` adds a link to the game.
 
 An owner can read `GET /api/v1/me/notifications/deliveries?limit=20` and
 `GET /api/v1/me/notifications/deliveries/{deliveryId}/attempts?limit=20` with their bearer token;
@@ -811,6 +814,42 @@ worker), checks that no private address or subject appears in traces or metrics,
 `CourtPulseReconciliationBlocked`, `CourtPulseWorkerStale`, and `CourtPulseDlqNonEmpty` to fire
 (and the first two to resolve) from real failures, not synthetic metric values.
 
+## AWS staging (infrastructure as code, not applied)
+
+`infra/terraform` describes a complete staging environment: a two-AZ VPC without a NAT gateway,
+Fargate services for the API and the processor, delivery, reconciliation, and (optional) ingest
+workers, RDS PostgreSQL with an RDS-managed secret, SQS FIFO queues with DLQs, Cognito with a
+public PKCE client and an operations group, SES for email, CloudFront serving the SPA from a
+private S3 bucket and proxying `/api` and `/ws` to the ALB, CloudWatch alarms and a dashboard, an
+AWS Budget, an optional nightly shutdown schedule, ECR, and a GitHub OIDC deploy role. It has been
+validated offline only (`fmt`, `validate`, mocked `terraform test`, TFLint, and a Trivy
+configuration scan); **nothing in this repository has been applied to an AWS account.**
+
+**Running it costs money** (estimated at roughly USD 80-100 per month if left on; see the cost table
+in [the deployment guide](docs/deployment/aws-staging.md)). The supported student-budget pattern is
+create, demonstrate, and destroy with `scripts/aws/teardown.sh`.
+
+The same images run locally and in AWS; only configuration changes. Deployed workers use
+`COURTPULSE_SQS_ENDPOINT=aws` (task-role credentials), `COURTPULSE_EMAIL_PROVIDER=ses` with a
+verified `COURTPULSE_EMAIL_FROM`, and one-off `--migrate` and `--canary` tasks that CI runs around
+each deploy. The API accepts Cognito access tokens (`COURTPULSE_AUTH_AUDIENCE_CLAIM=client_id`,
+`COURTPULSE_AUTH_REQUIRED_TOKEN_USE=access`, groups from `cognito:groups`), exposes Cognito's
+logout endpoint to the browser, and allows WebSocket handshakes only from the CloudFront origin
+(`COURTPULSE_REALTIME_ALLOWED_ORIGINS`). `.github/workflows/deploy-staging.yml` builds and pushes
+images, migrates, rolls every service forward, runs the canary, publishes the SPA, and smoke-tests;
+`rollback-staging.yml` re-points services to the previous revision. Rehearse that sequence locally,
+without AWS, including an SES email through LocalStack and an API rollback to the release before the
+newest migration:
+
+```bash
+./scripts/verify-release-rehearsal.sh
+```
+
+See
+[ADR 0012](docs/adr/0012-aws-staging-deployment.md) and the runbooks for
+[rollback](docs/runbooks/rollback.md), [database restore](docs/runbooks/database-restore.md),
+[secret rotation](docs/runbooks/secret-rotation.md), and [cost and teardown](docs/runbooks/cost-and-teardown.md).
+
 ## Troubleshooting and shutdown
 
 - Docker unavailable: start Docker Desktop and ensure `docker info` succeeds for the same user.
@@ -864,4 +903,5 @@ See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0009](docs/adr/0009-reliable-alert-delivery.md), and
 [ADR 0010](docs/adr/0010-corrections-and-reconciliation.md).
 [ADR 0011](docs/adr/0011-local-observability.md) covers local telemetry.
+[ADR 0012](docs/adr/0012-aws-staging-deployment.md) covers the AWS staging design and
 [ADR 0013](docs/adr/0013-live-provider-ingestion.md) covers live provider ingestion and overtime.

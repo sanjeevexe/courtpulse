@@ -33,7 +33,9 @@ public final class ApiDto {
             boolean enabled,
             String issuer,
             String clientId,
-            String scope) {}
+            String scope,
+            @Schema(nullable = true, description = "Logout endpoint when the provider's discovery document omits one (Cognito)")
+            String endSessionEndpoint) {}
 
     @Schema(requiredProperties = {
         "gameId", "source", "homeTeamId", "awayTeamId", "status", "stateVersion",

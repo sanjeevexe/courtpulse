@@ -1,0 +1,4 @@
+# Copy to backend.hcl (ignored by git) or let scripts/aws/bootstrap-state.sh write it.
+bucket = "courtpulse-tfstate-123456789012-us-east-1"
+key    = "courtpulse/staging/terraform.tfstate"
+region = "us-east-1"

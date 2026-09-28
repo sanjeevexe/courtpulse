@@ -1,0 +1,31 @@
+# The repository root ignores every directory named data/ (local database
+# volumes). Re-include the Terraform data module explicitly.
+!/modules/data/
+
+# Provider plugins, module caches, and plugin caches are local build output.
+**/.terraform/
+.terraform.d/
+.tflint.d/
+
+# State and state backups may contain generated secrets (for example the
+# CloudFront origin-verify header). Remote state lives in the encrypted
+# bootstrap bucket; local bootstrap state stays on the operator's machine.
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.plan
+
+# Variable files and backend settings are account-specific.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+backend.hcl
+!backend.hcl.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Crash logs
+crash.log
+crash.*.log

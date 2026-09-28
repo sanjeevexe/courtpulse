@@ -1,0 +1,225 @@
+# Deploy CourtPulse to the AWS staging environment.
+#
+# Runs after the "CI" workflow succeeds for a push to main, or manually from
+# main. Every job is skipped (not failed) until the repository variable
+# AWS_DEPLOY_ROLE_ARN exists, so forks and fresh clones never try to reach AWS.
+# AWS access uses GitHub OIDC only; there are no long-lived AWS secrets.
+#
+# Jobs:
+#   gate    - decides whether to run and pins the commit SHA
+#   web     - builds the SPA with no cloud credentials (third-party npm code
+#             never runs in a job that can mint an AWS token)
+#   images  - builds/pushes immutable <sha> images with provenance and SBOM
+#             (the Gradle/npm builds run inside BuildKit, isolated from the
+#             runner's OIDC request token)
+#   deploy  - migrate -> services -> canary -> web -> invalidate -> smoke test
+#
+# Required repository variables (see docs/deployment/aws-staging.md):
+#   AWS_REGION, AWS_DEPLOY_ROLE_ARN, ECR_API_REPOSITORY, ECR_WORKER_REPOSITORY,
+#   ECS_CLUSTER, ECS_SERVICES, MIGRATE_TASK_FAMILY, CANARY_TASK_FAMILY,
+#   ONEOFF_LOG_GROUP, TASK_SUBNETS, TASK_SECURITY_GROUP, WEB_BUCKET,
+#   CLOUDFRONT_DISTRIBUTION_ID, CLOUDFRONT_URL
+name: Deploy staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      images_only:
+        description: Only build and push images (first-time bootstrap); skip web and deployment
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  gate:
+    name: Gate
+    # workflow_run fires for any completed CI run whose head branch is named
+    # main - including a fork's pull request from a branch called main - so
+    # also require a push event from this repository.
+    if: >-
+      vars.AWS_DEPLOY_ROLE_ARN != '' && (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'push' &&
+         github.event.workflow_run.head_repository.full_name == github.repository)
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - name: Pin the commit to deploy
+        id: sha
+        env:
+          # workflow_run's github.sha is the default branch tip, not the commit CI tested.
+          CANDIDATE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Unexpected commit SHA"; exit 1; }
+          echo "sha=${CANDIDATE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Deploying \`${CANDIDATE_SHA}\` to staging." >> "$GITHUB_STEP_SUMMARY"
+
+  web:
+    name: Build web
+    needs: gate
+    if: ${{ !inputs.images_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+
+      - name: Set up Node from apps/web/.nvmrc
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: apps/web/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-dist-${{ needs.gate.outputs.sha }}
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  images:
+    name: Build and push images
+    needs: gate
+    # No environment: this job's OIDC subject is repo:<owner>/<repo>:ref:refs/heads/main.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: courtpulse-images-${{ github.run_id }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - name: Build and push immutable images
+        env:
+          DEPLOY_SHA: ${{ needs.gate.outputs.sha }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          ECR_API_REPOSITORY: ${{ vars.ECR_API_REPOSITORY }}
+          ECR_WORKER_REPOSITORY: ${{ vars.ECR_WORKER_REPOSITORY }}
+          IMAGE_SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+          SKIP_ECR_LOGIN: "true"
+        run: scripts/aws/build-push-images.sh "$DEPLOY_SHA"
+
+  deploy:
+    name: Deploy
+    needs: [gate, web, images]
+    if: ${{ !inputs.images_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    environment:
+      name: staging
+      url: ${{ vars.CLOUDFRONT_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DEPLOY_SHA: ${{ needs.gate.outputs.sha }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICES: ${{ vars.ECS_SERVICES }}
+      MIGRATE_TASK_FAMILY: ${{ vars.MIGRATE_TASK_FAMILY }}
+      CANARY_TASK_FAMILY: ${{ vars.CANARY_TASK_FAMILY }}
+      ONEOFF_LOG_GROUP: ${{ vars.ONEOFF_LOG_GROUP }}
+      TASK_SUBNETS: ${{ vars.TASK_SUBNETS }}
+      TASK_SECURITY_GROUP: ${{ vars.TASK_SECURITY_GROUP }}
+      WEB_BUCKET: ${{ vars.WEB_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      CLOUDFRONT_URL: ${{ vars.CLOUDFRONT_URL }}
+    steps:
+      - name: Check out deployment scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+
+      - name: Download web build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-dist-${{ needs.gate.outputs.sha }}
+          path: apps/web/dist
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: courtpulse-deploy-${{ github.run_id }}
+
+      - name: Run database migrations (one-off task)
+        run: scripts/aws/run-oneoff-task.sh migrate "$DEPLOY_SHA"
+
+      - name: Deploy ECS services
+        run: scripts/aws/deploy-services.sh "$DEPLOY_SHA"
+
+      - name: Run the replay canary (one-off task)
+        run: scripts/aws/run-oneoff-task.sh canary "$DEPLOY_SHA"
+
+      - name: Publish the SPA
+        run: scripts/aws/publish-web.sh apps/web/dist
+
+      - name: Invalidate the SPA shell
+        run: scripts/aws/invalidate-web.sh /index.html
+
+      - name: Smoke test through CloudFront
+        run: scripts/aws/smoke-test.sh "$CLOUDFRONT_URL"
+
+      - name: Summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### Staging deploy: ${JOB_STATUS}"
+            echo "- Commit: \`${DEPLOY_SHA}\`"
+            echo "- URL: ${CLOUDFRONT_URL}"
+            echo "- Roll back with the **Roll back staging** workflow (see docs/runbooks/rollback.md)."
+          } >> "$GITHUB_STEP_SUMMARY"

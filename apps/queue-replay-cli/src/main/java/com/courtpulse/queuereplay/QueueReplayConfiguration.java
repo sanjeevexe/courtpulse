@@ -11,6 +11,8 @@ import com.courtpulse.messaging.delivery.DeliveryQueuePublisher;
 import com.courtpulse.messaging.delivery.DeliveryQueueConsumer;
 import com.courtpulse.messaging.delivery.EmailSender;
 import com.courtpulse.messaging.delivery.LocalSmtpEmailSender;
+import com.courtpulse.messaging.delivery.SesEmailSender;
+import software.amazon.awssdk.services.ses.SesClient;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
 import com.courtpulse.persistence.DurableGameProcessor;
@@ -204,7 +206,8 @@ public class QueueReplayConfiguration {
             @Value("${courtpulse.sqs.local-access-key:test}") String accessKey,
             @Value("${courtpulse.sqs.local-secret-key:test}") String secretKey) {
         var builder = SqsClient.builder().region(Region.of(region));
-        if (!endpoint.isBlank()) {
+        // "aws" (or blank) selects the SDK's regional endpoint and default credential chain.
+        if (!endpoint.isBlank() && !"aws".equalsIgnoreCase(endpoint)) {
             URI endpointUri = URI.create(endpoint);
             String host = endpointUri.getHost();
             if (!("localhost".equals(host) || "127.0.0.1".equals(host)
@@ -263,11 +266,36 @@ public class QueueReplayConfiguration {
                 queue -> queue.depth().total()).register(registry);
     }
 
+    /** Mailpit locally; Amazon SES (task-role credentials, verified sender) when deployed. */
     @Bean
-    EmailSender localEmailSender(
+    EmailSender emailSender(
+            @Value("${courtpulse.email.provider}") String provider,
             @Value("${courtpulse.mailpit.host}") String host,
-            @Value("${courtpulse.mailpit.port}") int port) {
-        return new LocalSmtpEmailSender(host, port);
+            @Value("${courtpulse.mailpit.port}") int port,
+            @Value("${courtpulse.email.from}") String from,
+            @Value("${courtpulse.email.ses-configuration-set:}") String configurationSet,
+            @Value("${courtpulse.sqs.region}") String region,
+            @Value("${courtpulse.email.ses-endpoint:}") String sesEndpoint,
+            @Value("${courtpulse.sqs.local-access-key:test}") String accessKey,
+            @Value("${courtpulse.sqs.local-secret-key:test}") String secretKey) {
+        return switch (provider) {
+            case "mailpit" -> new LocalSmtpEmailSender(host, port);
+            case "ses" -> {
+                var builder = SesClient.builder().region(Region.of(region));
+                if (!sesEndpoint.isBlank()) {
+                    URI endpointUri = URI.create(sesEndpoint);
+                    if (!("localhost".equals(endpointUri.getHost()) || "127.0.0.1".equals(endpointUri.getHost())
+                            || "localstack".equals(endpointUri.getHost()))) {
+                        throw new IllegalArgumentException(
+                                "SES endpoint overrides and dummy credentials are restricted to localstack");
+                    }
+                    builder.endpointOverride(endpointUri).credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(accessKey, secretKey)));
+                }
+                yield new SesEmailSender(builder.build(), from, configurationSet);
+            }
+            default -> throw new IllegalArgumentException("COURTPULSE_EMAIL_PROVIDER must be mailpit or ses");
+        };
     }
 
     @Bean
@@ -283,10 +311,11 @@ public class QueueReplayConfiguration {
     DeliveryQueueConsumer deliveryQueueConsumer(
             JdbcDeliveryWorkRepository work,
             @Qualifier("alertDeliveriesQueue") QueuePort queue,
-            EmailSender email, TransactionTemplate transactions, Clock clock) {
+            EmailSender email, TransactionTemplate transactions, Clock clock,
+            @Value("${courtpulse.email.public-base-url:}") String publicBaseUrl) {
         return new DeliveryQueueConsumer(
                 work, queue, email, transactions, clock,
-                "delivery-consumer-" + UUID.randomUUID());
+                "delivery-consumer-" + UUID.randomUUID(), publicBaseUrl);
     }
 
     @Bean

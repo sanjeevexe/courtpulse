@@ -581,6 +581,9 @@ components:
         issuer: {type: string}
         clientId: {type: string, minLength: 1}
         scope: {type: string, minLength: 1}
+        endSessionEndpoint:
+          type: [string, 'null']
+          description: Logout endpoint when the provider's discovery document omits one (Cognito)
     Me:
       type: object
       additionalProperties: false

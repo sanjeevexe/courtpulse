@@ -20,6 +20,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("software.amazon.awssdk:sqs")
+    implementation("software.amazon.awssdk:ses")
     implementation("software.amazon.awssdk:url-connection-client")
     runtimeOnly("org.postgresql:postgresql")
 

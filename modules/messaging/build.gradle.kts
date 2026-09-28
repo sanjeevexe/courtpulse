@@ -15,6 +15,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api")
     implementation("org.springframework:spring-tx")
     implementation("software.amazon.awssdk:sqs")
+    implementation("software.amazon.awssdk:ses")
     implementation("software.amazon.awssdk:url-connection-client")
 
     testImplementation(project(":modules:testkit"))
@@ -26,4 +27,5 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
     testImplementation("org.testcontainers:testcontainers-localstack:2.0.5")
+    testImplementation("org.mockito:mockito-core")
 }

@@ -193,6 +193,38 @@ describe('OIDC browser authentication', () => {
     expect(oidc.signoutRedirect).toHaveBeenCalledOnce();
   });
 
+  it('uses Cognito logout parameters only when the API supplies an end-session endpoint', async () => {
+    server.use(http.get('*/api/v1/auth/config', () => HttpResponse.json({
+      enabled: true,
+      issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_example',
+      clientId: 'app-client-123',
+      scope: 'openid email profile',
+      endSessionEndpoint: 'https://courtpulse-staging.auth.us-east-1.amazoncognito.com/logout',
+    })));
+    oidc.getUser.mockResolvedValue(authenticatedUser);
+    const user = userEvent.setup();
+    renderApp('/');
+
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+    expect(oidc.settings?.metadataSeed).toEqual({
+      end_session_endpoint: 'https://courtpulse-staging.auth.us-east-1.amazoncognito.com/logout',
+    });
+    expect(oidc.signoutRedirect).toHaveBeenCalledWith({
+      extraQueryParams: { client_id: 'app-client-123', logout_uri: `${window.location.origin}/` },
+    });
+  });
+
+  it('keeps standard discovery-driven logout for providers such as Keycloak', async () => {
+    enableAuthentication();
+    oidc.getUser.mockResolvedValue(authenticatedUser);
+    const user = userEvent.setup();
+    renderApp('/');
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    expect(oidc.settings?.metadataSeed).toBeUndefined();
+    expect(oidc.signoutRedirect).toHaveBeenCalledWith(undefined);
+  });
+
   it('clears protected queries and local identity when provider logout fails', async () => {
     enableAuthentication();
     oidc.getUser.mockResolvedValue(authenticatedUser);

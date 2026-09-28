@@ -24,16 +24,40 @@ public final class DeliveryQueueConsumer {
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final String owner;
+    private final String publicBaseUrl;
 
     public DeliveryQueueConsumer(
             JdbcDeliveryWorkRepository work, QueuePort queue, EmailSender email,
             TransactionTemplate transactions, Clock clock, String owner) {
+        this(work, queue, email, transactions, clock, owner, null);
+    }
+
+    /** {@code publicBaseUrl} (for example the CloudFront URL) adds a link to the game, if set. */
+    public DeliveryQueueConsumer(
+            JdbcDeliveryWorkRepository work, QueuePort queue, EmailSender email,
+            TransactionTemplate transactions, Clock clock, String owner, String publicBaseUrl) {
         this.work = work;
         this.queue = queue;
         this.email = email;
         this.transactions = transactions;
         this.clock = clock;
         this.owner = owner;
+        if (publicBaseUrl != null && !publicBaseUrl.isBlank()
+                && !publicBaseUrl.matches("https://[A-Za-z0-9.-]+(:[0-9]{1,5})?|http://(localhost|127\\.0\\.0\\.1)(:[0-9]{1,5})?")) {
+            throw new IllegalArgumentException("Public base URL must be an HTTPS origin without a path");
+        }
+        this.publicBaseUrl = publicBaseUrl == null || publicBaseUrl.isBlank() ? null : publicBaseUrl;
+    }
+
+    String body(ClaimedEmailDelivery delivery) {
+        StringBuilder body = new StringBuilder(delivery.title())
+                .append("\nGame: ").append(delivery.gameId());
+        if (publicBaseUrl != null) {
+            body.append("\nOpen the game: ").append(publicBaseUrl).append("/games/")
+                    .append(java.net.URLEncoder.encode(delivery.gameId(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        return body.append("\n\nYou receive this because email alerts are enabled in your CourtPulse")
+                .append(" notification settings.").toString();
     }
 
     public int pollOnce() {
@@ -42,6 +66,7 @@ public final class DeliveryQueueConsumer {
         for (ReceivedQueueMessage message : queue.receive(10, Duration.ofSeconds(2))) {
             try (var span = TraceContext.continueFrom(message.traceparent(),
                     "alert-delivery consume", SpanKind.CONSUMER)) {
+            span.span().setAttribute("messaging.message.delivery_count", message.receiveCount());
             LOGGER.debug("Delivery queue message received messageId={} receiveCount={}",
                     message.providerMessageId(), message.receiveCount());
             UUID deliveryId;
@@ -67,9 +92,7 @@ public final class DeliveryQueueConsumer {
             } else {
                 try {
                     String providerId = email.send(delivery.address(),
-                            "CourtPulse: " + delivery.title(),
-                            delivery.title() + "\nGame: " + delivery.gameId()
-                                    + "\nThis notification was captured by local Mailpit.");
+                            "CourtPulse: " + delivery.title(), body(delivery));
                     finish(delivery, "SENT", null, providerId, null);
                 } catch (EmailSendException exception) {
                     boolean retry = exception.retryable() && delivery.attempt() < 5;

@@ -31,6 +31,8 @@ public final class AuthenticationConfigurationController {
                 properties.isEnabled(),
                 properties.isEnabled() ? properties.getIssuerUri() : "",
                 properties.getClientId(),
-                properties.getBrowserScope());
+                properties.getBrowserScope(),
+                properties.isEnabled() && !properties.getEndSessionEndpoint().isBlank()
+                        ? properties.getEndSessionEndpoint() : null);
     }
 }

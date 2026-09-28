@@ -18,7 +18,7 @@ services:
   localstack:
     image: localstack/localstack:4.4.0
     environment:
-      SERVICES: sqs
+      SERVICES: sqs,ses
       AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
@@ -53,6 +53,7 @@ services:
       COURTPULSE_AUTH_AUTHORITY_PREFIX: ${COURTPULSE_AUTH_AUTHORITY_PREFIX:-SCOPE_}
       COURTPULSE_AUTH_OPERATIONS_AUTHORITY: ${COURTPULSE_AUTH_OPERATIONS_AUTHORITY:-SCOPE_courtpulse:ops}
       COURTPULSE_LIVE_FRESHNESS_WINDOW: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:-2m}
+      COURTPULSE_REALTIME_ALLOWED_ORIGINS: ${COURTPULSE_REALTIME_ALLOWED_ORIGINS:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,6 +130,11 @@ services:
       COURTPULSE_SQS_ENDPOINT: http://localstack:4566
       COURTPULSE_MAILPIT_HOST: mailpit
       COURTPULSE_MAILPIT_PORT: 1025
+      # mailpit by default; "ses" with COURTPULSE_SES_ENDPOINT=http://localstack:4566 rehearses AWS.
+      COURTPULSE_EMAIL_PROVIDER: ${COURTPULSE_EMAIL_PROVIDER:-mailpit}
+      COURTPULSE_EMAIL_FROM: ${COURTPULSE_EMAIL_FROM:-alerts@courtpulse.test}
+      COURTPULSE_SES_ENDPOINT: ${COURTPULSE_SES_ENDPOINT:-}
+      COURTPULSE_PUBLIC_BASE_URL: ${COURTPULSE_PUBLIC_BASE_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

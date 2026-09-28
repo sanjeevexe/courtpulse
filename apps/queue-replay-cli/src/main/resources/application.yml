@@ -24,6 +24,13 @@ courtpulse:
   mailpit:
     host: ${COURTPULSE_MAILPIT_HOST:localhost}
     port: ${COURTPULSE_MAILPIT_PORT:1025}
+  email:
+    # mailpit (local SMTP sink) | ses (Amazon SES v2 with task-role credentials)
+    provider: ${COURTPULSE_EMAIL_PROVIDER:mailpit}
+    from: ${COURTPULSE_EMAIL_FROM:alerts@courtpulse.test}
+    ses-configuration-set: ${COURTPULSE_SES_CONFIGURATION_SET:}
+    ses-endpoint: ${COURTPULSE_SES_ENDPOINT:}
+    public-base-url: ${COURTPULSE_PUBLIC_BASE_URL:}
   publisher:
     batch-size: ${COURTPULSE_PUBLISHER_BATCH_SIZE:10}
     lease-duration: ${COURTPULSE_PUBLISHER_LEASE_DURATION:30s}

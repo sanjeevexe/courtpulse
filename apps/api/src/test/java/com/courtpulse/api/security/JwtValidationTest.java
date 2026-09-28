@@ -88,6 +88,48 @@ class JwtValidationTest {
     }
 
     @Test
+    void cognitoStyleAccessTokensAreMatchedOnClientIdAndTokenUse() {
+        var validator = new DelegatingOAuth2TokenValidator<>(
+                new AudienceValidator("app-client-123", "client_id"), new TokenUseValidator("access"));
+        assertEquals(false, validator.validate(cognito("app-client-123", "access")).hasErrors());
+        assertEquals(true, validator.validate(cognito("other-client", "access")).hasErrors(),
+                "another app client's token is rejected");
+        assertEquals(true, validator.validate(cognito("app-client-123", "id")).hasErrors(),
+                "an ID token is not accepted as a bearer access token");
+        assertEquals(true, new AudienceValidator("app-client-123", "aud")
+                .validate(cognito("app-client-123", "access")).hasErrors(),
+                "without an aud claim the default standard check fails closed");
+        assertThrows(IllegalArgumentException.class, () -> new AudienceValidator("x", "azp"));
+    }
+
+    @Test
+    void cognitoConfigurationValidatesClaimChoiceAndLogoutEndpoint() {
+        CourtPulseAuthenticationProperties properties = validProperties();
+        properties.setIssuerUri("https://cognito-idp.us-east-1.amazonaws.com/us-east-1_example");
+        properties.setAudienceClaim("client_id");
+        properties.setRequiredTokenUse("access");
+        properties.setEndSessionEndpoint("https://courtpulse-staging.auth.us-east-1.amazoncognito.com/logout");
+        SecurityConfiguration.validateEnabledConfiguration(properties);
+
+        properties.setAudienceClaim("azp");
+        assertThrows(IllegalStateException.class,
+                () -> SecurityConfiguration.validateEnabledConfiguration(properties));
+        properties.setAudienceClaim("client_id");
+        properties.setEndSessionEndpoint("http://courtpulse.auth.example/logout");
+        assertThrows(IllegalStateException.class,
+                () -> SecurityConfiguration.validateEnabledConfiguration(properties));
+    }
+
+    private static Jwt cognito(String clientId, String tokenUse) {
+        return Jwt.withTokenValue("test")
+                .header("alg", "none")
+                .claim("sub", "user-a")
+                .claim("client_id", clientId)
+                .claim("token_use", tokenUse)
+                .build();
+    }
+
+    @Test
     void subjectValidatorRejectsBlankAndOversizedSubjects() {
         SubjectValidator validator = new SubjectValidator();
         assertEquals(false, validator.validate(jwtWithSubject("user-a")).hasErrors());

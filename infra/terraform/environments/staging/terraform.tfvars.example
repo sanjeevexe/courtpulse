@@ -1,0 +1,40 @@
+# Copy to terraform.tfvars (ignored by git). Values here are examples only.
+# Every setting below is billed or bounded; read docs/deployment/aws-staging.md.
+
+region      = "us-east-1"
+project     = "courtpulse"
+environment = "staging"
+owner       = "your-name"
+cost_center = "portfolio"
+
+# GitHub repository allowed to assume the deploy role through OIDC (exact letter case).
+github_repository = "your-github-user/CourtPulse"
+
+# Leave commented for the one-time `terraform apply -target=module.cicd`
+# bootstrap; then set it to the full git SHA of the first pushed images.
+# image_tag = "0123456789abcdef0123456789abcdef01234567"
+
+# SES sends a verification link here. Budget and alarm mail go to the others.
+email_from_address = "you@example.com"
+budget_email       = "you@example.com"
+alarm_email        = "you@example.com"
+
+monthly_budget_usd = 25
+
+# Protection: set both to false and apply before `terraform destroy`.
+deletion_protection = true
+skip_final_snapshot = false
+
+# Cost levers (see the cost table in docs/deployment/aws-staging.md).
+worker_capacity_provider = "FARGATE_SPOT"
+ingestor_desired_count   = 0
+enable_nightly_shutdown  = false
+enable_tracing           = false
+enable_alb_access_logs   = false
+
+# BALLDONTLIE tiers: free 5, ALL-STAR 60, GOAT 600 requests/minute.
+provider_requests_per_minute = 30
+
+# Optional HTTPS origin (requires a domain you control):
+# alb_certificate_arn    = "arn:aws:acm:us-east-1:123456789012:certificate/..."
+# alb_origin_domain_name = "origin.staging.example.com"

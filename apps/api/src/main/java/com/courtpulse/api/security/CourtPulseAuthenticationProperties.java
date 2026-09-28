@@ -13,6 +13,9 @@ public class CourtPulseAuthenticationProperties {
     private String authoritiesClaim = "scope";
     private String authorityPrefix = "SCOPE_";
     private String operationsAuthority = "SCOPE_courtpulse:ops";
+    private String audienceClaim = "aud";
+    private String requiredTokenUse = "";
+    private String endSessionEndpoint = "";
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -32,4 +35,10 @@ public class CourtPulseAuthenticationProperties {
     public void setAuthorityPrefix(String authorityPrefix) { this.authorityPrefix = authorityPrefix; }
     public String getOperationsAuthority() { return operationsAuthority; }
     public void setOperationsAuthority(String operationsAuthority) { this.operationsAuthority = operationsAuthority; }
+    public String getAudienceClaim() { return audienceClaim; }
+    public void setAudienceClaim(String audienceClaim) { this.audienceClaim = audienceClaim; }
+    public String getRequiredTokenUse() { return requiredTokenUse; }
+    public void setRequiredTokenUse(String requiredTokenUse) { this.requiredTokenUse = requiredTokenUse; }
+    public String getEndSessionEndpoint() { return endSessionEndpoint; }
+    public void setEndSessionEndpoint(String endSessionEndpoint) { this.endSessionEndpoint = endSessionEndpoint; }
 }

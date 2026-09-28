@@ -113,10 +113,15 @@ public class SecurityConfiguration {
             decoder = NimbusJwtDecoder.withJwkSetUri(
                     requireHttpUri("jwk-set-uri", properties.getJwkSetUri())).build();
         }
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+        java.util.List<org.springframework.security.oauth2.core.OAuth2TokenValidator<
+                org.springframework.security.oauth2.jwt.Jwt>> validators = new java.util.ArrayList<>(java.util.List.of(
                 JwtValidators.createDefaultWithIssuer(issuer),
-                new AudienceValidator(audience),
+                new AudienceValidator(audience, properties.getAudienceClaim()),
                 new SubjectValidator()));
+        if (properties.getRequiredTokenUse() != null && !properties.getRequiredTokenUse().isBlank()) {
+            validators.add(new TokenUseValidator(properties.getRequiredTokenUse()));
+        }
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
         return decoder;
     }
 
@@ -134,6 +139,21 @@ public class SecurityConfiguration {
         requireText("operations-authority", properties.getOperationsAuthority());
         if (properties.getJwkSetUri() != null && !properties.getJwkSetUri().isBlank()) {
             requireHttpUri("jwk-set-uri", properties.getJwkSetUri());
+        }
+        if (!AudienceValidator.SUPPORTED_CLAIMS.contains(properties.getAudienceClaim())) {
+            throw new IllegalStateException("courtpulse.auth.audience-claim must be aud or client_id");
+        }
+        if (properties.getEndSessionEndpoint() != null && !properties.getEndSessionEndpoint().isBlank()) {
+            requireBrowserUri("end-session-endpoint", properties.getEndSessionEndpoint());
+        }
+    }
+
+    private static void requireBrowserUri(String name, String value) {
+        URI uri = URI.create(requireHttpUri(name, value));
+        String host = uri.getHost();
+        boolean loopback = "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host);
+        if (!"https".equals(uri.getScheme()) && !("http".equals(uri.getScheme()) && loopback)) {
+            throw new IllegalStateException("courtpulse.auth." + name + " must use HTTPS");
         }
     }
 

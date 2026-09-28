@@ -1134,6 +1134,8 @@ export interface components {
             issuer: string;
             clientId: string;
             scope: string;
+            /** @description Logout endpoint when the provider's discovery document omits one (Cognito) */
+            endSessionEndpoint?: string | null;
         };
         Me: {
             subject: string;

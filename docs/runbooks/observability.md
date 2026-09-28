@@ -24,6 +24,18 @@ restarting the API. If the app is healthy but only the scrape fails, verify that
 `build/observability/metrics-password` file and API environment refer to the same generated
 credential.
 
+## Database pressure (AWS staging)
+
+The RDS alarms (`rds-cpu`, `rds-free-storage`, `rds-connections`) mean PostgreSQL itself is the
+bottleneck. Check the dashboard's RDS row, then Performance Insights (7-day free tier) for the top
+SQL. High CPU on `db.t4g.micro` usually means exhausted burst credits: look for a replay, backfill,
+or reconciliation loop before resizing. A connection spike above the configured pools (API 5,
+each worker 4) indicates a leak or extra tasks; confirm every ECS service's running count first.
+Free storage falling fast is usually raw provider payloads from a backfill or runaway logs; do
+not delete canonical rows to recover space. Resize or add storage through Terraform, never in the
+console, and record the change. Use [the database restore runbook](database-restore.md) for
+corruption or accidental deletion, not for pressure.
+
 ## Stale feed
 
 `CourtPulseLiveFeedStale` applies only while a game is marked live. Check the source ingest

@@ -20,6 +20,8 @@ spring:
 server:
   port: ${COURTPULSE_API_PORT:8080}
   shutdown: graceful
+  # "framework" trusts X-Forwarded-* from the load balancer in deployed environments only.
+  forward-headers-strategy: ${COURTPULSE_FORWARD_HEADERS_STRATEGY:none}
 
 courtpulse:
   auth:
@@ -32,6 +34,10 @@ courtpulse:
     authorities-claim: ${COURTPULSE_AUTH_AUTHORITIES_CLAIM:scope}
     authority-prefix: ${COURTPULSE_AUTH_AUTHORITY_PREFIX:SCOPE_}
     operations-authority: ${COURTPULSE_AUTH_OPERATIONS_AUTHORITY:SCOPE_courtpulse:ops}
+    # Cognito access tokens identify the app client in client_id (no aud) and set token_use.
+    audience-claim: ${COURTPULSE_AUTH_AUDIENCE_CLAIM:aud}
+    required-token-use: ${COURTPULSE_AUTH_REQUIRED_TOKEN_USE:}
+    end-session-endpoint: ${COURTPULSE_AUTH_END_SESSION_ENDPOINT:}
   api:
     live-freshness-window: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:2m}
   telemetry:
@@ -42,6 +48,8 @@ courtpulse:
     publish-delay: ${COURTPULSE_REALTIME_PUBLISH_DELAY:250ms}
     # Below common proxy idle timeouts (nginx 75s here, AWS ALB 60s by default).
     keepalive-interval: ${COURTPULSE_REALTIME_KEEPALIVE_INTERVAL:25s}
+    # Public site origins allowed to open /ws/v1/games when the API sits behind a CDN.
+    allowed-origins: ${COURTPULSE_REALTIME_ALLOWED_ORIGINS:}
     lease-duration: ${COURTPULSE_REALTIME_LEASE_DURATION:15s}
     batch-size: ${COURTPULSE_REALTIME_BATCH_SIZE:25}
     maximum-attempts: ${COURTPULSE_REALTIME_MAXIMUM_ATTEMPTS:5}
