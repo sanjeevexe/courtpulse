@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 repository="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project="courtpulse-m6-acceptance"
-password="courtpulse-m6-isolated"
+password="$(openssl rand -hex 18)"
 artifact_dir="${repository}/build/verification/milestone-6"
 queue_url="http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/game-events.fifo"
 dlq_url="http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/game-events-dlq.fifo"
@@ -60,13 +60,13 @@ diagnostics() {
 finish() {
   local status=$?
   diagnostics
-  compose down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  compose down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   exit "${status}"
 }
 trap finish EXIT
 
 cd "${repository}"
-compose down -v --remove-orphans >/dev/null 2>&1 || true
+compose down -v --rmi local --remove-orphans >/dev/null 2>&1 || true
 compose up -d --build postgres localstack api web | tee "${artifact_dir}/compose-up.txt"
 
 for attempt in {1..90}; do

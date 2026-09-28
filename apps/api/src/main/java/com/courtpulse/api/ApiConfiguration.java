@@ -256,6 +256,34 @@ public class ApiConfiguration {
         return new RealtimePublicationScheduler(publisher);
     }
 
+    /** Runs just after Spring Security so authenticated callers are limited by JWT subject. */
+    @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+            name = "courtpulse.rate-limit.enabled", havingValue = "true", matchIfMissing = true)
+    org.springframework.boot.web.servlet.FilterRegistrationBean<com.courtpulse.api.http.RateLimitFilter> rateLimitFilter(
+            com.courtpulse.api.security.SecurityProblemWriter problems,
+            MeterRegistry meters,
+            @Value("${courtpulse.rate-limit.public-reads-per-minute}") int publicReads,
+            @Value("${courtpulse.rate-limit.owner-reads-per-minute}") int ownerReads,
+            @Value("${courtpulse.rate-limit.owner-writes-per-minute}") int ownerWrites,
+            @Value("${courtpulse.rate-limit.operations-per-minute}") int operations,
+            @Value("${courtpulse.rate-limit.realtime-handshakes-per-minute}") int handshakes,
+            @Value("${courtpulse.rate-limit.maximum-tracked-clients}") int maximumTrackedClients) {
+        var limits = new java.util.EnumMap<com.courtpulse.api.http.RateLimitFilter.EndpointClass, Integer>(
+                com.courtpulse.api.http.RateLimitFilter.EndpointClass.class);
+        limits.put(com.courtpulse.api.http.RateLimitFilter.EndpointClass.PUBLIC_READ, publicReads);
+        limits.put(com.courtpulse.api.http.RateLimitFilter.EndpointClass.OWNER_READ, ownerReads);
+        limits.put(com.courtpulse.api.http.RateLimitFilter.EndpointClass.OWNER_WRITE, ownerWrites);
+        limits.put(com.courtpulse.api.http.RateLimitFilter.EndpointClass.OPERATIONS, operations);
+        limits.put(com.courtpulse.api.http.RateLimitFilter.EndpointClass.REALTIME_HANDSHAKE, handshakes);
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(
+                new com.courtpulse.api.http.RateLimitFilter(
+                        limits, problems, meters, System::nanoTime, maximumTrackedClients));
+        registration.setOrder(org.springframework.boot.security.autoconfigure.web.servlet
+                .SecurityFilterProperties.DEFAULT_FILTER_ORDER + 10);
+        return registration;
+    }
+
     @Bean
     RealtimeKeepAliveScheduler realtimeKeepAliveScheduler(RealtimeHub hub) {
         return new RealtimeKeepAliveScheduler(hub);
@@ -275,6 +303,7 @@ public class ApiConfiguration {
             path.readOperations().forEach(operation -> {
                 addStandardError(operation.getResponses(), "405", "HTTP method is not supported");
                 addStandardError(operation.getResponses(), "406", "Requested representation is unavailable");
+                addStandardError(operation.getResponses(), "429", "Rate limit or quota exceeded");
                 addStandardError(operation.getResponses(), "500", "Unexpected server failure");
                 addStandardError(operation.getResponses(), "503", "Durable data is unavailable");
                 operation.getResponses().values().forEach(response -> response.addHeaderObject(
@@ -289,6 +318,11 @@ public class ApiConfiguration {
                                         new io.swagger.v3.oas.models.media.MediaType().schema(
                                                 new io.swagger.v3.oas.models.media.Schema<>()
                                                         .$ref("#/components/schemas/Problem"))));
+                    }
+                    if ("429".equals(status)) {
+                        response.addHeaderObject("Retry-After", new Header()
+                                .description("Seconds to wait before retrying")
+                                .schema(new io.swagger.v3.oas.models.media.IntegerSchema()));
                     }
                     if ("304".equals(status)) {
                         response.setContent(null);

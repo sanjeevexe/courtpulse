@@ -6,7 +6,7 @@ description = "Local-only BALLDONTLIE-shaped provider simulator for replay, faul
 
 dependencies {
     implementation(project(":modules:testkit"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.1")
 }
 
 application {

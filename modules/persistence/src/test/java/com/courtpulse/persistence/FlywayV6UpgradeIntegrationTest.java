@@ -23,7 +23,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 class FlywayV6UpgradeIntegrationTest {
     @Container
     private static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.6-alpine");
+            new PostgreSQLContainer("postgres:17.11-alpine");
 
     @Test
     void upgradesV1ThroughV5DataAndBackfillsTheStableSystemRule() {

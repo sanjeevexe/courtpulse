@@ -38,6 +38,7 @@ export interface paths {
                 400: components["responses"]["BadRequest"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -111,6 +112,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -160,6 +162,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -208,6 +211,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -251,6 +255,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -294,6 +299,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -337,6 +343,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -380,6 +387,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -423,6 +431,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -466,6 +475,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -507,6 +517,7 @@ export interface paths {
                 };
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -550,6 +561,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -610,6 +622,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -641,6 +654,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -685,6 +699,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -783,6 +798,7 @@ export interface paths {
                 404: components["responses"]["RuleNotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -814,6 +830,7 @@ export interface paths {
                 404: components["responses"]["RuleNotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -853,6 +870,7 @@ export interface paths {
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -894,6 +912,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -937,6 +956,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -970,6 +990,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -1016,6 +1037,7 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -1066,6 +1088,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
                 405: components["responses"]["MethodNotAllowed"];
                 406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["InternalError"];
                 503: components["responses"]["Unavailable"];
             };
@@ -1609,10 +1632,12 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Per-user alert-rule quota exceeded */
+        /** @description Rate limit or per-user alert-rule quota exceeded */
         TooManyRequests: {
             headers: {
                 "X-Correlation-ID": components["headers"]["CorrelationId"];
+                /** @description Seconds to wait before retrying */
+                "Retry-After"?: number;
                 [name: string]: unknown;
             };
             content: {

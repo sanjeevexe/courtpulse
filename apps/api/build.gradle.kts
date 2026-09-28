@@ -34,6 +34,14 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
     testImplementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     testImplementation("org.mockito:mockito-core")
+
+    constraints {
+        // Spring Boot 4.1.1 manages Tomcat 11.0.24 (CVE-2026-65182, CVE-2026-65905, CVE-2026-68525).
+        // Remove once a Spring Boot release manages 11.0.26 or later.
+        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.26")
+        implementation("org.apache.tomcat.embed:tomcat-embed-websocket:11.0.26")
+        implementation("org.apache.tomcat.embed:tomcat-embed-el:11.0.26")
+    }
 }
 
 application {

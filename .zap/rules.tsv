@@ -1,0 +1,4 @@
+# OWASP ZAP baseline rule overrides: <rule id><TAB><IGNORE|WARN|FAIL><TAB><justification>.
+# Only reviewed, documented exceptions belong here; every other rule keeps ZAP's default.
+10049	IGNORE	(Storable content: hashed /assets are immutable by design and index.html is served no-cache)
+10027	IGNORE	(Suspicious comments: words inside the minified third-party bundle; no secrets or internal notes)

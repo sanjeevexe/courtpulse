@@ -87,7 +87,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 @Testcontainers
 class MessagingPostgresLocalStackIntegrationTest {
     @Container
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.6-alpine");
+    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.11-alpine");
 
     @Container
     private static final LocalStackContainer LOCALSTACK = new LocalStackContainer(

@@ -1,0 +1,15 @@
+# Secret scanning for CI (security.yml) and local runs. Default rules plus a narrow allowlist of
+# documented placeholders and protocol values that are not credentials.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation placeholders, the local simulator's non-secret key, and WebSocket nonces"
+regexTarget = "line"
+regexes = [
+  '''PASTE_[A-Z_]+''',
+  '''Authorization: local-simulator-key''',
+  '''Sec-WebSocket-Key: [A-Za-z0-9+/=]+''',
+  # Historical fixed password for the isolated, throwaway M6 Compose project (now generated per run).
+  '''password="courtpulse-m6-isolated"''',
+]

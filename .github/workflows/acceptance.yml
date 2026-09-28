@@ -1,0 +1,54 @@
+name: Acceptance
+
+# The isolated end-to-end harnesses: minutes each, so weekly and on demand rather than per commit.
+on:
+  schedule:
+    - cron: '41 7 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  harness:
+    name: ${{ matrix.script }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        script:
+          - verify-observability.sh
+          - verify-milestone-12.sh
+          - verify-release-rehearsal.sh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the release rehearsal builds the previous release for its rollback step
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: apps/web/.nvmrc
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Browser tooling for harnesses with a browser step
+        working-directory: apps/web
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Run ${{ matrix.script }}
+        run: scripts/${{ matrix.script }}
+      - name: Keep harness evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: evidence-${{ matrix.script }}
+          path: build/verification/
+          retention-days: 14

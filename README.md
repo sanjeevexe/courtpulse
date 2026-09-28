@@ -850,6 +850,36 @@ See
 [rollback](docs/runbooks/rollback.md), [database restore](docs/runbooks/database-restore.md),
 [secret rotation](docs/runbooks/secret-rotation.md), and [cost and teardown](docs/runbooks/cost-and-teardown.md).
 
+## Continuous integration and security
+
+`.github/workflows/ci.yml` (named **CI**, the gate the staging deploy waits for) runs on every pull
+request and push to `main`: all backend tests against real PostgreSQL and LocalStack containers
+(and fails if any container-backed test is skipped), the frontend contract check, type check,
+lint, unit tests, production build, and `npm audit`; a Playwright dashboard run against the
+Compose stack; a build of every image with a non-root check and a Trivy scan that fails on fixable
+HIGH or CRITICAL findings; Terraform fmt, validate, mocked plan tests, TFLint, and a Trivy
+misconfiguration scan; and shellcheck, actionlint, promtool, and Compose validation.
+`security.yml` adds gitleaks over the full history, a Trivy filesystem scan, a weekly OWASP ZAP
+baseline, and (on public repositories, where they are free) CodeQL and dependency review.
+`acceptance.yml` runs the isolated observability, live-provider, and release-rehearsal harnesses
+weekly or on demand. Dependabot proposes grouped weekly updates for Gradle, npm, Docker, Actions,
+and Terraform.
+
+The API rate-limits clients per endpoint class (public reads 600, owner reads 300, owner writes
+120, operations 120 per minute, WebSocket handshakes 60 per minute) and answers `429` with
+`Retry-After`; authenticated callers are keyed by JWT subject. Set `COURTPULSE_RATE_LIMIT_*` to
+tune the budgets or `COURTPULSE_RATE_LIMIT_ENABLED=false` for load tests. Run the same scans
+locally:
+
+```bash
+./scripts/verify-security-baseline.sh      # OWASP ZAP baseline against the Compose stack
+docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.30.1 git /repo --config /repo/.gitleaks.toml
+```
+
+Results and the fixes they drove are in
+[docs/verification/security-scan-report.md](docs/verification/security-scan-report.md); the
+OWASP API Top 10 control map is [docs/security/threat-model.md](docs/security/threat-model.md).
+
 ## Troubleshooting and shutdown
 
 - Docker unavailable: start Docker Desktop and ensure `docker info` succeeds for the same user.

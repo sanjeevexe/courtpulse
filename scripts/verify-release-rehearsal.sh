@@ -85,7 +85,7 @@ finish() {
   git -C "${repository}" worktree remove --force "${rollback_tree}" >/dev/null 2>&1 || true
   "${compose[@]}" ps -a >"${artifact_dir}/compose-ps.txt" 2>&1 || true
   "${compose[@]}" logs --no-color >"${artifact_dir}/compose.log" 2>&1 || true
-  "${compose[@]}" down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  "${compose[@]}" down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   [[ ${status} -eq 0 ]] || echo "Release rehearsal failed; evidence is in ${artifact_dir}" >&2
   exit "${status}"
 }

@@ -41,7 +41,9 @@ locals {
     "style-src 'self'",
     "script-src 'self'",
     "font-src 'self'",
+    "object-src 'none'",
     "base-uri 'self'",
+    "form-action 'self'",
     "frame-ancestors 'none'",
   ])
 

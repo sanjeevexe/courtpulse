@@ -52,7 +52,7 @@ class EmbeddedPostgresLocalVerificationTest {
         } catch (IllegalStateException embeddedUnavailable) {
             // macOS can exhaust its small System V shared-memory allocation even while
             // Docker-backed PostgreSQL remains healthy. Keep the same verification running.
-            dockerPostgres = new PostgreSQLContainer("postgres:17.6-alpine");
+            dockerPostgres = new PostgreSQLContainer("postgres:17.11-alpine");
             dockerPostgres.start();
             PGSimpleDataSource source = new PGSimpleDataSource();
             source.setURL(dockerPostgres.getJdbcUrl());

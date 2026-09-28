@@ -186,7 +186,8 @@ public class QueueReplayConfiguration {
                 .map(String::strip).filter(value -> !value.isEmpty()).collect(Collectors.toSet());
         return new BallDontLieProvider(
                 new BallDontLieProvider.Settings(baseUrl, apiKey, requestTimeout, 8 * 1024 * 1024, teams),
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
+                // HTTP/1.1 avoids the cleartext h2c upgrade against a local simulator; the API is tiny.
+                HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3))
                         .followRedirects(HttpClient.Redirect.NEVER).build(),
                 mapper,
                 new ProviderRateLimiter(requestsPerMinute, Duration.ofSeconds(10), clock, Thread::sleep),

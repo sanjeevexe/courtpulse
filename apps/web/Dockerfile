@@ -8,7 +8,7 @@ COPY contracts/openapi/courtpulse-v1.yaml /workspace/contracts/openapi/courtpuls
 COPY apps/web/ ./
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.29.1-alpine
+FROM nginxinc/nginx-unprivileged:1.31.6-alpine
 
 ENV NGINX_ENVSUBST_FILTER=COURTPULSE_AUTH_ISSUER_ORIGIN
 

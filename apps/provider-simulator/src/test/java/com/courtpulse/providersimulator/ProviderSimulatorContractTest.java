@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 class ProviderSimulatorContractTest {
     private static final String KEY = "simulator-contract-key";
     private final ObjectMapper json = new ObjectMapper();
-    private final HttpClient http = HttpClient.newHttpClient();
+    private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     private ProviderSimulator simulator;
 
     @BeforeEach

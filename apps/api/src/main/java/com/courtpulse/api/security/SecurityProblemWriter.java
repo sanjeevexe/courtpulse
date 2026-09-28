@@ -26,6 +26,13 @@ public final class SecurityProblemWriter {
                 "The authenticated identity is not permitted to use this resource.");
     }
 
+    public void tooManyRequests(HttpServletRequest request, HttpServletResponse response, long retryAfterSeconds)
+            throws IOException {
+        response.setHeader("Retry-After", Long.toString(retryAfterSeconds));
+        write(request, response, 429, "rate_limited", "Too many requests",
+                "This client exceeded the request rate for this kind of resource. Retry after the indicated delay.");
+    }
+
     private void write(
             HttpServletRequest request,
             HttpServletResponse response,

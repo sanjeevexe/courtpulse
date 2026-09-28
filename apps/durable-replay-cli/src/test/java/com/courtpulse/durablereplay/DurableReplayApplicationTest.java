@@ -30,7 +30,7 @@ class DurableReplayApplicationTest {
                 username = "postgres";
                 password = "postgres";
             } catch (IllegalStateException embeddedUnavailable) {
-                dockerPostgres = new PostgreSQLContainer("postgres:17.6-alpine");
+                dockerPostgres = new PostgreSQLContainer("postgres:17.11-alpine");
                 dockerPostgres.start();
                 url = dockerPostgres.getJdbcUrl();
                 username = dockerPostgres.getUsername();

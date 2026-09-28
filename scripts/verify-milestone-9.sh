@@ -7,7 +7,8 @@ suffix="$(openssl rand -hex 4)"
 artifact_dir="${repository}/build/verification/milestone-9/${suffix}"
 export COURTPULSE_COMPOSE_PROJECT="${project}"
 
-export COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_DB_PASSWORD
 export COURTPULSE_POSTGRES_HOST_PORT=57432
 export COURTPULSE_LOCALSTACK_HOST_PORT=56566
 export COURTPULSE_API_HOST_PORT=60080
@@ -18,13 +19,17 @@ export COURTPULSE_MAILPIT_UI_HOST_PORT=18025
 export COURTPULSE_MAILPIT_PORT=11025
 export COURTPULSE_MAILPIT_URL='http://127.0.0.1:18025'
 export COURTPULSE_IDP_ADMIN_USERNAME="m9-admin-${suffix}"
-export COURTPULSE_IDP_ADMIN_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_IDP_ADMIN_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_IDP_ADMIN_PASSWORD
 export COURTPULSE_TEST_USER_A="m9-user-a-${suffix}"
-export COURTPULSE_TEST_USER_A_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_USER_A_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_USER_A_PASSWORD
 export COURTPULSE_TEST_USER_B="m9-user-b-${suffix}"
-export COURTPULSE_TEST_USER_B_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_USER_B_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_USER_B_PASSWORD
 export COURTPULSE_TEST_OPS_USER="m9-ops-${suffix}"
-export COURTPULSE_TEST_OPS_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_OPS_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_OPS_PASSWORD
 export COURTPULSE_AUTH_ENABLED=true
 export COURTPULSE_AUTH_ISSUER_BASE='http://127.0.0.1:59180'
 export COURTPULSE_AUTH_ISSUER_URI='http://127.0.0.1:59180/realms/courtpulse'
@@ -52,14 +57,14 @@ finish() {
   local status=$?
   "${compose[@]}" ps -a >"${artifact_dir}/compose-ps.txt" 2>&1 || true
   "${compose[@]}" logs --no-color >"${artifact_dir}/compose.log" 2>&1 || true
-  "${compose[@]}" down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  "${compose[@]}" down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   exit "${status}"
 }
 trap finish EXIT
 
 cd "${repository}"
 # The sole cleanup target is the named, isolated M9 project.
-"${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+"${compose[@]}" down -v --rmi local --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" up -d postgres localstack identity mailpit | tee "${artifact_dir}/infrastructure-up.txt"
 for attempt in {1..120}; do
   if curl -fsS 'http://127.0.0.1:59180/realms/courtpulse/.well-known/openid-configuration' >/dev/null 2>&1 \

@@ -100,7 +100,7 @@ finish() {
     FROM provider_game_observations" >"${artifact_dir}/provider-observations.txt" 2>&1 || true
   database -c "SELECT reason, detail, provider_event_id FROM provider_data_incidents" \
     >"${artifact_dir}/provider-incidents.txt" 2>&1 || true
-  "${compose[@]}" down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  "${compose[@]}" down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   [[ ${status} -eq 0 ]] || echo "Milestone 12 verification failed; evidence is in ${artifact_dir}" >&2
   exit "${status}"
 }

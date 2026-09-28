@@ -43,7 +43,10 @@ class BallDontLieProviderTest {
              "visitor_team":{"id":90002,"full_name":"Summit Valley Sentinels","abbreviation":"SVS"}}
             """;
 
+    // HTTP/1.1 as in production; a shared client and a pooled server keep a loaded CI host stable.
+    private static final HttpClient HTTP = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     private HttpServer server;
+    private java.util.concurrent.ExecutorService serverThreads;
     private final List<String> authorizations = new CopyOnWriteArrayList<>();
     private final List<String> paths = new CopyOnWriteArrayList<>();
     private volatile Function<HttpExchange, Response> handler;
@@ -51,6 +54,8 @@ class BallDontLieProviderTest {
     @BeforeEach
     void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        serverThreads = java.util.concurrent.Executors.newFixedThreadPool(4);
+        server.setExecutor(serverThreads);
         server.createContext("/", exchange -> {
             authorizations.add(exchange.getRequestHeaders().getFirst("Authorization"));
             paths.add(exchange.getRequestURI().toString());
@@ -69,6 +74,7 @@ class BallDontLieProviderTest {
     @AfterEach
     void stop() {
         server.stop(0);
+        serverThreads.shutdownNow();
     }
 
     @Test
@@ -106,7 +112,7 @@ class BallDontLieProviderTest {
         handler = exchange -> new Response(429, "{}", java.util.Map.of("Retry-After", "2"));
         MutableClock clock = new MutableClock();
         List<Duration> sleeps = new ArrayList<>();
-        BallDontLieProvider provider = new BallDontLieProvider(settings(Set.of()), HttpClient.newHttpClient(),
+        BallDontLieProvider provider = new BallDontLieProvider(settings(Set.of()), HTTP,
                 new ObjectMapper(), new ProviderRateLimiter(600, Duration.ofSeconds(5), clock, sleeps::add),
                 new ProviderCircuitBreaker(3, Duration.ofSeconds(30), clock), clock);
 
@@ -188,7 +194,7 @@ class BallDontLieProviderTest {
 
     private BallDontLieProvider provider(Set<String> teams, int requestsPerMinute) {
         Clock clock = Clock.systemUTC();
-        return new BallDontLieProvider(settings(teams), HttpClient.newHttpClient(), new ObjectMapper(),
+        return new BallDontLieProvider(settings(teams), HTTP, new ObjectMapper(),
                 new ProviderRateLimiter(requestsPerMinute, Duration.ofSeconds(5), clock, duration -> { }),
                 new ProviderCircuitBreaker(5, Duration.ofSeconds(30), clock), clock);
     }
@@ -196,7 +202,7 @@ class BallDontLieProviderTest {
     private BallDontLieProvider.Settings settings(Set<String> teams) {
         return new BallDontLieProvider.Settings(
                 URI.create("http://127.0.0.1:" + server.getAddress().getPort()), KEY,
-                Duration.ofSeconds(5), 2_048, teams);
+                Duration.ofSeconds(20), 2_048, teams);
     }
 
     private record Response(int status, String body, java.util.Map<String, String> headers) {

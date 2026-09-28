@@ -42,6 +42,15 @@ courtpulse:
     live-freshness-window: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:2m}
   telemetry:
     scrape-password: ${COURTPULSE_METRICS_SCRAPE_PASSWORD:}
+  # Per-client, per-minute budgets by endpoint class. Load tests disable this explicitly.
+  rate-limit:
+    enabled: ${COURTPULSE_RATE_LIMIT_ENABLED:true}
+    public-reads-per-minute: ${COURTPULSE_RATE_LIMIT_PUBLIC_READS:600}
+    owner-reads-per-minute: ${COURTPULSE_RATE_LIMIT_OWNER_READS:300}
+    owner-writes-per-minute: ${COURTPULSE_RATE_LIMIT_OWNER_WRITES:120}
+    operations-per-minute: ${COURTPULSE_RATE_LIMIT_OPERATIONS:120}
+    realtime-handshakes-per-minute: ${COURTPULSE_RATE_LIMIT_REALTIME_HANDSHAKES:60}
+    maximum-tracked-clients: ${COURTPULSE_RATE_LIMIT_MAXIMUM_CLIENTS:100000}
   realtime:
     publication:
       enabled: ${COURTPULSE_REALTIME_PUBLICATION_ENABLED:true}

@@ -1,0 +1,2 @@
+# Trivy image-scan exceptions. Each entry needs a reason, an owner decision, and a review date.
+# CI fails on fixable HIGH/CRITICAL findings; unfixed findings are reported but do not fail.

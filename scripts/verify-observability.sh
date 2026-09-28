@@ -153,7 +153,7 @@ finish() {
     >"${artifact_dir}/worker-heartbeats.txt" 2>&1 || true
   database -c "SELECT queue_type, visible, in_flight, delayed, observed_at FROM queue_observations ORDER BY 1" \
     >"${artifact_dir}/queue-observations.txt" 2>&1 || true
-  "${compose[@]}" down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  "${compose[@]}" down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   rm -f "${COURTPULSE_METRICS_SCRAPE_PASSWORD_FILE}"
   if [[ ${status} -ne 0 ]]; then
     echo "Observability verification failed; evidence is in ${artifact_dir}" >&2

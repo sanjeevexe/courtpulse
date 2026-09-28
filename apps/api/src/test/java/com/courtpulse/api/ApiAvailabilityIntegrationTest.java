@@ -26,7 +26,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 class ApiAvailabilityIntegrationTest {
     @Container
     static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.6-alpine")
+            new PostgreSQLContainer("postgres:17.11-alpine")
                     .withDatabaseName("courtpulse")
                     .withUsername("courtpulse")
                     .withPassword("test-password");

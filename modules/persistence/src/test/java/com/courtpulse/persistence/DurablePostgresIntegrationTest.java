@@ -55,7 +55,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 class DurablePostgresIntegrationTest {
     @Container
     private static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.6-alpine");
+            new PostgreSQLContainer("postgres:17.11-alpine");
 
     private static final Clock CLOCK =
             Clock.fixed(Instant.parse("2026-01-01T01:00:00Z"), ZoneOffset.UTC);

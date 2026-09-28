@@ -484,10 +484,26 @@ resource "aws_cloudfront_response_headers_policy" "security" {
     }
   }
 
+  # Same isolation headers as apps/web/nginx.conf (OWASP ZAP baseline findings 10063 and 90004).
   custom_headers_config {
     items {
       header   = "Permissions-Policy"
-      value    = "camera=(), microphone=(), geolocation=(), payment=()"
+      value    = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+      override = true
+    }
+    items {
+      header   = "Cross-Origin-Opener-Policy"
+      value    = "same-origin"
+      override = true
+    }
+    items {
+      header   = "Cross-Origin-Embedder-Policy"
+      value    = "require-corp"
+      override = true
+    }
+    items {
+      header   = "Cross-Origin-Resource-Policy"
+      value    = "same-origin"
       override = true
     }
   }

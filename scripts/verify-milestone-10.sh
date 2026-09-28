@@ -9,7 +9,8 @@ mkdir -p "${artifact_dir}"
 date -u '+started_at_utc=%Y-%m-%dT%H:%M:%SZ' >"${artifact_dir}/timing.txt"
 
 export COURTPULSE_COMPOSE_PROJECT="${project}"
-export COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_DB_PASSWORD
 export COURTPULSE_POSTGRES_HOST_PORT=57433
 export COURTPULSE_LOCALSTACK_HOST_PORT=56567
 export COURTPULSE_API_HOST_PORT=60081
@@ -20,13 +21,17 @@ export COURTPULSE_MAILPIT_UI_HOST_PORT=18026
 export COURTPULSE_MAILPIT_PORT=11025
 export COURTPULSE_MAILPIT_URL='http://127.0.0.1:18026'
 export COURTPULSE_IDP_ADMIN_USERNAME="m10-admin-${suffix}"
-export COURTPULSE_IDP_ADMIN_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_IDP_ADMIN_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_IDP_ADMIN_PASSWORD
 export COURTPULSE_TEST_USER_A="m10-user-a-${suffix}"
-export COURTPULSE_TEST_USER_A_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_USER_A_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_USER_A_PASSWORD
 export COURTPULSE_TEST_USER_B="m10-user-b-${suffix}"
-export COURTPULSE_TEST_USER_B_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_USER_B_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_USER_B_PASSWORD
 export COURTPULSE_TEST_OPS_USER="m10-ops-${suffix}"
-export COURTPULSE_TEST_OPS_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_OPS_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_OPS_PASSWORD
 export COURTPULSE_AUTH_ENABLED=true
 export COURTPULSE_AUTH_ISSUER_BASE='http://127.0.0.1:59181'
 export COURTPULSE_AUTH_ISSUER_URI='http://127.0.0.1:59181/realms/courtpulse'
@@ -68,7 +73,7 @@ finish() {
     >"${artifact_dir}/reconciliations.txt" 2>&1 || true
   database -c "SELECT game_id,state_version,last_sequence,home_score,away_score,state_checksum FROM game_checkpoints ORDER BY game_id" \
     >"${artifact_dir}/checkpoints.txt" 2>&1 || true
-  "${compose[@]}" down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  "${compose[@]}" down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   exit "${status}"
 }
 trap finish EXIT

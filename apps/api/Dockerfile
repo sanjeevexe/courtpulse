@@ -5,11 +5,15 @@ WORKDIR /workspace
 RUN chown gradle:gradle /workspace
 COPY --chown=gradle:gradle . .
 USER gradle
-RUN ./gradlew :apps:api:bootJar --no-daemon
+# The pinned build image already contains Gradle 8.14.4 (the wrapper's version), so builds do not
+# download a distribution; the cache mount keeps dependencies between image builds.
+RUN --mount=type=cache,id=courtpulse-gradle,target=/home/gradle/.gradle/caches,uid=1000,gid=1000 \
+    gradle :apps:api:bootJar --no-daemon --console=plain
 
-FROM eclipse-temurin:21.0.8_9-jre-alpine
+FROM eclipse-temurin:21.0.12_8-jre-alpine
 
-RUN addgroup -S courtpulse && adduser -S -G courtpulse courtpulse
+# Alpine security fixes often land before the next base-image release; take them at build time.
+RUN apk upgrade --no-cache && addgroup -S courtpulse && adduser -S -G courtpulse courtpulse
 WORKDIR /app
 # The pinned agent is inert unless JAVA_TOOL_OPTIONS adds -javaagent (observability profile or cloud tracing).
 ADD --checksum=sha256:bbf83c151b6400709e2f225bdd07a04f839d9d13b8b93464241333fd25d3e3ba \

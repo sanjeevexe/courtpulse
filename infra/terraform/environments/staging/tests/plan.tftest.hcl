@@ -63,7 +63,7 @@ run "defaults_plan" {
   }
 
   assert {
-    condition     = local.content_security_policy == "default-src 'self'; connect-src 'self' https://cognito-idp.us-east-1.amazonaws.com https://courtpulse-staging-12345678.auth.us-east-1.amazoncognito.com; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; base-uri 'self'; frame-ancestors 'none'"
+    condition     = local.content_security_policy == "default-src 'self'; connect-src 'self' https://cognito-idp.us-east-1.amazonaws.com https://courtpulse-staging-12345678.auth.us-east-1.amazoncognito.com; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     error_message = "CSP must match apps/web/nginx.conf plus the two Cognito origins."
   }
 

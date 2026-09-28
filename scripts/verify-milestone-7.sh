@@ -7,20 +7,25 @@ artifact_dir="${repository}/build/verification/milestone-7"
 suffix="$(openssl rand -hex 4)"
 
 export COURTPULSE_COMPOSE_PROJECT="${project}"
-export COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_DB_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_DB_PASSWORD
 export COURTPULSE_POSTGRES_HOST_PORT=56432
 export COURTPULSE_LOCALSTACK_HOST_PORT=55566
 export COURTPULSE_API_HOST_PORT=59080
 export COURTPULSE_WEB_HOST_PORT=55173
 export COURTPULSE_IDP_HOST_PORT=58180
 export COURTPULSE_IDP_ADMIN_USERNAME="m7-admin-${suffix}"
-export COURTPULSE_IDP_ADMIN_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_IDP_ADMIN_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_IDP_ADMIN_PASSWORD
 export COURTPULSE_TEST_USER_A="m7-user-a-${suffix}"
-export COURTPULSE_TEST_USER_A_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_USER_A_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_USER_A_PASSWORD
 export COURTPULSE_TEST_USER_B="m7-user-b-${suffix}"
-export COURTPULSE_TEST_USER_B_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_USER_B_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_USER_B_PASSWORD
 export COURTPULSE_TEST_OPS_USER="m7-ops-${suffix}"
-export COURTPULSE_TEST_OPS_PASSWORD="$(openssl rand -hex 18)"
+COURTPULSE_TEST_OPS_PASSWORD="$(openssl rand -hex 18)"
+export COURTPULSE_TEST_OPS_PASSWORD
 export COURTPULSE_AUTH_ENABLED=true
 export COURTPULSE_AUTH_ISSUER_BASE='http://127.0.0.1:58180'
 export COURTPULSE_AUTH_ISSUER_URI='http://127.0.0.1:58180/realms/courtpulse'
@@ -44,12 +49,12 @@ diagnostics() {
 finish() {
   local status=$?
   diagnostics
-  "${compose[@]}" down -v --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
+  "${compose[@]}" down -v --rmi local --remove-orphans >"${artifact_dir}/compose-down.txt" 2>&1 || true
   exit "${status}"
 }
 trap finish EXIT
 
-"${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+"${compose[@]}" down -v --rmi local --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" up -d --build postgres localstack identity \
   | tee "${artifact_dir}/infrastructure-up.txt"
 

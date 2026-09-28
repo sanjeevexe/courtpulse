@@ -41,7 +41,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @Testcontainers(disabledWithoutDocker = true)
 class ProviderIngestionIntegrationTest {
     @Container
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.6-alpine");
+    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.11-alpine");
     private static final String GAME_ID = "bdl-game-990001";
     private static final String ADA = "bdl-player-9000101";
     private static final String BO = "bdl-player-9000102";
