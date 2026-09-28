@@ -19,6 +19,7 @@ import com.courtpulse.messaging.delivery.DeliveryQueuePublisher;
 import com.courtpulse.messaging.delivery.EmailSendException;
 import com.courtpulse.messaging.publisher.OutboxPublisher;
 import com.courtpulse.messaging.publisher.PublicationRetryPolicy;
+import com.courtpulse.messaging.publisher.PublisherBatchResult;
 import com.courtpulse.messaging.publisher.PublisherFailureMode;
 import com.courtpulse.messaging.publisher.SimulatedPublisherCrashException;
 import com.courtpulse.messaging.queue.GameEventEnvelopeCodec;
@@ -28,6 +29,7 @@ import com.courtpulse.messaging.queue.QueuePort;
 import com.courtpulse.messaging.queue.QueuePublishException;
 import com.courtpulse.messaging.queue.QueueSendRequest;
 import com.courtpulse.messaging.queue.ReceivedQueueMessage;
+import com.courtpulse.messaging.queue.SendOutcome;
 import com.courtpulse.messaging.sqs.SqsQueueAdapter;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FixtureIngestionService;
@@ -41,6 +43,7 @@ import com.courtpulse.persistence.JdbcOutboxRepository;
 import com.courtpulse.persistence.LeasedOutboxRecord;
 import com.courtpulse.persistence.OutboxStatusCounts;
 import com.courtpulse.testkit.SyntheticFixtureResources;
+import com.courtpulse.testkit.SyntheticLoadGames;
 import com.courtpulse.providers.fixture.FixtureGame;
 import com.courtpulse.providers.fixture.LoadedFixture;
 import com.courtpulse.providers.fixture.LoadedSourceEvent;
@@ -265,6 +268,33 @@ class MessagingPostgresLocalStackIntegrationTest {
         assertEquals(1_000, stored.length());
         assertFalse(stored.contains("super-secret"));
         assertTrue(stored.contains("password=[redacted]"));
+    }
+
+    @Test
+    void batchedPublishSendsOneRowPerGameThroughSqsBatchesAndSettlesEachEntry() throws Exception {
+        SyntheticLoadGames.generate("batch", 12, 8, 7).forEach(game -> services.ingestion().importFixture(game));
+        SqsQueueAdapter queue = new SqsQueueAdapter(sqs, queueUrl);
+        OutboxPublisher publisher = publisher(services, queue, "batch-publisher", 50);
+
+        PublisherBatchResult first = publisher.publishBatch();
+
+        assertEquals(12, first.claimed(), "one row per game: later rows wait for their predecessor");
+        assertEquals(12, first.sent());
+        assertEquals(12, services.publications().statusCounts().sent());
+        awaitDepth(queue, 12);
+        assertEquals(12, queue.depth().visible(), "two SQS batch calls (10 + 2) delivered every entry");
+        assertEquals(12, publisher.publishBatch().sent(), "the next claim takes each game's second row");
+
+        services.fixtures().resetAll();
+        SyntheticLoadGames.generate("partial", 5, 8, 7).forEach(game -> services.ingestion().importFixture(game));
+        PublisherBatchResult partial = publisher(services, new PartiallyFailingQueue(), "partial", 50)
+                .publishBatch();
+
+        assertEquals(new PublisherBatchResult(5, 3, 1, 1, 0), partial);
+        OutboxStatusCounts counts = services.publications().statusCounts();
+        assertEquals(3, counts.sent());
+        assertEquals(1, counts.retryScheduled());
+        assertEquals(1, counts.failed());
     }
 
     @Test
@@ -528,10 +558,14 @@ class MessagingPostgresLocalStackIntegrationTest {
     }
 
     private OutboxPublisher publisher(Services value, QueuePort queue, String owner) {
+        return publisher(value, queue, owner, 10);
+    }
+
+    private OutboxPublisher publisher(Services value, QueuePort queue, String owner, int batchSize) {
         return new OutboxPublisher(
                 value.publications(), queue, value.codec(), value.transactions(),
                 new PublicationRetryPolicy(Duration.ofSeconds(2), Duration.ofSeconds(30), 3, () -> 0.0),
-                value.clock(), owner, Duration.ofMinutes(1), 10);
+                value.clock(), owner, Duration.ofMinutes(1), batchSize);
     }
 
     private GameEventQueueConsumer consumer(Services value, QueuePort queue) {
@@ -671,6 +705,17 @@ class MessagingPostgresLocalStackIntegrationTest {
         }
         @Override public String send(QueueSendRequest request) {
             throw new QueuePublishException(message, retryable);
+        }
+    }
+
+    /** Second entry fails transiently, third permanently, the rest succeed. */
+    private static final class PartiallyFailingQueue extends RecordingQueue {
+        @Override public List<SendOutcome> sendBatch(List<QueueSendRequest> requests) {
+            return java.util.stream.IntStream.range(0, requests.size()).mapToObj(index -> switch (index) {
+                case 1 -> SendOutcome.failed(new QueuePublishException("SQS batch entry failed: InternalError", true));
+                case 2 -> SendOutcome.failed(new QueuePublishException("SQS batch entry failed: InvalidParameterValue", false));
+                default -> SendOutcome.sent("message-" + index);
+            }).toList();
         }
     }
 

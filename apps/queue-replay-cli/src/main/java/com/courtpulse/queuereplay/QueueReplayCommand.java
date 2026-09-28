@@ -62,7 +62,10 @@ public final class QueueReplayCommand implements ApplicationRunner {
             "simulate-consumer-after-commit");
     /** Deployment modes: each runs alone and is what an orchestrator schedules. */
     private static final Set<String> SERVICE_OPTIONS = Set.of(
-            "processor-daemon", "ingest-daemon", "ingest-game", "migrate", "canary");
+            "processor-daemon", "ingest-daemon", "ingest-game", "migrate", "canary", "synthetic-load");
+    /** Companion settings accepted only with --synthetic-load. */
+    private static final Set<String> SYNTHETIC_OPTIONS = Set.of(
+            "synthetic-events", "synthetic-prefix", "synthetic-pace-ms", "synthetic-seed");
     private static final Set<String> DELIVERY_OPTIONS = Set.of(
             "delivery-publish", "delivery-drain", "delivery-run", "delivery-daemon");
 
@@ -271,8 +274,10 @@ public final class QueueReplayCommand implements ApplicationRunner {
         if (modes.isEmpty()) {
             return false;
         }
+        boolean synthetic = modes.contains("synthetic-load");
         List<String> other = arguments.getOptionNames().stream()
                 .filter(option -> !SERVICE_OPTIONS.contains(option))
+                .filter(option -> !(synthetic && SYNTHETIC_OPTIONS.contains(option)))
                 .filter(option -> !option.startsWith("spring.") && !option.startsWith("logging.")
                         && !option.startsWith("courtpulse."))
                 .toList();
@@ -293,9 +298,19 @@ public final class QueueReplayCommand implements ApplicationRunner {
                     ORDER BY installed_rank DESC LIMIT 1
                     """).query(String.class).single());
             case "canary" -> new ReplayCanary(ingestion, processing, canaryTimeout).run();
+            case "synthetic-load" -> new SyntheticLoadImporter(ingestion).run(
+                    optional(arguments, "synthetic-prefix", "load"),
+                    Integer.parseInt(Options.oneValue(arguments, "synthetic-load")),
+                    Integer.parseInt(optional(arguments, "synthetic-events", "40")),
+                    Long.parseLong(optional(arguments, "synthetic-seed", "7")),
+                    Long.parseLong(optional(arguments, "synthetic-pace-ms", "0")));
             default -> throw new IllegalStateException("Unhandled deployment mode");
         }
         return true;
+    }
+
+    private static String optional(ApplicationArguments arguments, String name, String fallback) {
+        return arguments.containsOption(name) ? Options.oneValue(arguments, name) : fallback;
     }
 
     private LiveGameProvider requireProvider() {
@@ -486,6 +501,8 @@ public final class QueueReplayCommand implements ApplicationRunner {
         System.out.println("       [--reconciliation-run | --reconciliation-daemon]");
         System.out.println("Deployment modes (one at a time): --processor-daemon | --ingest-daemon");
         System.out.println("       | --ingest-game=<provider game id> | --migrate | --canary");
+        System.out.println("Load tests: --synthetic-load=<games> [--synthetic-events=40] [--synthetic-prefix=load]");
+        System.out.println("       [--synthetic-seed=7] [--synthetic-pace-ms=0 (burst) | 1..10000 (paced)]");
     }
 
     private record Options(

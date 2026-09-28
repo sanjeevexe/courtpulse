@@ -62,6 +62,8 @@ class RealtimeProtocolTest {
                 "event-8", null, null, null));
         ObjectMapper mapper = new ObjectMapper();
         assertEquals(8, mapper.readTree(json).path("stateVersion").asInt());
+        assertEquals("2026-09-21T12:00:00Z", mapper.readTree(json).path("emittedAt").textValue(),
+                "emittedAt is a date-time string, as the AsyncAPI contract declares");
         assertFalse(json.toLowerCase().contains("sql"));
         assertFalse(json.toLowerCase().contains("exception"));
     }

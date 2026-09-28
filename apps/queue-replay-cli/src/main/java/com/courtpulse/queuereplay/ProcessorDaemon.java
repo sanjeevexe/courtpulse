@@ -29,7 +29,11 @@ import org.slf4j.LoggerFactory;
 final class ProcessorDaemon {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessorDaemon.class);
     private static final Duration PUBLISH_IDLE = Duration.ofMillis(100);
-    private static final int MAXIMUM_CONSECUTIVE_FAILURES = 5;
+    /** A dependency outage shorter than this is ridden out; a longer one restarts the process. */
+    private static final Duration MAXIMUM_FAILURE_WINDOW = Duration.ofMinutes(2);
+    private static final Duration MAXIMUM_FAILURE_BACKOFF = Duration.ofSeconds(10);
+    /** Workers finish their current step (a publish attempt is bounded at 5 s) before interrupts. */
+    private static final Duration SHUTDOWN_GRACE = Duration.ofSeconds(15);
     private static final Path HEARTBEAT = Path.of("/tmp/courtpulse-processor-worker.heartbeat");
 
     private final OutboxPublisher publisher;
@@ -79,14 +83,7 @@ final class ProcessorDaemon {
             }
         } finally {
             running.set(false);
-            for (Thread worker : workers) {
-                worker.interrupt();
-                try {
-                    worker.join(10_000);
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                }
-            }
+            stop(workers);
         }
         if (failure.get() != null) {
             telemetry.heartbeat("processor", Instant.now(), false);
@@ -94,12 +91,48 @@ final class ProcessorDaemon {
         }
     }
 
+    /**
+     * Interrupting a publisher mid-send would abort an SQS call whose outcome is then unknown, so
+     * workers get a grace period to finish their step; only stragglers are interrupted.
+     */
+    private static void stop(List<Thread> workers) {
+        long deadline = System.nanoTime() + SHUTDOWN_GRACE.toNanos();
+        boolean interrupted = false;
+        for (Thread worker : workers) {
+            try {
+                worker.join(Duration.ofNanos(Math.max(1, deadline - System.nanoTime())));
+            } catch (InterruptedException exception) {
+                interrupted = true;
+                break;
+            }
+        }
+        for (Thread worker : workers) {
+            if (worker.isAlive()) {
+                worker.interrupt();
+                try {
+                    worker.join(Duration.ofSeconds(5));
+                } catch (InterruptedException exception) {
+                    interrupted = true;
+                }
+            }
+        }
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private void observe() {
-        QueueDepth depth = queue.depth();
-        QueueDepth dead = dlq.depth();
         Instant now = Instant.now();
-        telemetry.queue("game_events", depth.visible(), depth.inFlight(), depth.delayed(), now);
-        telemetry.queue("game_events_dlq", dead.visible(), dead.inFlight(), dead.delayed(), now);
+        try {
+            QueueDepth depth = queue.depth();
+            QueueDepth dead = dlq.depth();
+            telemetry.queue("game_events", depth.visible(), depth.inFlight(), depth.delayed(), now);
+            telemetry.queue("game_events_dlq", dead.visible(), dead.inFlight(), dead.delayed(), now);
+        } catch (RuntimeException exception) {
+            // Queue depth is telemetry; the consumers themselves decide whether SQS is usable.
+            LOGGER.atWarn().addKeyValue("errorType", exception.getClass().getSimpleName())
+                    .log("Queue depth observation failed");
+        }
         telemetry.heartbeat("processor", now, true);
         try {
             Files.writeString(HEARTBEAT, now.toString(),
@@ -113,6 +146,7 @@ final class ProcessorDaemon {
             Runnable step) {
         Thread thread = new Thread(() -> {
             int consecutiveFailures = 0;
+            long failingSince = 0;
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     step.run();
@@ -121,16 +155,19 @@ final class ProcessorDaemon {
                     if (!running.get()) {
                         return;
                     }
-                    consecutiveFailures++;
+                    if (consecutiveFailures++ == 0) {
+                        failingSince = System.nanoTime();
+                    }
                     LOGGER.atWarn().addKeyValue("thread", name)
                             .addKeyValue("errorType", exception.getClass().getSimpleName())
                             .addKeyValue("consecutiveFailures", consecutiveFailures)
                             .log("Processor worker step failed");
-                    if (consecutiveFailures >= MAXIMUM_CONSECUTIVE_FAILURES) {
+                    if (System.nanoTime() - failingSince >= MAXIMUM_FAILURE_WINDOW.toNanos()) {
                         failure.compareAndSet(null, exception);
                         return;
                     }
-                    sleep(Duration.ofSeconds(consecutiveFailures));
+                    Duration backoff = Duration.ofSeconds(consecutiveFailures);
+                    sleep(backoff.compareTo(MAXIMUM_FAILURE_BACKOFF) > 0 ? MAXIMUM_FAILURE_BACKOFF : backoff);
                 }
             }
         }, name);

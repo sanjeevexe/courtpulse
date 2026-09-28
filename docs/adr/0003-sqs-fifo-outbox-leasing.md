@@ -1,6 +1,7 @@
 # ADR 0003 Publish game events through leased outbox rows and SQS FIFO
 
-- Status: Accepted
+- Status: Accepted; batching, failure classification, and the transient retry budget amended by
+  [ADR 0014](0014-batched-publication-and-transient-retry.md)
 - Date: 2026-09-20
 
 ## Context

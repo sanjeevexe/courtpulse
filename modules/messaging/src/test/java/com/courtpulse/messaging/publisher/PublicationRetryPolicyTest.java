@@ -30,4 +30,14 @@ class PublicationRetryPolicyTest {
         assertFalse(policy.afterFailure(3, true).retry());
         assertTrue(policy.afterFailure(2, true).retry());
     }
+
+    @Test
+    void unlimitedPolicyRetriesTransientFailuresForeverAtTheCappedDelay() {
+        PublicationRetryPolicy policy = new PublicationRetryPolicy(
+                Duration.ofSeconds(1), Duration.ofSeconds(30), PublicationRetryPolicy.UNLIMITED, () -> 1.0);
+
+        assertTrue(policy.afterFailure(10_000, true).retry());
+        assertEquals(Duration.ofSeconds(30), policy.afterFailure(10_000, true).delay());
+        assertFalse(policy.afterFailure(1, false).retry(), "permanent failures stay terminal");
+    }
 }

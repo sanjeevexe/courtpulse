@@ -32,11 +32,12 @@ courtpulse:
     ses-endpoint: ${COURTPULSE_SES_ENDPOINT:}
     public-base-url: ${COURTPULSE_PUBLIC_BASE_URL:}
   publisher:
-    batch-size: ${COURTPULSE_PUBLISHER_BATCH_SIZE:10}
+    batch-size: ${COURTPULSE_PUBLISHER_BATCH_SIZE:50}
     lease-duration: ${COURTPULSE_PUBLISHER_LEASE_DURATION:30s}
     retry-initial: ${COURTPULSE_PUBLISHER_RETRY_INITIAL:1s}
     retry-maximum: ${COURTPULSE_PUBLISHER_RETRY_MAXIMUM:30s}
-    maximum-attempts: ${COURTPULSE_PUBLISHER_MAX_ATTEMPTS:5}
+    # 0 retries transient SQS failures until they succeed (capped backoff); permanent ones fail.
+    maximum-attempts: ${COURTPULSE_PUBLISHER_MAX_ATTEMPTS:0}
   consumer:
     batch-size: ${COURTPULSE_CONSUMER_BATCH_SIZE:10}
     long-poll-wait: ${COURTPULSE_CONSUMER_LONG_POLL:2s}

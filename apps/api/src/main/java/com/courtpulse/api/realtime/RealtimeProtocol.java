@@ -3,6 +3,8 @@ package com.courtpulse.api.realtime;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -12,9 +14,12 @@ public final class RealtimeProtocol {
             Set.of("schemaVersion", "messageType", "gameId", "lastStateVersion");
 
     private final ObjectMapper mapper;
+    private final ObjectWriter writer;
 
     public RealtimeProtocol(ObjectMapper mapper) {
         this.mapper = mapper;
+        // The contract declares emittedAt as an RFC 3339 string, not Jackson's default epoch number.
+        this.writer = mapper.writer().without(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     public RealtimeSubscription decodeSubscription(String json) {
@@ -58,7 +63,7 @@ public final class RealtimeProtocol {
 
     public String encode(RealtimeServerMessage message) {
         try {
-            return mapper.writeValueAsString(message);
+            return writer.writeValueAsString(message);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Could not encode realtime message", exception);
         }

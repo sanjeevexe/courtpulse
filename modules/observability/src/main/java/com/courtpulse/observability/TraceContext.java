@@ -35,6 +35,22 @@ public final class TraceContext {
         return new SpanScope(span);
     }
 
+    /**
+     * A span that is not made current, for work handled in batches: each item gets its own span
+     * (continuing its stored context, or a new root when it has none) without nesting under the
+     * previous item. The caller must end it.
+     */
+    public static Span startDetached(String traceparent, String name, SpanKind kind) {
+        SpanContext parent = parse(traceparent);
+        var builder = GlobalOpenTelemetry.getTracer("com.courtpulse").spanBuilder(name).setSpanKind(kind);
+        if (parent == null) {
+            builder.setNoParent();
+        } else {
+            builder.setParent(Context.root().with(Span.wrap(parent)));
+        }
+        return builder.startSpan();
+    }
+
     public static String currentTraceparent() {
         return format(Span.current().getSpanContext());
     }

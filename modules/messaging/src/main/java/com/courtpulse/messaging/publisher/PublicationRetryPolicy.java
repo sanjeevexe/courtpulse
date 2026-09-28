@@ -4,7 +4,14 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.DoubleSupplier;
 
+/**
+ * Backoff for outbox publication. Permanent failures are terminal at once. Transient failures are
+ * terminal after {@code maximumAttempts}, or never when it is {@link #UNLIMITED}: a terminal row
+ * blocks its game, so an infrastructure outage should delay publication, not wedge live games.
+ */
 public final class PublicationRetryPolicy {
+    public static final int UNLIMITED = 0;
+
     private final Duration initialDelay;
     private final Duration maximumDelay;
     private final int maximumAttempts;
@@ -20,15 +27,15 @@ public final class PublicationRetryPolicy {
         if (maximumDelay.compareTo(initialDelay) < 0) {
             throw new IllegalArgumentException("maximumDelay must be at least initialDelay");
         }
-        if (maximumAttempts < 1) {
-            throw new IllegalArgumentException("maximumAttempts must be positive");
+        if (maximumAttempts < 0) {
+            throw new IllegalArgumentException("maximumAttempts must be positive, or 0 for unlimited");
         }
         this.maximumAttempts = maximumAttempts;
         this.jitter = Objects.requireNonNull(jitter, "jitter is required");
     }
 
     public RetryDecision afterFailure(int attempt, boolean retryable) {
-        if (!retryable || attempt >= maximumAttempts) {
+        if (!retryable || (maximumAttempts != UNLIMITED && attempt >= maximumAttempts)) {
             return RetryDecision.terminal();
         }
         int exponent = Math.min(30, Math.max(0, attempt - 1));
