@@ -7,6 +7,9 @@ import com.courtpulse.messaging.queue.ReceivedQueueMessage;
 import com.courtpulse.persistence.DurableProcessingResult;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FailureMode;
+import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,6 +25,7 @@ public final class GameEventQueueConsumer implements AutoCloseable {
     private final DurableGameProcessor processor;
     private final int batchSize;
     private final Duration waitTime;
+    private final JdbcOperationalTelemetryRepository operationalTelemetry;
     private final AtomicBoolean closed = new AtomicBoolean();
 
     public GameEventQueueConsumer(
@@ -31,12 +35,24 @@ public final class GameEventQueueConsumer implements AutoCloseable {
             DurableGameProcessor processor,
             int batchSize,
             Duration waitTime) {
+        this(queue, codec, validator, processor, batchSize, waitTime, null);
+    }
+
+    public GameEventQueueConsumer(
+            QueuePort queue,
+            GameEventEnvelopeCodec codec,
+            CanonicalEventEnvelopeValidator validator,
+            DurableGameProcessor processor,
+            int batchSize,
+            Duration waitTime,
+            JdbcOperationalTelemetryRepository operationalTelemetry) {
         this.queue = queue;
         this.codec = codec;
         this.validator = validator;
         this.processor = processor;
         this.batchSize = batchSize;
         this.waitTime = waitTime;
+        this.operationalTelemetry = operationalTelemetry;
     }
 
     public ConsumerBatchResult pollOnce() {
@@ -63,12 +79,19 @@ public final class GameEventQueueConsumer implements AutoCloseable {
             ReceivedQueueMessage message, ConsumerFailureMode failureMode) {
         try {
             GameEventEnvelope envelope = codec.decode(message.body());
+            try (var span = TraceContext.continueFrom(
+                    envelope.traceparent() != null ? envelope.traceparent() : message.traceparent(),
+                    "game-event consume", SpanKind.CONSUMER)) {
+            span.span().setAttribute("courtpulse.event.id", envelope.eventId());
             validator.validate(envelope);
             FailureMode processingFailure = failureMode == ConsumerFailureMode.BEFORE_DATABASE_COMMIT
                     ? FailureMode.BEFORE_COMMIT
                     : FailureMode.NONE;
             DurableProcessingResult processing = processor.processEvent(
                     envelope.eventId(), processingFailure);
+            if (!processing.accepted() && operationalTelemetry != null) {
+                operationalTelemetry.duplicateSuppressed();
+            }
             if (failureMode == ConsumerFailureMode.AFTER_COMMIT_BEFORE_DELETE) {
                 throw new SimulatedConsumerCrashException(
                         "Simulated consumer crash after commit for event " + envelope.eventId());
@@ -86,6 +109,7 @@ public final class GameEventQueueConsumer implements AutoCloseable {
                     processing.accepted() ? 0 : 1,
                     1,
                     0);
+            }
         } catch (RuntimeException exception) {
             LOGGER.atWarn()
                     .addKeyValue("providerMessageId", message.providerMessageId())

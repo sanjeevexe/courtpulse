@@ -157,13 +157,13 @@ public final class JdbcDeliveryWorkRepository {
                         SET status = 'LEASED', attempts = work.attempts + 1,
                             lease_owner = :owner, lease_until = :leaseUntil
                         FROM picked WHERE work.id = picked.id
-                        RETURNING work.id, work.delivery_id, work.attempts
+                        RETURNING work.id, work.delivery_id, work.attempts, work.traceparent
                         """)
                 .params(Map.of("now", SqlTime.offset(now), "limit", limit,
                         "owner", owner, "leaseUntil", SqlTime.offset(now.plus(leaseDuration))))
                 .query((row, number) -> new DeliveryOutboxLease(
                         row.getObject("id", UUID.class), row.getObject("delivery_id", UUID.class),
-                        row.getInt("attempts")))
+                        row.getInt("attempts"), row.getString("traceparent")))
                 .list();
     }
 

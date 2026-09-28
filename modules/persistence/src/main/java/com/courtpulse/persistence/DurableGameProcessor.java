@@ -8,6 +8,8 @@ import com.courtpulse.domain.event.CanonicalEvent;
 import com.courtpulse.domain.game.GameReducer;
 import com.courtpulse.domain.game.GameState;
 import com.courtpulse.domain.replay.StateChecksum;
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Duration;
@@ -53,7 +55,11 @@ public final class DurableGameProcessor {
     }
 
     public DurableProcessingResult processEvent(String eventId, FailureMode failureMode) {
-        DurableProcessingResult result = transactions.execute(status -> processInTransaction(eventId, failureMode));
+        DurableProcessingResult result;
+        try (var span = TraceContext.start("game-event process", SpanKind.INTERNAL)) {
+            span.span().setAttribute("courtpulse.event.id", eventId);
+            result = transactions.execute(status -> processInTransaction(eventId, failureMode));
+        }
         if (failureMode == FailureMode.AFTER_COMMIT) {
             throw new SimulatedProcessingFailureException(
                     "Simulated process failure after commit for event " + eventId);
@@ -116,6 +122,8 @@ public final class DurableGameProcessor {
 
         List<Alert> createdAlerts = new ArrayList<>();
         for (AlertRule rule : ruleBatch.enabledRules()) {
+            try (var ruleSpan = TraceContext.start("alert-rule evaluate", SpanKind.INTERNAL)) {
+            ruleSpan.span().setAttribute("courtpulse.rule.type", rule.ruleType().name());
             long evaluationStarted = System.nanoTime();
             RuleEvaluationFacts facts = new RuleEvaluationFacts(
                     previousState,
@@ -149,6 +157,7 @@ public final class DurableGameProcessor {
                     metrics.duplicateSuppressed(rule.ruleType());
                 }
             });
+            }
         }
 
         if (failureMode == FailureMode.BEFORE_COMMIT) {

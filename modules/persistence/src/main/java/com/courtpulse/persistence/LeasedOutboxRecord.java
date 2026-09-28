@@ -14,4 +14,12 @@ public record LeasedOutboxRecord(
         int revision,
         Instant occurredAt,
         String messageGroupId,
-        int attempt) {}
+        int attempt,
+        String traceparent) {
+    public LeasedOutboxRecord(UUID outboxId, String deduplicationKey, String eventId,
+            String gameId, long sequence, String source, String providerEventId, int revision,
+            Instant occurredAt, String messageGroupId, int attempt) {
+        this(outboxId, deduplicationKey, eventId, gameId, sequence, source, providerEventId,
+                revision, occurredAt, messageGroupId, attempt, null);
+    }
+}

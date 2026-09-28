@@ -6,6 +6,7 @@ description = "Broker-independent queue workflow and AWS SDK v2 SQS adapter"
 
 dependencies {
     api(project(":modules:persistence"))
+    implementation(project(":modules:observability"))
 
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
     implementation(platform("software.amazon.awssdk:bom:2.55.1"))

@@ -1,5 +1,6 @@
 package com.courtpulse.persistence;
 
+import com.courtpulse.observability.TraceContext;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -29,11 +30,11 @@ public final class JdbcOutboxRepository {
                         INSERT INTO outbox (
                             id, deduplication_key, aggregate_type, aggregate_id, event_type,
                             payload, destination, message_group_id, status, attempts,
-                            next_attempt_at, created_at)
+                            next_attempt_at, created_at, traceparent)
                         VALUES (
                             :id, :deduplicationKey, :aggregateType, :aggregateId, :eventType,
                             CAST(:payload AS JSONB), :destination, :messageGroupId,
-                            'PENDING', 0, :now, :now)
+                            'PENDING', 0, :now, :now, :traceparent)
                         ON CONFLICT (deduplication_key) DO NOTHING
                         """)
                 .params(parameters(
@@ -68,6 +69,7 @@ public final class JdbcOutboxRepository {
         parameters.put("destination", destination);
         parameters.put("messageGroupId", messageGroupId);
         parameters.put("now", SqlTime.offset(now));
+        parameters.put("traceparent", TraceContext.currentTraceparent());
         return parameters;
     }
 }

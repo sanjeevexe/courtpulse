@@ -1,5 +1,8 @@
 package com.courtpulse.api.http;
 
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +38,11 @@ public final class CorrelationIdFilter extends OncePerRequestFilter {
         request.setAttribute(ATTRIBUTE, correlationId);
         response.setHeader(HEADER, correlationId);
         MDC.put("correlationId", correlationId);
-        try {
+        try (var span = TraceContext.start("http request", SpanKind.INTERNAL)) {
+            String traceparent = TraceContext.currentTraceparent();
+            if (traceparent != null) {
+                response.setHeader("X-Trace-ID", span.span().getSpanContext().getTraceId());
+            }
             chain.doFilter(request, response);
         } finally {
             Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);

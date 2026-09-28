@@ -4,4 +4,10 @@ public record ReceivedQueueMessage(
         String providerMessageId,
         String receiptHandle,
         String body,
-        int receiveCount) {}
+        int receiveCount,
+        String traceparent) {
+    public ReceivedQueueMessage(String providerMessageId, String receiptHandle,
+            String body, int receiveCount) {
+        this(providerMessageId, receiptHandle, body, receiveCount, null);
+    }
+}

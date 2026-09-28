@@ -21,6 +21,7 @@ import com.courtpulse.persistence.ImportResult;
 import com.courtpulse.persistence.JdbcFixtureRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
 import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.OutboxStatusCounts;
@@ -70,6 +71,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
     private final DeliveryQueuePublisher deliveryPublisher;
     private final DeliveryQueueConsumer deliveryConsumer;
     private final JdbcDeliveryWorkRepository deliveryWork;
+    private final JdbcOperationalTelemetryRepository operationalTelemetry;
     private final JdbcOutboxPublicationRepository outbox;
     private final JdbcInspectionRepository inspection;
     private final JdbcGameProcessingRepository processing;
@@ -92,6 +94,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
             DeliveryQueuePublisher deliveryPublisher,
             DeliveryQueueConsumer deliveryConsumer,
             JdbcDeliveryWorkRepository deliveryWork,
+            JdbcOperationalTelemetryRepository operationalTelemetry,
             JdbcOutboxPublicationRepository outbox,
             JdbcInspectionRepository inspection,
             JdbcGameProcessingRepository processing,
@@ -112,6 +115,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
         this.deliveryPublisher = deliveryPublisher;
         this.deliveryConsumer = deliveryConsumer;
         this.deliveryWork = deliveryWork;
+        this.operationalTelemetry = operationalTelemetry;
         this.outbox = outbox;
         this.inspection = inspection;
         this.processing = processing;
@@ -258,9 +262,22 @@ public final class QueueReplayCommand implements ApplicationRunner {
         }, "delivery-shutdown"));
         Path heartbeat = Path.of("/tmp/courtpulse-delivery-worker.heartbeat");
         while (running.get()) {
+            try {
             deliveryPublisher.publishBatch();
             deliveryConsumer.pollOnce();
-            deliveryWork.observeDlqDepth(deliveryDlq.depth().total(), Instant.now());
+            var sourceDepth = deliveryQueue.depth();
+            var dlqDepth = deliveryDlq.depth();
+            Instant observed = Instant.now();
+            deliveryWork.observeDlqDepth(dlqDepth.total(), observed);
+            operationalTelemetry.queue("alert_deliveries", sourceDepth.visible(),
+                    sourceDepth.inFlight(), sourceDepth.delayed(), observed);
+            operationalTelemetry.queue("alert_deliveries_dlq", dlqDepth.visible(),
+                    dlqDepth.inFlight(), dlqDepth.delayed(), observed);
+            operationalTelemetry.heartbeat("delivery", observed, true);
+            } catch (RuntimeException exception) {
+                operationalTelemetry.heartbeat("delivery", Instant.now(), false);
+                throw exception;
+            }
             try {
                 Files.writeString(heartbeat, Instant.now().toString(),
                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -283,7 +300,20 @@ public final class QueueReplayCommand implements ApplicationRunner {
         }, "reconciliation-shutdown"));
         Path heartbeat = Path.of("/tmp/courtpulse-reconciliation-worker.heartbeat");
         while (running.get()) {
+            try {
             reconciliation.reconcileAvailable(10);
+            var sourceDepth = queue.depth();
+            var dlqDepth = dlq.depth();
+            Instant observed = Instant.now();
+            operationalTelemetry.queue("game_events", sourceDepth.visible(),
+                    sourceDepth.inFlight(), sourceDepth.delayed(), observed);
+            operationalTelemetry.queue("game_events_dlq", dlqDepth.visible(),
+                    dlqDepth.inFlight(), dlqDepth.delayed(), observed);
+            operationalTelemetry.heartbeat("reconciliation", observed, true);
+            } catch (RuntimeException exception) {
+                operationalTelemetry.heartbeat("reconciliation", Instant.now(), false);
+                throw exception;
+            }
             try {
                 Files.writeString(heartbeat, Instant.now().toString(),
                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);

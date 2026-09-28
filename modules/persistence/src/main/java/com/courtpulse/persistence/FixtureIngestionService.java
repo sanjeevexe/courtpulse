@@ -3,6 +3,8 @@ package com.courtpulse.persistence;
 import com.courtpulse.domain.event.CanonicalEvent;
 import com.courtpulse.providers.fixture.LoadedFixture;
 import com.courtpulse.providers.fixture.LoadedSourceEvent;
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
@@ -26,7 +28,9 @@ public final class FixtureIngestionService {
     }
 
     public ImportResult importFixture(LoadedFixture fixture) {
-        return transactions.execute(status -> importInTransaction(fixture));
+        try (var span = TraceContext.start("fixture ingest", SpanKind.INTERNAL)) {
+            return transactions.execute(status -> importInTransaction(fixture));
+        }
     }
 
     private ImportResult importInTransaction(LoadedFixture fixture) {

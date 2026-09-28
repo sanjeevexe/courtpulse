@@ -9,6 +9,7 @@ dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
     implementation(project(":modules:query"))
     implementation(project(":modules:persistence"))
+    implementation(project(":modules:observability"))
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-websocket")

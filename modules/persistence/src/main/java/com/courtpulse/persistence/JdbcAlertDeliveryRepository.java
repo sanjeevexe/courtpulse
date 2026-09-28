@@ -1,5 +1,7 @@
 package com.courtpulse.persistence;
 
+import com.courtpulse.observability.TraceContext;
+
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -193,10 +195,12 @@ public final class JdbcAlertDeliveryRepository {
         if (emailDelivery != null) {
             jdbc.sql("""
                             INSERT INTO delivery_outbox (
-                                id, delivery_id, status, attempts, next_attempt_at, created_at)
-                            VALUES (:id, :deliveryId, 'PENDING', 0, :now, :now)
+                                id, delivery_id, status, attempts, next_attempt_at, created_at,
+                                traceparent)
+                            VALUES (:id, :deliveryId, 'PENDING', 0, :now, :now, :traceparent)
                             """)
-                    .params(Map.of("id", UUID.randomUUID(), "deliveryId", emailDelivery, "now", at))
+                    .param("id", UUID.randomUUID()).param("deliveryId", emailDelivery)
+                    .param("now", at).param("traceparent", TraceContext.currentTraceparent())
                     .update();
         }
     }

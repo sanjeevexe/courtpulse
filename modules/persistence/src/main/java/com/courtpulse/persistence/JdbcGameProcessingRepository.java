@@ -1,6 +1,7 @@
 package com.courtpulse.persistence;
 
 import com.courtpulse.domain.alert.Alert;
+import com.courtpulse.observability.TraceContext;
 import com.courtpulse.domain.alert.ScoringRunFacts;
 import com.courtpulse.domain.event.CanonicalEvent;
 import com.courtpulse.domain.event.EventFingerprint;
@@ -182,8 +183,8 @@ public final class JdbcGameProcessingRepository {
         jdbc.sql("""
                         INSERT INTO game_reconciliations (
                             game_id, status, first_affected_sequence, correction_event_id,
-                            requested_at, updated_at)
-                        VALUES (:gameId, 'PENDING', :sequence, :eventId, :now, :now)
+                            requested_at, updated_at, traceparent)
+                        VALUES (:gameId, 'PENDING', :sequence, :eventId, :now, :now, :traceparent)
                         ON CONFLICT (game_id) DO UPDATE
                         SET status = 'PENDING',
                             first_affected_sequence = CASE
@@ -191,12 +192,14 @@ public final class JdbcGameProcessingRepository {
                                     THEN :sequence
                                 ELSE LEAST(game_reconciliations.first_affected_sequence, :sequence) END,
                             correction_event_id = :eventId,
+                            traceparent = COALESCE(:traceparent, game_reconciliations.traceparent),
                             requested_revision = game_reconciliations.requested_revision + 1,
                             requested_at = :now, updated_at = :now, completed_at = NULL,
                             last_error_code = NULL
                         WHERE game_reconciliations.correction_event_id IS DISTINCT FROM :eventId
                         """).param("gameId", event.gameId()).param("sequence", event.sequence())
-                .param("eventId", event.eventId()).param("now", SqlTime.offset(now)).update();
+                .param("eventId", event.eventId()).param("now", SqlTime.offset(now))
+                .param("traceparent", TraceContext.currentTraceparent()).update();
     }
 
     public void saveCheckpoint(GameState state, String checksum, Instant now) {

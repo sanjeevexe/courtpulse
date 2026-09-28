@@ -34,6 +34,8 @@ courtpulse:
     operations-authority: ${COURTPULSE_AUTH_OPERATIONS_AUTHORITY:SCOPE_courtpulse:ops}
   api:
     live-freshness-window: ${COURTPULSE_LIVE_FRESHNESS_WINDOW:2m}
+  telemetry:
+    scrape-password: ${COURTPULSE_METRICS_SCRAPE_PASSWORD:}
   realtime:
     publication:
       enabled: ${COURTPULSE_REALTIME_PUBLICATION_ENABLED:true}

@@ -120,13 +120,16 @@ class FlywayV6UpgradeIntegrationTest {
             Flyway.configure().dataSource(dataSource).schemas(schema).target("7").load().migrate();
             JdbcClient jdbc = JdbcClient.create(dataSource);
             var mapper = JsonMapper.builder().addModule(new JavaTimeModule()).build();
-            var transactions = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
             var fixtures = new JdbcFixtureRepository(jdbc, mapper);
-            var outbox = new JdbcOutboxRepository(jdbc, mapper);
             var processing = new JdbcGameProcessingRepository(jdbc, mapper);
             var fixture = SyntheticFixtureResources.loadMilestoneGame();
-            new FixtureIngestionService(fixtures, outbox, transactions, Clock.systemUTC())
-                    .importFixture(fixture);
+            var now = Clock.systemUTC().instant();
+            fixtures.ensureGame(fixture.sourceEvents().getFirst().canonicalEvent().source(),
+                    fixture.game(), now);
+            for (var item : fixture.sourceEvents()) {
+                var raw = fixtures.insertOrObserveRaw(item, now);
+                fixtures.insertCanonical(item.canonicalEvent(), raw.id(), now);
+            }
             String before = processing.readCheckpoint(fixture.game().gameId()).toString();
 
             Flyway.configure().dataSource(dataSource).schemas(schema).load().migrate();

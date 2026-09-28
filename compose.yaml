@@ -148,7 +148,7 @@ services:
     build:
       context: .
       dockerfile: apps/queue-replay-cli/Dockerfile
-    entrypoint: ["java", "-jar", "/app/courtpulse-delivery-worker.jar", "--reconciliation-daemon"]
+    command: ["--reconciliation-daemon"]
     environment:
       COURTPULSE_DB_URL: jdbc:postgresql://postgres:5432/courtpulse
       COURTPULSE_DB_USERNAME: courtpulse

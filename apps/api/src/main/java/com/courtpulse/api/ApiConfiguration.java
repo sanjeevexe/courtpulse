@@ -42,6 +42,7 @@ import com.courtpulse.persistence.JdbcAlertDeliveryRepository;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.JdbcReconciliationOperationsRepository;
 import com.courtpulse.api.notifications.NotificationService;
+import com.courtpulse.api.operations.OperationalMetrics;
 import com.courtpulse.persistence.MicrometerRuleEngineMetrics;
 import com.courtpulse.persistence.RuleEngineMetrics;
 import com.courtpulse.api.ownership.OwnershipService;
@@ -148,6 +149,11 @@ public class ApiConfiguration {
             Gauge.builder("courtpulse.delivery.dlq.depth", deliveries,
                     work -> work.operations(clock.instant()).dlqDepth()).register(registry);
         };
+    }
+
+    @Bean
+    MeterBinder operationalMeters(JdbcClient jdbc, Clock clock) {
+        return new OperationalMetrics(jdbc, clock);
     }
 
     @Bean

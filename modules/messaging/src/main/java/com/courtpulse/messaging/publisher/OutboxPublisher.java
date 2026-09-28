@@ -7,6 +7,8 @@ import com.courtpulse.messaging.queue.QueuePublishException;
 import com.courtpulse.messaging.queue.QueueSendRequest;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.LeasedOutboxRecord;
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -71,6 +73,9 @@ public final class OutboxPublisher {
 
     private PublisherBatchResult publishOne(
             LeasedOutboxRecord record, PublisherFailureMode failureMode) {
+        try (var span = TraceContext.continueFrom(record.traceparent(),
+                "game-event publish", SpanKind.PRODUCER)) {
+        span.span().setAttribute("courtpulse.event.id", record.eventId());
         GameEventEnvelope envelope = new GameEventEnvelope(
                 record.outboxId().toString(),
                 GameEventEnvelope.MESSAGE_TYPE,
@@ -84,12 +89,14 @@ public final class OutboxPublisher {
                 record.occurredAt(),
                 record.outboxId(),
                 record.deduplicationKey(),
-                null);
+                null,
+                TraceContext.currentTraceparent());
         try {
             String providerMessageId = queue.send(new QueueSendRequest(
                     codec.encode(envelope),
                     record.messageGroupId(),
-                    record.deduplicationKey()));
+                    record.deduplicationKey(),
+                    TraceContext.currentTraceparent()));
             LOGGER.atInfo()
                     .addKeyValue("outboxId", record.outboxId())
                     .addKeyValue("gameId", record.gameId())
@@ -106,6 +113,7 @@ public final class OutboxPublisher {
         } catch (SimulatedPublisherCrashException exception) {
             throw exception;
         } catch (QueuePublishException exception) {
+            span.span().recordException(exception);
             RetryDecision decision = retryPolicy.afterFailure(record.attempt(), exception.retryable());
             boolean owned;
             Instant failureTime = clock.instant();
@@ -121,6 +129,7 @@ public final class OutboxPublisher {
             owned = Boolean.TRUE.equals(transactions.execute(status -> repository.markFailed(
                     record.outboxId(), leaseOwner, failureTime, exception.getMessage())));
             return new PublisherBatchResult(1, 0, 0, owned ? 1 : 0, owned ? 0 : 1);
+        }
         }
     }
 }

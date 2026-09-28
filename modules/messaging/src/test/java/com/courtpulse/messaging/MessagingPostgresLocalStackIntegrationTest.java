@@ -144,6 +144,17 @@ class MessagingPostgresLocalStackIntegrationTest {
     }
 
     @Test
+    void sqsTraceparentRoundTripsAsMetadataWithoutChangingPrivateBody() {
+        String parent = "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01";
+        SqsQueueAdapter queue = new SqsQueueAdapter(sqs, queueUrl);
+        queue.send(new QueueSendRequest("opaque-delivery-id", "safe-group", "safe-dedup", parent));
+        var received = queue.receive(1, Duration.ofSeconds(2));
+        assertEquals(1, received.size());
+        assertEquals("opaque-delivery-id", received.getFirst().body());
+        assertEquals(parent, received.getFirst().traceparent());
+    }
+
+    @Test
     void leasesPreventDoubleClaimsPreserveGroupOrderAndAllowIndependentGroups() {
         importFixture();
         JdbcOutboxPublicationRepository repository = services.publications();

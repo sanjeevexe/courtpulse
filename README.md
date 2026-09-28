@@ -716,12 +716,40 @@ modules/persistence  Flyway, JDBC, checkpoints, idempotency, outbox leases
 modules/messaging    queue port, publisher/consumer, AWS SDK v2 SQS adapter
 modules/testkit      reusable synthetic fixture
 modules/query        read models, keyset cursors, data status, bounded JDBC
+modules/observability  validated W3C trace context and span conventions
 apps/replay-cli      infrastructure-free replay
 apps/durable-replay-cli  direct PostgreSQL replay
 apps/queue-replay-cli    bounded PostgreSQL -> FIFO SQS -> PostgreSQL demo
 apps/api             Spring MVC read API, DTOs, OpenAPI, errors, health
 apps/web             React dashboard, typed REST client, Nginx same-origin boundary
 ```
+
+## Local observability
+
+Run `scripts/start-observability.sh` to start a separate, pinned Compose project with
+OpenTelemetry Collector, Tempo, Prometheus, Grafana, Mailpit, and the CourtPulse services.
+Its PostgreSQL, LocalStack, and telemetry volumes are distinct from the normal Compose
+project. The API and worker images contain a version-pinned Java agent verified by SHA-256 at
+build time; it is inert unless this overlay enables it. The script generates ignored local
+credentials and prints the loopback Grafana URL. Use
+`scripts/observability-compose.sh ps`, `logs SERVICE`, or `down` to inspect or stop it;
+`down` retains the observability project's data. The normal `compose.yaml` and its volumes
+are not modified by this workflow.
+
+Trace context is carried through durable outbox rows, FIFO message metadata, reconciliation
+claims, and delivery work. Only a validated `traceparent` is propagated; no private rule
+parameters, addresses, tokens, or raw payloads enter telemetry. API metrics are available
+to Prometheus through a generated basic-auth scrape credential. `/actuator/metrics` remains
+operations-authorized and Grafana requires a local password. The dashboard shows feed
+freshness, event and outbox lag, queue/DLQ depth, blocked corrections, delivery outcomes,
+and worker heartbeat age. [ADR 0011](docs/adr/0011-local-observability.md) records the
+tradeoffs; [the observability runbook](docs/runbooks/observability.md) covers the alarms.
+Run `scripts/verify-observability.sh` to exercise a real blocked gap, alert firing, trace
+linkage, and worker recovery in a uniquely named isolated project. It requires one trace to
+contain spans from three separate processes (fixture ingest, queue processor, and delivery
+worker), checks that no private address or subject appears in traces or metrics, and waits for
+`CourtPulseReconciliationBlocked`, `CourtPulseWorkerStale`, and `CourtPulseDlqNonEmpty` to fire
+(and the first two to resolve) from real failures, not synthetic metric values.
 
 ## Troubleshooting and shutdown
 
@@ -775,3 +803,4 @@ See [ADR 0001](docs/adr/0001-infrastructure-independent-domain.md),
 [ADR 0008](docs/adr/0008-structured-personalized-alert-rules.md), and
 [ADR 0009](docs/adr/0009-reliable-alert-delivery.md), and
 [ADR 0010](docs/adr/0010-corrections-and-reconciliation.md).
+[ADR 0011](docs/adr/0011-local-observability.md) covers local telemetry.

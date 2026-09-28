@@ -7,6 +7,7 @@ description = "PostgreSQL repositories and durable transactional processing"
 dependencies {
     api(project(":modules:domain"))
     api(project(":modules:providers"))
+    implementation(project(":modules:observability"))
 
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
     implementation("org.springframework:spring-jdbc")

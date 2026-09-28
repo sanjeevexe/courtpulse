@@ -10,6 +10,8 @@ import com.courtpulse.domain.game.GameState;
 import com.courtpulse.domain.replay.StateChecksum;
 import com.courtpulse.providers.fixture.LoadedFixture;
 import com.courtpulse.providers.fixture.LoadedSourceEvent;
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
@@ -58,7 +60,9 @@ public final class GameReconciliationService {
         if (fixture.sourceEvents().isEmpty()) {
             throw new IllegalArgumentException("Correction fixture must contain source events");
         }
-        return transactions.execute(status -> submitInTransaction(fixture));
+        try (var span = TraceContext.start("correction ingest", SpanKind.INTERNAL)) {
+            return transactions.execute(status -> submitInTransaction(fixture));
+        }
     }
 
     private Submission submitInTransaction(LoadedFixture fixture) {
@@ -135,14 +139,16 @@ public final class GameReconciliationService {
             params.put("eventId", correctionEventId);
             params.put("now", SqlTime.offset(now));
             params.put("blocked", conflicts > 0);
+            params.put("traceparent", TraceContext.currentTraceparent());
             jdbc.sql("""
                             INSERT INTO game_reconciliations (
                                 game_id, status, first_affected_sequence, generation,
-                                correction_event_id, last_error_code, requested_at, updated_at)
+                                correction_event_id, last_error_code, requested_at, updated_at,
+                                traceparent)
                             VALUES (:gameId, CASE WHEN :blocked THEN 'BLOCKED' ELSE 'PENDING' END,
                                 :firstAffected, 0, :eventId,
                                 CASE WHEN :blocked THEN 'ambiguous_revision' ELSE NULL END,
-                                :now, :now)
+                                :now, :now, :traceparent)
                             ON CONFLICT (game_id) DO UPDATE
                             SET status = CASE WHEN :blocked THEN 'BLOCKED' ELSE 'PENDING' END,
                                 first_affected_sequence = CASE
@@ -152,6 +158,7 @@ public final class GameReconciliationService {
                                         :firstAffected) END,
                                 correction_event_id = COALESCE(:eventId,
                                     game_reconciliations.correction_event_id),
+                                traceparent = COALESCE(:traceparent, game_reconciliations.traceparent),
                                 last_error_code = CASE WHEN :blocked THEN 'ambiguous_revision' ELSE NULL END,
                                 requested_revision = game_reconciliations.requested_revision + 1,
                                 requested_at = :now, updated_at = :now, completed_at = NULL
@@ -165,7 +172,11 @@ public final class GameReconciliationService {
         if (claim == null) {
             return new Result("SKIPPED", 0, null, null);
         }
-        return transactions.execute(status -> rebuild(claim));
+        try (var span = TraceContext.continueFrom(claim.traceparent(),
+                "game reconcile", SpanKind.CONSUMER)) {
+            span.span().setAttribute("courtpulse.reconciliation.outcome.pending", true);
+            return transactions.execute(status -> rebuild(claim));
+        }
     }
 
     /** One bounded polling pass; BLOCKED rows are deliberately excluded. */
@@ -186,12 +197,13 @@ public final class GameReconciliationService {
         Instant now = clock.instant();
         var row = jdbc.sql("""
                         SELECT status, generation, requested_revision, first_affected_sequence,
-                               correction_event_id
+                               correction_event_id, traceparent
                         FROM game_reconciliations WHERE game_id = :gameId FOR UPDATE
                         """).param("gameId", gameId)
                 .query((rs, n) -> new Claim(gameId, rs.getInt("generation") + 1,
                         rs.getLong("requested_revision"), rs.getLong("first_affected_sequence"),
-                        rs.getString("correction_event_id"), rs.getString("status")))
+                        rs.getString("correction_event_id"), rs.getString("status"),
+                        rs.getString("traceparent")))
                 .optional().orElse(null);
         if (row == null || !("PENDING".equals(row.status())
                 || ("REBUILDING".equals(row.status()) && abandoned(gameId, now)))) {
@@ -443,7 +455,7 @@ public final class GameReconciliationService {
     }
 
     private record Claim(String gameId, int generation, long requestedRevision,
-            long firstAffected, String eventId, String status) {}
+            long firstAffected, String eventId, String status, String traceparent) {}
     private record EventRow(String eventId, UUID rawId, long sequence, int revision) {}
     private record AlertKey(String ruleId, String triggerKey) {}
     private record ProviderKey(String source, String providerEventId) {}

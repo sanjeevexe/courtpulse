@@ -4,6 +4,8 @@ import com.courtpulse.messaging.queue.QueuePort;
 import com.courtpulse.messaging.queue.ReceivedQueueMessage;
 import com.courtpulse.persistence.ClaimedEmailDelivery;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.observability.TraceContext;
+import io.opentelemetry.api.trace.SpanKind;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -38,6 +40,8 @@ public final class DeliveryQueueConsumer {
         transactions.executeWithoutResult(status -> work.recoverExpired(clock.instant()));
         int completed = 0;
         for (ReceivedQueueMessage message : queue.receive(10, Duration.ofSeconds(2))) {
+            try (var span = TraceContext.continueFrom(message.traceparent(),
+                    "alert-delivery consume", SpanKind.CONSUMER)) {
             LOGGER.debug("Delivery queue message received messageId={} receiveCount={}",
                     message.providerMessageId(), message.receiveCount());
             UUID deliveryId;
@@ -78,6 +82,7 @@ public final class DeliveryQueueConsumer {
             }
             queue.delete(message.receiptHandle());
             completed++;
+            }
         }
         return completed;
     }

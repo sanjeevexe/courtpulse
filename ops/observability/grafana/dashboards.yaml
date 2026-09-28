@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: CourtPulse
+    orgId: 1
+    folder: CourtPulse
+    type: file
+    disableDeletion: true
+    options:
+      path: /var/lib/grafana/dashboards

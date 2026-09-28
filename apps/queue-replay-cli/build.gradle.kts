@@ -9,6 +9,7 @@ dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
     implementation(platform("software.amazon.awssdk:bom:2.55.1"))
     implementation(project(":modules:messaging"))
+    implementation(project(":modules:observability"))
     implementation(project(":modules:testkit"))
 
     implementation("org.springframework.boot:spring-boot-starter")

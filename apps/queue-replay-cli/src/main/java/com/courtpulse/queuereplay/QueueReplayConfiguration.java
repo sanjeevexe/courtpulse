@@ -12,6 +12,7 @@ import com.courtpulse.messaging.delivery.DeliveryQueueConsumer;
 import com.courtpulse.messaging.delivery.EmailSender;
 import com.courtpulse.messaging.delivery.LocalSmtpEmailSender;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
+import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
 import com.courtpulse.persistence.DurableGameProcessor;
 import com.courtpulse.persistence.FixtureIngestionService;
 import com.courtpulse.persistence.GameReconciliationService;
@@ -100,6 +101,11 @@ public class QueueReplayConfiguration {
     @Bean
     JdbcDeliveryWorkRepository deliveryWorkRepository(JdbcClient jdbc) {
         return new JdbcDeliveryWorkRepository(jdbc);
+    }
+
+    @Bean
+    JdbcOperationalTelemetryRepository operationalTelemetryRepository(JdbcClient jdbc) {
+        return new JdbcOperationalTelemetryRepository(jdbc);
     }
 
     @Bean
@@ -265,6 +271,7 @@ public class QueueReplayConfiguration {
             GameEventEnvelopeCodec codec,
             JdbcGameProcessingRepository processing,
             JdbcOutboxPublicationRepository outbox,
+            JdbcOperationalTelemetryRepository operationalTelemetry,
             DurableGameProcessor processor,
             @Value("${courtpulse.consumer.batch-size}") int batchSize,
             @Value("${courtpulse.consumer.long-poll-wait}") Duration waitTime) {
@@ -274,6 +281,7 @@ public class QueueReplayConfiguration {
                 new CanonicalEventEnvelopeValidator(processing, outbox),
                 processor,
                 batchSize,
-                waitTime);
+                waitTime,
+                operationalTelemetry);
     }
 }

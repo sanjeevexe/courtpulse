@@ -95,7 +95,8 @@ public final class JdbcOutboxPublicationRepository {
                         SELECT outbox.id, outbox.deduplication_key, outbox.aggregate_id,
                                outbox.message_group_id, outbox.attempts,
                                event.game_id, event.sequence_number, event.source,
-                               event.provider_event_id, event.revision, event.occurred_at
+                               event.provider_event_id, event.revision, event.occurred_at,
+                               outbox.traceparent
                         FROM outbox
                         JOIN canonical_events event ON event.event_id = outbox.aggregate_id
                         WHERE outbox.id IN (:ids)
@@ -113,7 +114,8 @@ public final class JdbcOutboxPublicationRepository {
                         resultSet.getInt("revision"),
                         resultSet.getObject("occurred_at", OffsetDateTime.class).toInstant(),
                         resultSet.getString("message_group_id"),
-                        resultSet.getInt("attempts")))
+                        resultSet.getInt("attempts"),
+                        resultSet.getString("traceparent")))
                 .list();
     }
 

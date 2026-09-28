@@ -1,0 +1,99 @@
+services:
+  api:
+    environment:
+      COURTPULSE_METRICS_SCRAPE_PASSWORD: ${COURTPULSE_METRICS_SCRAPE_PASSWORD:?Run scripts/start-observability.sh}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -javaagent:/opt/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: courtpulse-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_TRACES_SAMPLER: always_on
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  delivery-worker:
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -javaagent:/opt/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: courtpulse-delivery-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_TRACES_SAMPLER: always_on
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  reconciliation-worker:
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -javaagent:/opt/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: courtpulse-reconciliation-worker
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_TRACES_SAMPLER: always_on
+    volumes:
+      - ./fixtures:/app/fixtures:ro
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.161.0
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./ops/observability/collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on:
+      - tempo
+
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["observability"]
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+      - ./ops/observability/tempo.yaml:/etc/tempo/config.yaml:ro
+      - courtpulse-tempo-data:/var/tempo
+
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    profiles: ["observability"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    volumes:
+      - ./ops/observability/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./ops/observability/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - ${COURTPULSE_METRICS_SCRAPE_PASSWORD_FILE:?Run scripts/start-observability.sh}:/etc/prometheus/scrape-password:ro
+      - courtpulse-prometheus-data:/prometheus
+    depends_on:
+      api:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: courtpulse
+      GF_SECURITY_ADMIN_PASSWORD: ${COURTPULSE_GRAFANA_ADMIN_PASSWORD:?Run scripts/start-observability.sh}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:${COURTPULSE_GRAFANA_HOST_PORT:-3000}:3000"
+    volumes:
+      - ./ops/observability/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./ops/observability/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./ops/observability/grafana/courtpulse.json:/var/lib/grafana/dashboards/courtpulse.json:ro
+      - courtpulse-grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - tempo
+
+volumes:
+  courtpulse-tempo-data:
+  courtpulse-prometheus-data:
+  courtpulse-grafana-data:

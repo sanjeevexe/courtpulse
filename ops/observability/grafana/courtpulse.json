@@ -1,0 +1,20 @@
+{
+  "uid": "courtpulse-local",
+  "title": "CourtPulse operations",
+  "tags": ["courtpulse", "local"],
+  "timezone": "browser",
+  "schemaVersion": 40,
+  "version": 1,
+  "refresh": "10s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id": 1, "title": "API health", "type": "stat", "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "up{job=\"courtpulse-api\"}", "refId": "A"}]},
+    {"id": 2, "title": "Live feed freshness (seconds)", "type": "timeseries", "gridPos": {"x": 6, "y": 0, "w": 9, "h": 7}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_feed_freshness_seconds", "refId": "A"}]},
+    {"id": 3, "title": "Oldest unprocessed event (seconds)", "type": "timeseries", "gridPos": {"x": 15, "y": 0, "w": 9, "h": 7}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_event_oldest_unprocessed_seconds", "refId": "A"}]},
+    {"id": 4, "title": "Outbox backlog by destination", "type": "timeseries", "gridPos": {"x": 0, "y": 7, "w": 12, "h": 7}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_outbox_backlog", "legendFormat": "{{destination}}", "refId": "A"}]},
+    {"id": 5, "title": "Queue and DLQ depth", "type": "timeseries", "gridPos": {"x": 12, "y": 7, "w": 12, "h": 7}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_queue_depth", "legendFormat": "{{queue}}", "refId": "A"}]},
+    {"id": 6, "title": "Blocked reconciliations", "type": "stat", "gridPos": {"x": 0, "y": 14, "w": 6, "h": 5}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_reconciliation_blocked", "refId": "A"}]},
+    {"id": 7, "title": "Delivery retries and terminal failures", "type": "timeseries", "gridPos": {"x": 6, "y": 14, "w": 9, "h": 7}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_delivery_retries", "legendFormat": "retry", "refId": "A"}, {"expr": "courtpulse_delivery_terminal_failures", "legendFormat": "terminal", "refId": "B"}]},
+    {"id": 8, "title": "Worker heartbeat age (seconds)", "type": "timeseries", "gridPos": {"x": 15, "y": 14, "w": 9, "h": 7}, "datasource": {"type": "prometheus", "uid": "courtpulse-prometheus"}, "targets": [{"expr": "courtpulse_worker_heartbeat_age_seconds", "legendFormat": "{{worker}}", "refId": "A"}]}
+  ]
+}

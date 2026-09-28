@@ -1,0 +1,74 @@
+groups:
+  - name: courtpulse-operations
+    rules:
+      - alert: CourtPulseApiUnavailable
+        expr: up{job="courtpulse-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: CourtPulse API scrape is unavailable
+          runbook: docs/runbooks/observability.md#api-or-scrape-unavailable
+      - alert: CourtPulseLiveFeedStale
+        expr: courtpulse_feed_live_games > 0 and courtpulse_feed_freshness_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A live game's source feed has not been observed for two minutes
+          runbook: docs/runbooks/observability.md#stale-feed
+      - alert: CourtPulseEventLag
+        expr: courtpulse_event_oldest_unprocessed_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: An accepted event has not been processed for two minutes
+          runbook: docs/runbooks/observability.md#event-or-outbox-lag
+      - alert: CourtPulseOutboxStalled
+        expr: courtpulse_outbox_oldest_pending_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: An outbox publication is more than two minutes old
+          runbook: docs/runbooks/observability.md#event-or-outbox-lag
+      - alert: CourtPulseDlqNonEmpty
+        expr: courtpulse_queue_depth{queue=~".*_dlq"} > 0 or courtpulse_delivery_dlq_depth > 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: A queue dead-letter backlog requires operator review
+          runbook: docs/runbooks/observability.md#dead-letter-queue
+      - alert: CourtPulseReconciliationBlocked
+        expr: courtpulse_reconciliation_blocked > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: At least one game rebuild is blocked by a gap or conflict
+          runbook: docs/runbooks/observability.md#blocked-reconciliation
+      - alert: CourtPulseDeliveryFailure
+        expr: delta(courtpulse_delivery_terminal_failures[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: A private alert delivery reached a terminal failure
+          runbook: docs/runbooks/observability.md#delivery-failures
+      - alert: CourtPulseWorkerStale
+        expr: courtpulse_worker_heartbeat_age_seconds{worker=~"delivery|reconciliation"} > 60
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: A worker has not completed a healthy pass in one minute
+          runbook: docs/runbooks/observability.md#worker-stale
+      - alert: CourtPulseQueueObservationStale
+        expr: courtpulse_queue_observation_age_seconds > 60
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Queue depth observations have stopped
+          runbook: docs/runbooks/observability.md#worker-stale

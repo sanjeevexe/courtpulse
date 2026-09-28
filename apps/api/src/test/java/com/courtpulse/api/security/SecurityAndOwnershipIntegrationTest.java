@@ -70,6 +70,7 @@ class SecurityAndOwnershipIntegrationTest {
                         .with(jwt().jwt(value -> value.subject("user-a"))))
                 .andExpect(status().isForbidden());
         http.perform(get("/actuator/metrics")).andExpect(status().isUnauthorized());
+        http.perform(get("/internal/metrics")).andExpect(status().isNotFound());
     }
 
     @Test

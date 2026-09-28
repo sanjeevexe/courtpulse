@@ -19,7 +19,9 @@ class GameEventEnvelopeCodecTest {
         GameEventEnvelope envelope = new GameEventEnvelope(
                 outboxId.toString(), "CANONICAL_EVENT_READY", 1, "event-1", "game-1", 1,
                 "fixture", "provider-1", 1, Instant.parse("2026-01-01T00:00:01Z"),
-                outboxId, "canonical:event-1", "trace-1");
+                outboxId, "canonical:event-1",
+                "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
+                "00-0123456789abcdef0123456789abcdef-abcdef0123456789-01");
 
         assertEquals(envelope, codec.decode(codec.encode(envelope)));
     }

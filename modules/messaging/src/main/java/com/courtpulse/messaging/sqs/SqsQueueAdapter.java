@@ -14,6 +14,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
+import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
@@ -48,12 +49,16 @@ public final class SqsQueueAdapter implements QueuePort {
     @Override
     public String send(QueueSendRequest request) {
         try {
-            return client.sendMessage(SendMessageRequest.builder()
+            var builder = SendMessageRequest.builder()
                             .queueUrl(queueUrl)
                             .messageBody(request.body())
                             .messageGroupId(request.messageGroupId())
-                            .messageDeduplicationId(request.deduplicationId())
-                            .build())
+                            .messageDeduplicationId(request.deduplicationId());
+            if (request.traceparent() != null) {
+                builder.messageAttributes(Map.of("traceparent", MessageAttributeValue.builder()
+                        .dataType("String").stringValue(request.traceparent()).build()));
+            }
+            return client.sendMessage(builder.build())
                     .messageId();
         } catch (SdkException exception) {
             throw new QueuePublishException(
@@ -71,6 +76,7 @@ public final class SqsQueueAdapter implements QueuePort {
                         .maxNumberOfMessages(Math.min(10, Math.max(1, maxMessages)))
                         .waitTimeSeconds(waitSeconds)
                         .messageSystemAttributeNamesWithStrings("ApproximateReceiveCount")
+                        .messageAttributeNames("traceparent")
                         .build())
                 .messages().stream()
                 .map(message -> new ReceivedQueueMessage(
@@ -78,7 +84,9 @@ public final class SqsQueueAdapter implements QueuePort {
                         message.receiptHandle(),
                         message.body(),
                         Integer.parseInt(message.attributesAsStrings()
-                                .getOrDefault("ApproximateReceiveCount", "1"))))
+                                .getOrDefault("ApproximateReceiveCount", "1")),
+                        message.messageAttributes().containsKey("traceparent")
+                                ? message.messageAttributes().get("traceparent").stringValue() : null))
                 .toList();
         LOGGER.debug("SQS queue polled queueUrl={} received={}", queueUrl, received.size());
         return received;
