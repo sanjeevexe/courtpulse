@@ -5,12 +5,13 @@ import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../auth/AuthContext';
+import { providerSnapshot } from '../test/fixtures';
 import { server } from '../test/server';
 import { MyAlertsPage } from './MyAlertsPage';
 import { MyRulesPage } from './MyRulesPage';
 
 const auth: AuthContextValue = {
-  status: 'AUTHENTICATED', enabled: true, subject: 'user-a', accessToken: 'access-token', error: null,
+  status: 'AUTHENTICATED', enabled: true, subject: 'user-a', displayName: 'user-a', accessToken: 'access-token', error: null,
   signInPending: false, signOutPending: false,
   signIn: () => Promise.resolve(), completeCallback: () => Promise.resolve('/'), signOut: () => Promise.resolve(),
 };
@@ -21,12 +22,12 @@ const playerRule = {
   version: 1, createdAt: '2026-09-21T20:00:00Z', updatedAt: '2026-09-21T20:00:00Z',
 };
 
-function renderPrivate(page: 'rules' | 'alerts') {
+function renderPrivate(page: 'rules' | 'alerts', path = '/') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthContext.Provider value={auth}>
-        <MemoryRouter>{page === 'rules' ? <MyRulesPage /> : <MyAlertsPage />}</MemoryRouter>
+        <MemoryRouter initialEntries={[path]}>{page === 'rules' ? <MyRulesPage /> : <MyAlertsPage />}</MemoryRouter>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -45,6 +46,23 @@ describe('My Rules', () => {
     await user.type(screen.getByLabelText('Game ID'), 'game_synthetic_001');
     await user.click(screen.getByRole('button', { name: 'Create rule' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Team ID is required');
+  });
+
+  it('suggests the linked game’s teams and scoring players by name', async () => {
+    server.use(
+      http.get('*/api/v1/me/rules', () => HttpResponse.json({ items: [] })),
+      http.get('*/api/v1/games/:gameId', () => HttpResponse.json(providerSnapshot)),
+    );
+    const user = userEvent.setup();
+    renderPrivate('rules', '/my-rules?gameId=bdl-game-990001');
+    const players = await screen.findByTestId('rule-targets');
+    expect(within(players).getAllByRole('option', { hidden: true }).map((option) => option.getAttribute('label')))
+      .toEqual(['Ada Lane', 'bdl-player-9000204']);
+    expect(screen.getByLabelText('Player ID')).toHaveAttribute('list', 'rule-targets');
+    await user.selectOptions(screen.getByLabelText('Template'), 'SCORING_RUN');
+    const teams = within(screen.getByTestId('rule-targets')).getAllByRole('option', { hidden: true });
+    expect(teams.map((option) => option.getAttribute('value'))).toEqual(['bdl-team-90001', 'bdl-team-90002']);
+    expect(teams[0]).toHaveAttribute('label', 'Harbor City Herons');
   });
 
   it('creates, disables, and deletes an owned rule with bearer authentication', async () => {

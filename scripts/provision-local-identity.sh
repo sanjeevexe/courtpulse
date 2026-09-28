@@ -26,9 +26,16 @@ kcadm=("${compose[@]}" --profile auth exec -T identity /opt/keycloak/bin/kcadm.s
   --server http://127.0.0.1:8080 --realm master \
   --user "${COURTPULSE_IDP_ADMIN_USERNAME}" --password "${COURTPULSE_IDP_ADMIN_PASSWORD}"
 
+# Idempotent: an existing user keeps its ID and only has its password reset.
 provision_user() {
   local username="$1"
   local password="$2"
+  if [[ -n "$("${kcadm[@]}" get users -r courtpulse -q "username=${username}" -q exact=true \
+      --fields id --format csv --noquotes)" ]]; then
+    "${kcadm[@]}" set-password -r courtpulse --username "${username}" \
+      --new-password "${password}" --temporary=false
+    return
+  fi
   "${kcadm[@]}" create users -r courtpulse \
     -s "username=${username}" \
     -s "email=${username}@example.invalid" \

@@ -9,7 +9,7 @@ import {
   type AlertRule,
   type CreateAlertRule,
 } from '../api/client';
-import { useMyRules } from '../api/hooks';
+import { useMyRules, useRuleTargets } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
@@ -30,6 +30,11 @@ export function MyRulesPage() {
   const query = useMyRules(auth.accessToken, auth.status === 'AUTHENTICATED');
   const [type, setType] = useState<RuleKind>('PLAYER_POINTS');
   const [gameId, setGameId] = useState(search.get('gameId') ?? '');
+  // Opened from a game page: suggest that game's teams and scoring players instead of raw IDs.
+  const targets = useRuleTargets(search.get('gameId'));
+  const suggestions = gameId === search.get('gameId')
+    ? (type === 'PLAYER_POINTS' ? targets.data?.players : targets.data?.teams) ?? []
+    : [];
   const [targetId, setTargetId] = useState('');
   const [threshold, setThreshold] = useState('10');
   const [margin, setMargin] = useState('5');
@@ -127,7 +132,13 @@ export function MyRulesPage() {
           <label>Game ID<input value={gameId} maxLength={200} onChange={(event) => setGameId(event.target.value)} /></label>
           {type !== 'CLOSE_GAME' ? (
             <label>{type === 'PLAYER_POINTS' ? 'Player ID' : 'Team ID'}
-              <input value={targetId} maxLength={200} onChange={(event) => setTargetId(event.target.value)} />
+              <input value={targetId} maxLength={200} list={suggestions.length > 0 ? 'rule-targets' : undefined}
+                onChange={(event) => setTargetId(event.target.value)} />
+              {suggestions.length > 0 ? (
+                <datalist id="rule-targets" data-testid="rule-targets">
+                  {suggestions.map((target) => <option key={target.id} value={target.id} label={target.label} />)}
+                </datalist>
+              ) : null}
             </label>
           ) : null}
           {type !== 'CLOSE_GAME' ? (

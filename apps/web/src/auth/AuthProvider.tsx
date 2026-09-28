@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useQueryClient } from '@tanstack/react-query';
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { AuthContext, type AuthContextValue } from './AuthContext';
+import { displayNameOf } from './displayName';
 
 type AuthenticationStatus = 'LOADING' | 'ANONYMOUS' | 'AUTHENTICATED' | 'ERROR';
 
@@ -155,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status,
     enabled,
     subject: user?.profile.sub ?? null,
+    displayName: displayNameOf(user?.profile),
     accessToken: user?.access_token ?? null,
     error,
     signInPending,

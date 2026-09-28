@@ -13,7 +13,7 @@ export function AuthControls() {
         <Link className="text-link" to="/my-rules">My Rules</Link>
         <Link className="text-link" to="/my-alerts">My Alerts</Link>
         <Link className="text-link" to="/notification-settings">Notifications</Link>
-        <span className="auth-subject">Signed in as {auth.subject}</span>
+        <span className="auth-subject">Signed in as {auth.displayName}</span>
         <button
           className="button button--quiet"
           disabled={auth.signOutPending}

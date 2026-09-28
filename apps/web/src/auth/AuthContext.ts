@@ -6,6 +6,7 @@ export interface AuthContextValue {
   status: AuthenticationStatus;
   enabled: boolean;
   subject: string | null;
+  displayName: string | null;
   accessToken: string | null;
   error: string | null;
   signInPending: boolean;

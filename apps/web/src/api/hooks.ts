@@ -66,6 +66,32 @@ export function useGameSnapshot(gameId: string, realtimeConnected = false) {
   });
 }
 
+export interface RuleTarget {
+  id: string;
+  label: string;
+}
+
+/** Teams and scoring players of one game, offered as suggestions when creating a rule for it. */
+export function useRuleTargets(gameId: string | null) {
+  return useQuery({
+    queryKey: ['game', gameId, 'rule-targets'],
+    enabled: gameId !== null && gameId !== '',
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { snapshot } = await getGameSnapshot(gameId ?? '');
+      if (!snapshot) return { teams: [] as RuleTarget[], players: [] as RuleTarget[] };
+      const teams: RuleTarget[] = [
+        { id: snapshot.homeTeamId, label: snapshot.homeTeamName ?? snapshot.homeTeamId },
+        { id: snapshot.awayTeamId, label: snapshot.awayTeamName ?? snapshot.awayTeamId },
+      ];
+      const players: RuleTarget[] = Object.keys(snapshot.playerPoints)
+        .map((id) => ({ id, label: snapshot.playerNames[id] ?? id }))
+        .sort((left, right) => left.label.localeCompare(right.label));
+      return { teams, players };
+    },
+  });
+}
+
 export function snapshotRefreshInterval(
   snapshot: GameSnapshot | undefined,
   realtimeConnected = false,

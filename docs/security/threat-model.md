@@ -33,7 +33,7 @@ deployment-time control.
 | SQL injection through search or rule values | Parameterized SQL only; enum-validated rule types; no dynamic rule code | Verified by design and tests |
 | Vulnerable library or base image | Pinned versions, Dependabot, Trivy image scans fail CI on fixable HIGH/CRITICAL, CodeQL on public repositories, SBOM and provenance on deployed images | Verified locally; CI runs on push |
 | Webhook SSRF | Webhooks out of scope | Documented |
-| Token theft through XSS | CSP without inline script, session storage (not local storage), no silent renew, short token lifetimes | Documented residual risk in README |
+| Token theft through XSS | CSP without inline script, session storage (not local storage), no silent renew, short token lifetimes | Documented residual risk in the [guide](../guide.md#oidc-authentication-and-owned-games) |
 | Plain-HTTP CloudFront-to-ALB hop without a custom domain | Secret origin header and CloudFront-only security group; use test identities until a certificate exists | Documented (ADR 0012) |
 
 ## Residual risks and deliberate omissions
