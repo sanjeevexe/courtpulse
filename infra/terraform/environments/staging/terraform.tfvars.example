@@ -28,6 +28,7 @@ skip_final_snapshot = false
 # Cost levers (see the cost table in docs/deployment/aws-staging.md).
 worker_capacity_provider = "FARGATE_SPOT"
 ingestor_desired_count   = 0
+replay_desired_count     = 1 # real-game replays (ADR 0015); 0 saves ~$7/month
 enable_nightly_shutdown  = false
 enable_tracing           = false
 enable_alb_access_logs   = false

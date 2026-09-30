@@ -50,8 +50,8 @@ locals {
   https_origin = var.alb_certificate_arn != null
 
   # Every long-running service and one-off task family.
-  service_processes = ["api", "processor", "delivery", "reconciliation", "ingestor"]
-  oneoff_processes  = ["migrate", "canary"]
+  service_processes = ["api", "processor", "delivery", "reconciliation", "ingestor", "replay"]
+  oneoff_processes  = ["migrate", "canary", "replay-import"]
   all_processes     = concat(local.service_processes, local.oneoff_processes)
 
   service_names   = { for process in local.service_processes : process => "${local.name_prefix}-${process}" }
@@ -217,5 +217,6 @@ module "cost" {
     delivery       = { name = module.delivery.service_name, desired_count = var.delivery_desired_count }
     reconciliation = { name = module.reconciliation.service_name, desired_count = var.reconciliation_desired_count }
     ingestor       = { name = module.ingestor.service_name, desired_count = var.ingestor_desired_count }
+    replay         = { name = module.replay.service_name, desired_count = var.replay_desired_count }
   }
 }

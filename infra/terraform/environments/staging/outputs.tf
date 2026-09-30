@@ -86,12 +86,18 @@ output "ecs_service_names" {
     delivery       = module.delivery.service_name
     reconciliation = module.reconciliation.service_name
     ingestor       = module.ingestor.service_name
+    replay         = module.replay.service_name
   }
 }
 
 output "migrate_task_family" {
   description = "Task definition family for the one-off --migrate task."
   value       = module.migrate.task_definition_family
+}
+
+output "replay_import_task_family" {
+  description = "Task definition family for the one-off --replay-import task."
+  value       = module.replay_import.task_definition_family
 }
 
 output "canary_task_family" {
@@ -182,9 +188,10 @@ output "github_actions_variables" {
     ECR_API_REPOSITORY         = module.cicd.api_repository_url
     ECR_WORKER_REPOSITORY      = module.cicd.worker_repository_url
     ECS_CLUSTER                = aws_ecs_cluster.this.name
-    ECS_SERVICES               = join(" ", [module.api.service_name, module.processor.service_name, module.delivery.service_name, module.reconciliation.service_name, module.ingestor.service_name])
+    ECS_SERVICES               = join(" ", [module.api.service_name, module.processor.service_name, module.delivery.service_name, module.reconciliation.service_name, module.ingestor.service_name, module.replay.service_name])
     MIGRATE_TASK_FAMILY        = module.migrate.task_definition_family
     CANARY_TASK_FAMILY         = module.canary.task_definition_family
+    REPLAY_IMPORT_TASK_FAMILY  = module.replay_import.task_definition_family
     ONEOFF_LOG_GROUP           = aws_cloudwatch_log_group.oneoff.name
     TASK_SUBNETS               = join(",", module.network.public_subnet_ids)
     TASK_SECURITY_GROUP        = module.network.worker_security_group_id

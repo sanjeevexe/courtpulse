@@ -105,6 +105,8 @@ run "defaults_plan" {
       jsonencode(module.ingestor.container_definitions[0].command) == jsonencode(["--ingest-daemon"]),
       jsonencode(module.migrate.container_definitions[0].command) == jsonencode(["--migrate"]),
       jsonencode(module.canary.container_definitions[0].command) == jsonencode(["--canary"]),
+      jsonencode(module.replay.container_definitions[0].command) == jsonencode(["--ingest-daemon"]),
+      jsonencode(module.replay_import.container_definitions[0].command) == jsonencode(["--replay-import=cdnnba_po_2025"]),
     ])
     error_message = "Each worker-image process must run its contract command."
   }
@@ -117,6 +119,11 @@ run "defaults_plan" {
   assert {
     condition     = local.ingestor_environment["COURTPULSE_PROVIDER_REQUESTS_PER_MINUTE"] == "30" && local.ingestor_environment["COURTPULSE_PROVIDER_BASE_URL"] == "https://api.balldontlie.io" && local.ingestor_environment["COURTPULSE_PROVIDER"] == "balldontlie"
     error_message = "The ingestor needs provider, base URL, and request-rate settings."
+  }
+
+  assert {
+    condition     = local.replay_environment["COURTPULSE_PROVIDER"] == "nba-replay" && jsonencode(module.replay.container_definitions[0].healthCheck.command) == jsonencode(["CMD-SHELL", "find /tmp/courtpulse-ingestor-worker.heartbeat -mmin -1 | grep -q heartbeat"])
+    error_message = "The replay worker runs the ingest daemon with the replay provider and the ingestor heartbeat."
   }
 
   assert {

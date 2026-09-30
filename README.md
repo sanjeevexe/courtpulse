@@ -113,7 +113,7 @@ with Grafana, Prometheus, and Tempo.
 
 | Area | Result | Details |
 | --- | --- | --- |
-| Tests | 200+ backend tests against real PostgreSQL and LocalStack containers, 60+ web unit tests, Playwright end-to-end runs, and 13 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
+| Tests | 199 backend tests against real PostgreSQL and LocalStack containers, 64 web unit tests, Playwright end-to-end runs, and 11 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
 | Real games | Replays of real 2026 playoff games (including two overtime games) reproduce each official final score and apply every play, with no rejected plays | `REAL_DATA=1 scripts/verify-replay.sh` |
 | Performance | Sustained 200 events/s across 50 games: p95 processing delay 82 ms (target 500 ms). 2,000 WebSocket clients see hints about 0.3 s after commit (target 2 s). 100,000 stored rules; a hot-game lookup takes 0.9 ms. | [Performance report](docs/verification/performance-report.md) |
 | Recovery | Processor SIGKILL, PostgreSQL restart, 20 s SQS partition, and SIGTERM mid-publication all recover with exactly-once state and one alert per rule | [Recovery report](docs/verification/recovery-report.md) |
@@ -167,7 +167,7 @@ scripts                demo, verification harnesses, and AWS deployment helpers
 `infra/terraform` describes a complete staging environment, and `scripts/aws` builds, deploys,
 smoke-tests, rolls back, and tears it down. It has been validated offline only
 (`make terraform-check`); **it has never been applied, and running it costs money**: roughly
-USD 80-100 per month if left on, or well under a dollar for a four-hour create-demo-destroy
+USD 85-110 per month if left on, or well under a dollar for a four-hour create-demo-destroy
 session, by the guide's estimates. Follow [the deployment guide](docs/deployment/aws-staging.md),
 which sets up a budget before anything billable.
 

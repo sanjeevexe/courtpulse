@@ -4,6 +4,7 @@
 #
 #   scripts/aws/run-oneoff-task.sh migrate <git-sha>
 #   scripts/aws/run-oneoff-task.sh canary  <git-sha>
+#   scripts/aws/run-oneoff-task.sh replay-import <git-sha>
 #
 # Environment: AWS_REGION, ECS_CLUSTER, MIGRATE_TASK_FAMILY, CANARY_TASK_FAMILY,
 # TASK_SUBNETS (comma-separated public subnets), TASK_SECURITY_GROUP,
@@ -13,6 +14,8 @@
 #          concurrent API start safe).
 # canary:  idempotently imports the synthetic fixture and waits until the
 #          processor service has produced its known checksum.
+# replay-import: downloads the replay dataset (var.replay_dataset) into the
+#          real-game replay catalog; safe to repeat. Needs REPLAY_IMPORT_TASK_FAMILY.
 set -Eeuo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,7 +37,11 @@ case "$kind" in
     require_env CANARY_TASK_FAMILY
     family="$CANARY_TASK_FAMILY"
     ;;
-  *) die "Usage: $0 migrate|canary <git-sha>" ;;
+  replay-import)
+    require_env REPLAY_IMPORT_TASK_FAMILY
+    family="$REPLAY_IMPORT_TASK_FAMILY"
+    ;;
+  *) die "Usage: $0 migrate|canary|replay-import <git-sha>" ;;
 esac
 
 timeout="${ONEOFF_TIMEOUT_SECONDS:-900}"

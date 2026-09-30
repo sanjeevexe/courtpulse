@@ -239,6 +239,28 @@ variable "reconciliation_desired_count" {
   default     = 1
 }
 
+variable "replay_desired_count" {
+  description = "Real-game replay workers (docs/adr/0015-real-game-replay.md). One is enough for a demo."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.replay_desired_count >= 0 && var.replay_desired_count <= 1
+    error_message = "Run zero or one replay worker; sessions are shared state, one poller is enough."
+  }
+}
+
+variable "replay_dataset" {
+  description = "nba_data dataset the replay-import task downloads (cdnnba_po_2025 is the 2026 playoffs)."
+  type        = string
+  default     = "cdnnba_po_2025"
+
+  validation {
+    condition     = can(regex("^cdnnba(_po)?_20[0-9]{2}$", var.replay_dataset))
+    error_message = "Use a dataset name such as cdnnba_po_2025 or cdnnba_2025."
+  }
+}
+
 variable "ingestor_desired_count" {
   description = "Live ingestor tasks. Keep 0 until the provider key secret has a value."
   type        = number

@@ -23,10 +23,11 @@ month, default variables, light staging traffic, and no Free Tier. Prices change
 | Resource | What drives the charge | Always-on estimate (USD/month) | Free Tier notes |
 | --- | --- | --- | --- |
 | [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/pricing/) | $0.0225/hour plus LCU usage (idle staging uses a small fraction of one LCU) | ~$17-18 | Legacy 12-month tier (accounts before 2025-07-15) included 750 ALB hours |
-| [Public IPv4 addresses](https://aws.amazon.com/vpc/pricing/) | $0.005 per address-hour. **Count: 2 for the ALB (one per AZ) + 1 per running task** = 2 + api 1 + processor 1 + delivery 1 + reconciliation 1 = **6** (7 with the ingestor). Rolling deploys and one-off tasks add a few minutes of extra addresses. | ~$21.90 (6 addresses) | The EC2 Free Tier IPv4 allowance does not cover ALB or Fargate addresses |
+| [Public IPv4 addresses](https://aws.amazon.com/vpc/pricing/) | $0.005 per address-hour. **Count: 2 for the ALB (one per AZ) + 1 per running task** = 2 + api 1 + processor 1 + delivery 1 + reconciliation 1 = **6** (plus 1 each for the replay worker, which is on by default, and the ingestor; their rows below include it). Rolling deploys and one-off tasks add a few minutes of extra addresses. | ~$21.90 (6 addresses) | The EC2 Free Tier IPv4 allowance does not cover ALB or Fargate addresses |
 | [Fargate](https://aws.amazon.com/fargate/pricing/), API | 0.5 vCPU x $0.04048/h + 1 GB x $0.004445/h | ~$18.02 | None |
 | Fargate, 3 workers | 0.25 vCPU + 0.5 GB each: $9.01 each on demand; Fargate Spot (default) is typically ~70% less and varies | ~$8 on Spot (~$27 on demand) | None |
 | Fargate, ingestor (off by default) | Same size as a worker, plus one public IPv4 | $0 (~$3 Spot + $3.65 IPv4 when on) | None |
+| Fargate, replay worker (on by default; `replay_desired_count = 0` turns it off) | Same size as a worker, plus one public IPv4 | ~$3 Spot + $3.65 IPv4 (~$0.01 per hour) | None |
 | [RDS PostgreSQL](https://aws.amazon.com/rds/postgresql/pricing/) | db.t4g.micro single-AZ $0.016/h (~$11.68); 20 GB gp3 $0.115/GB-month (~$2.30); backups up to the DB size and 7-day Performance Insights are free | ~$14 | Legacy 12-month tier: 750 micro hours + 20 GB storage + 20 GB backup |
 | [CloudFront](https://aws.amazon.com/cloudfront/pricing/) + CloudFront Function | Requests, data out, function invocations, invalidation paths | $0 | Always free: 1 TB out, 10M requests, 2M function invocations, 1,000 invalidation paths per month |
 | [Secrets Manager](https://aws.amazon.com/secrets-manager/pricing/) | $0.40 per secret-month (RDS-managed master secret + provider key) + $0.05 per 10,000 calls | ~$0.80 | Short free trial for new secrets only |
@@ -41,8 +42,8 @@ month, default variables, light staging traffic, and no Free Tier. Prices change
 | Data transfer | CloudFront-to-origin and in-region ECR pulls are free; internet egress beyond 100 GB/month is billed | $0 | 100 GB/month internet egress free across services |
 | NAT gateway, WAF, Container Insights, KMS keys, X-Ray | Not created by default | $0 | X-Ray (optional tracing): 100,000 traces/month free, then $5 per million |
 
-**Always-on totals (estimate):** about **$80/month** with Spot workers, about **$100/month** with
-on-demand workers, or roughly $0.11-0.14 per hour. That is well above the default $25 budget.
+**Always-on totals (estimate):** about **$87/month** with Spot workers, about **$110/month** with
+on-demand workers (both including the replay worker), or roughly $0.12-0.15 per hour. That is well above the default $25 budget.
 
 - **Nightly shutdown** (`enable_nightly_shutdown = true`, weekdays 07:45-23:00) removes about half
   of the Fargate, task-address, and RDS-instance hours, but the ALB (~$17), its two addresses
@@ -263,6 +264,11 @@ Every step is a script that you can run locally with the same variables exported
 - Direct requests to `terraform output -raw api_origin` return 403.
 - CloudWatch dashboard `courtpulse-staging`: ALB, SQS, RDS, and ECS widgets have data; alarms are
   `OK` or `INSUFFICIENT_DATA`, not `ALARM`.
+- Replay a real game: import the 2026 playoffs once with
+  `scripts/aws/run-oneoff-task.sh replay-import <git-sha>` (downloads about 1 MB from GitHub;
+  safe to repeat), then sign in, open **Replays**, and start a game. The replay flows through
+  SQS, the processor, alert rules, SES email, and WebSockets exactly as a live game would, which
+  makes it the best end-to-end check of a fresh deployment (see ADR 0015).
 - Billing > Cost Explorer the next day, filtered by tag `Application=courtpulse` once you activate
   that cost allocation tag in the Billing console.
 

@@ -1,6 +1,6 @@
 # Staging cost control and teardown
 
-Always-on staging is estimated at roughly $80-100 per month in us-east-1 (the table and its
+Always-on staging is estimated at roughly $85-110 per month in us-east-1 (the table and its
 assumptions are in [the deployment guide](../deployment/aws-staging.md#what-costs-money)). The default
 budget is $25. The budget only sends email; it never stops resources. Destroying the stack is the
 only hard stop.

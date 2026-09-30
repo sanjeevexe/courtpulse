@@ -109,7 +109,17 @@ locals {
     ingestor       = ["--ingest-daemon"]
     migrate        = ["--migrate"]
     canary         = ["--canary"]
+    replay         = ["--ingest-daemon"]
+    replay-import  = ["--replay-import=${var.replay_dataset}"]
   }
+
+  # Replays of imported real games through the ingest daemon (docs/adr/0015-real-game-replay.md).
+  replay_environment = merge(local.worker_environment, {
+    COURTPULSE_PROVIDER              = "nba-replay"
+    COURTPULSE_INGEST_POLL_INTERVAL  = "2s"
+    COURTPULSE_INGEST_MAX_LIVE_GAMES = "10"
+    COURTPULSE_INGEST_PLAYER_LOOKUPS = "40"
+  })
 
   delivery_environment = merge(local.worker_environment, {
     COURTPULSE_EMAIL_PROVIDER  = "ses"
@@ -125,8 +135,9 @@ locals {
   })
 
   worker_health_check = {
-    for process in ["processor", "delivery", "reconciliation", "ingestor"] : process => {
-      command      = ["CMD-SHELL", "find /tmp/courtpulse-${process}-worker.heartbeat -mmin -1 | grep -q heartbeat"]
+    # The replay worker is the ingest daemon, so it writes the ingestor's heartbeat file.
+    for process in ["processor", "delivery", "reconciliation", "ingestor", "replay"] : process => {
+      command      = ["CMD-SHELL", "find /tmp/courtpulse-${process == "replay" ? "ingestor" : process}-worker.heartbeat -mmin -1 | grep -q heartbeat"]
       interval     = 30
       timeout      = 5
       retries      = 3
@@ -402,6 +413,62 @@ module "ingestor" {
 # ---------------------------------------------------------------------------
 # One-off task families (run by CI with ecs run-task; no service)
 # ---------------------------------------------------------------------------
+
+module "replay" {
+  source = "../../modules/ecs-service"
+
+  name                = "replay"
+  name_prefix         = local.name_prefix
+  cluster_arn         = local.cluster_arn
+  image               = local.worker_image
+  command             = local.process_commands["replay"]
+  ecr_repository_arn  = module.cicd.worker_repository_arn
+  task_role_name      = local.task_role_names["replay"]
+  execution_role_name = local.execution_role_names["replay"]
+  task_role_policies  = { sqs = data.aws_iam_policy_document.resolve_queue_urls.json }
+  cpu                 = var.worker_cpu
+  memory              = var.worker_memory
+  desired_count       = var.replay_desired_count
+  capacity_provider   = var.worker_capacity_provider
+  health_check        = local.worker_health_check["replay"]
+
+  environment           = local.replay_environment
+  secrets               = local.db_secrets
+  execution_secret_arns = [local.db_secret_arn]
+
+  subnet_ids               = local.worker_service_defaults.subnet_ids
+  security_group_ids       = local.worker_service_defaults.security_group_ids
+  log_retention_days       = var.log_retention_days
+  enable_execute_command   = var.enable_execute_command
+  readonly_root_filesystem = var.readonly_root_filesystem
+  tracing                  = local.tracing
+}
+
+# Downloads the replay dataset from GitHub (public subnets with public IPs; no NAT needed).
+module "replay_import" {
+  source = "../../modules/ecs-service"
+
+  name                  = "replay-import"
+  name_prefix           = local.name_prefix
+  create_service        = false
+  cluster_arn           = local.cluster_arn
+  image                 = local.worker_image
+  command               = local.process_commands["replay-import"]
+  ecr_repository_arn    = module.cicd.worker_repository_arn
+  task_role_name        = local.task_role_names["replay-import"]
+  execution_role_name   = local.execution_role_names["replay-import"]
+  task_role_policies    = { sqs = data.aws_iam_policy_document.resolve_queue_urls.json }
+  cpu                   = var.worker_cpu
+  memory                = var.worker_memory
+  environment           = local.worker_environment
+  secrets               = local.db_secrets
+  execution_secret_arns = [local.db_secret_arn]
+  log_group_name        = aws_cloudwatch_log_group.oneoff.name
+
+  subnet_ids               = local.worker_service_defaults.subnet_ids
+  security_group_ids       = local.worker_service_defaults.security_group_ids
+  readonly_root_filesystem = var.readonly_root_filesystem
+}
 
 module "migrate" {
   source = "../../modules/ecs-service"
