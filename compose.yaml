@@ -99,6 +99,10 @@ services:
     ports:
       - "${COURTPULSE_IDP_HOST_PORT:-8180}:8080"
     volumes:
+      # Users live in Keycloak's embedded database; keeping it in a volume keeps each user's
+      # subject (and so their rules, alerts, and settings) stable across restarts. The realm
+      # file is imported only when the realm does not exist yet.
+      - courtpulse-identity-data:/opt/keycloak/data
       - ./identity/keycloak/courtpulse-realm.json:/opt/keycloak/data/import/courtpulse-realm.json:ro
     healthcheck:
       test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/9000'"]
@@ -283,5 +287,6 @@ services:
       retries: 6
 
 volumes:
+  courtpulse-identity-data:
   courtpulse-postgres-data:
   courtpulse-localstack-data:
