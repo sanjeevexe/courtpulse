@@ -23,6 +23,11 @@ jobs:
       fail-fast: false
       matrix:
         script:
+          - verify-milestone-6.sh
+          - verify-milestone-7.sh
+          - verify-milestone-8.sh
+          - verify-milestone-9.sh
+          - verify-milestone-10.sh
           - verify-observability.sh
           - verify-milestone-12.sh
           - verify-release-rehearsal.sh

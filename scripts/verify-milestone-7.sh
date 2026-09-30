@@ -128,7 +128,7 @@ for attempt in {1..90}; do
 done
 
 config_keys="$(jq -r 'keys | sort | join(",")' <<<"${config}")"
-[[ "${config_keys}" == 'clientId,enabled,issuer,scope' ]] || {
+[[ "${config_keys}" == 'clientId,enabled,endSessionEndpoint,issuer,scope' ]] || {
   echo "Public authentication configuration exposed unexpected fields: ${config_keys}" >&2
   exit 1
 }
