@@ -18,6 +18,9 @@ are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capabili
 - My Games shows live score cards instead of raw game IDs; the rule form suggests games from the
   slate; My Alerts shows delivery as status chips; notification email is a switch.
 - Fan-facing copy replaces internal wording ("Durable game feed", "PostgreSQL-backed").
+- A three-color scheme: charcoal neutrals, court blue for actions, selection, progress, and
+  success, and coral red only for live games, delays, errors, and destructive actions. Team
+  badges are monochrome, and scoring plays carry a blue marker.
 
 ## 1.1.0 — 2026-09-30 — Real-game replay
 

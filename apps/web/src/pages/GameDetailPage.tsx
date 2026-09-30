@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { uniqueAlerts, uniqueEvents, useAlerts, useEvents, useGameSnapshot, useMyAlerts } from '../api/hooks';
@@ -15,7 +15,6 @@ import { LoadingState } from '../components/LoadingState';
 import {
   alertDetails, formatClock, formatDateTime, formatPeriod, playerLabel, readableEventType, teamLabel,
 } from '../lib/format';
-import { teamCode, teamColor } from '../lib/teams';
 import { connectionLabel, useGameRealtime } from '../realtime/hooks';
 import { ReplayControls } from '../components/ReplayControls';
 
@@ -71,10 +70,6 @@ export function GameDetailPage() {
   const final = game.status === 'FINAL';
   const awayName = teamLabel(game.awayTeamId, game.awayTeamName);
   const homeName = teamLabel(game.homeTeamId, game.homeTeamName);
-  const teamColors: Record<string, string> = {
-    [game.awayTeamId]: teamColor(teamCode(awayName, game.awayTeamAbbreviation)),
-    [game.homeTeamId]: teamColor(teamCode(homeName, game.homeTeamAbbreviation)),
-  };
   const alertCount = alerts.length + myAlerts.length;
 
   return (
@@ -210,12 +205,7 @@ export function GameDetailPage() {
           {events.length > 0 ? (
             <ol className="event-list">
               {events.map((event) => (
-                <li
-                  className={`event-row${event.points > 0 ? ' event-row--score' : ''}`}
-                  key={event.eventId}
-                  style={event.teamId && teamColors[event.teamId]
-                    ? { '--team': teamColors[event.teamId] } as CSSProperties : undefined}
-                >
+                <li className={`event-row${event.points > 0 ? ' event-row--score' : ''}`} key={event.eventId}>
                   <span className="event-sequence">{event.sequence}</span>
                   <div className="event-time">
                     <strong>{formatPeriod(event.period)}</strong>
