@@ -6,7 +6,7 @@ import { useReplayGames, useReplaySessions } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
-import { REPLAY_SPEEDS, formatReplayDate, replayLength, replayProgress } from '../lib/replay';
+import { REPLAY_SPEEDS, formatReplayDate, replayLength, replayProgress, waitForReplayGame } from '../lib/replay';
 
 const TEAMS = ['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GSW', 'HOU', 'IND', 'LAC', 'LAL',
   'MEM', 'MIA', 'MIL', 'MIN', 'NOP', 'NYK', 'OKC', 'ORL', 'PHI', 'PHX', 'POR', 'SAC', 'SAS', 'TOR', 'UTA', 'WAS'];
@@ -20,7 +20,11 @@ export function ReplaysPage() {
   const games = useReplayGames(team);
   const sessions = useReplaySessions();
   const start = useMutation({
-    mutationFn: (game: ReplayGame) => startReplay(auth.accessToken ?? '', game.nbaGameId, speed),
+    mutationFn: async (game: ReplayGame) => {
+      const session = await startReplay(auth.accessToken ?? '', game.nbaGameId, speed);
+      await waitForReplayGame(session.gameId);
+      return session;
+    },
     onSuccess: async (session) => {
       await queryClient.invalidateQueries({ queryKey: ['replays', 'sessions'] });
       await queryClient.invalidateQueries({ queryKey: ['me', 'replays'] });
@@ -94,7 +98,9 @@ export function ReplaysPage() {
                 <span>{game.plays} plays · {replayLength(game.durationSeconds, speed)} at {speed}×</span>
                 {auth.status === 'AUTHENTICATED' ? (
                   <button className="button button--primary" disabled={start.isPending}
-                    onClick={() => start.mutate(game)}>Replay</button>
+                    onClick={() => start.mutate(game)}>
+                    {start.isPending && start.variables.nbaGameId === game.nbaGameId ? 'Starting replay…' : 'Replay'}
+                  </button>
                 ) : auth.enabled ? (
                   <button className="button button--secondary" disabled={auth.signInPending}
                     onClick={() => void auth.signIn('/replays')}>Sign in to replay</button>

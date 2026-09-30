@@ -1,4 +1,4 @@
-import type { ReplaySession } from '../api/client';
+import { ApiError, getGameSnapshot, type ReplaySession } from '../api/client';
 
 export const REPLAY_SPEEDS = [1, 10, 30, 60, 120] as const;
 
@@ -18,4 +18,20 @@ export function replayProgress(session: Pick<ReplaySession, 'playsReleased' | 't
 /** A calendar date from the API ("2026-05-08") in the reader's locale, without time-zone drift. */
 export function formatReplayDate(value: string): string {
   return new Date(`${value}T12:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/**
+ * A new replay's game appears after the replay worker's next poll and a first processing pass.
+ * Waits for it (up to about 30 s) so the game page opens with a scoreboard, not an empty shell.
+ */
+export async function waitForReplayGame(gameId: string, attempts = 30, delayMs = 1_000): Promise<void> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      await getGameSnapshot(gameId);
+      return;
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 404)) return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
 }

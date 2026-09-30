@@ -90,6 +90,30 @@ describe('Replays', () => {
     expect(body).toEqual({ nbaGameId: game.nbaGameId, speed: 60 });
   });
 
+  it('shows that the replay is starting and opens the game once it exists', async () => {
+    let lookups = 0;
+    server.use(
+      http.get('*/api/v1/replays/games', () => HttpResponse.json({ items: [game] })),
+      http.post('*/api/v1/me/replays', () => HttpResponse.json(session, { status: 201 })),
+      http.get('*/api/v1/me/replays', () => HttpResponse.json({ items: [] })),
+      http.get(`*/api/v1/games/${session.gameId}`, () => {
+        lookups++;
+        return lookups === 1
+          ? HttpResponse.json({ type: 'about:blank', title: 'Game not found', status: 404, detail: 'Game not found',
+            instance: '/', correlationId: 'id', code: 'game_not_found' },
+          { status: 404, headers: { 'Content-Type': 'application/problem+json' } })
+          : HttpResponse.json({ gameId: session.gameId });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt('/replays', auth(true));
+
+    await user.click(await screen.findByRole('button', { name: 'Replay' }));
+    expect(await screen.findByRole('button', { name: 'Starting replay…' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: `Game ${session.gameId}` }, { timeout: 3_000 })).toBeVisible();
+    expect(lookups).toBe(2);
+  });
+
   it('gives the owner pause, speed, and skip controls on the game page', async () => {
     const calls: string[] = [];
     server.use(

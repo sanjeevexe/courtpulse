@@ -9,7 +9,7 @@ import {
 } from '../api/client';
 import { useMyReplays, useReplaySessions } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
-import { REPLAY_SPEEDS, formatReplayDate, replayProgress } from '../lib/replay';
+import { REPLAY_SPEEDS, formatReplayDate, replayProgress, waitForReplayGame } from '../lib/replay';
 
 /** Shown on a game that is a replay: its progress, and controls for the fan who started it. */
 export function ReplayControls({ gameId }: { gameId: string }) {
@@ -36,7 +36,11 @@ export function ReplayControls({ gameId }: { gameId: string }) {
     onSuccess: refresh,
   });
   const again = useMutation({
-    mutationFn: (current: ReplaySession) => startReplay(auth.accessToken ?? '', current.nbaGameId, current.speed),
+    mutationFn: async (current: ReplaySession) => {
+      const next = await startReplay(auth.accessToken ?? '', current.nbaGameId, current.speed);
+      await waitForReplayGame(next.gameId);
+      return next;
+    },
     onSuccess: async (next) => {
       await refresh();
       void navigate(`/games/${encodeURIComponent(next.gameId)}`);
@@ -76,7 +80,7 @@ export function ReplayControls({ gameId }: { gameId: string }) {
             </>
           ) : null}
           <button className="button button--quiet" disabled={busy} onClick={() => again.mutate(session)}>
-            {owned ? 'Replay again' : 'Replay this game yourself'}
+            {again.isPending ? 'Starting replay…' : owned ? 'Replay again' : 'Replay this game yourself'}
           </button>
         </div>
       ) : null}
