@@ -131,18 +131,18 @@ test('two real OIDC users create private rules before queue replay and see isola
   await page.goto(`/my-rules?gameId=${gameId}`);
   await expect(page.getByLabel('Game ID')).toHaveValue(gameId);
   await page.getByLabel('Player ID').fill('player_ace');
-  await createRuleAndVerify(page, 1, page.getByText('player_ace · 10 points'));
+  await createRuleAndVerify(page, 1, page.getByText('player_ace reaches 10 points'));
 
   await page.getByLabel('Template').selectOption('CLOSE_GAME');
   await page.getByLabel('Maximum margin').fill('3');
   await page.getByLabel('Eligible period').fill('4');
   await page.getByLabel('Clock seconds remaining').fill('720');
-  await createRuleAndVerify(page, 2, page.getByText(/Within 3 points · Q4/));
+  await createRuleAndVerify(page, 2, page.getByText(/Within 3 points in the last .* of Q4/));
 
   await page.getByLabel('Template').selectOption('SCORING_RUN');
   await page.getByLabel('Team ID').fill('team_home');
   await page.getByLabel('Unanswered points').fill('5');
-  await createRuleAndVerify(page, 3, page.getByText('team_home · 5 unanswered'));
+  await createRuleAndVerify(page, 3, page.getByText('team_home goes on a 5-0 run'));
   await expect(page.locator('article.rule-card')).toHaveCount(3);
   if (deliveryAcceptance) {
     await page.goto('/notification-settings');
