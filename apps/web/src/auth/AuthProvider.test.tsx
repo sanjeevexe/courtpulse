@@ -153,7 +153,7 @@ describe('OIDC browser authentication', () => {
     const { queryClient } = renderApp('/auth/callback?code=safe-code');
     queryClient.setQueryData(['me', 'followed-games'], { items: [{ gameId: 'user-a-game' }] });
     queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'user-a-rule' }] });
-    queryClient.setQueryData(['me', 'alerts'], { items: [{ id: 'user-a-alert' }] });
+    queryClient.setQueryData(['me', 'alerts'], { pages: [{ items: [{ id: 'user-a-alert' }] }], pageParams: [null] });
 
     await vi.waitFor(() => expect(oidc.signinRedirectCallback).toHaveBeenCalledOnce());
     complete({ ...authenticatedUser, profile: { sub: 'user-b' } });
@@ -233,7 +233,7 @@ describe('OIDC browser authentication', () => {
     const { queryClient } = renderApp('/');
     queryClient.setQueryData(['me', 'followed-games'], { items: [{ gameId: 'private-game' }] });
     queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'private-rule' }] });
-    queryClient.setQueryData(['me', 'alerts'], { items: [{ id: 'private-alert' }] });
+    queryClient.setQueryData(['me', 'alerts'], { pages: [{ items: [{ id: 'private-alert' }] }], pageParams: [null] });
 
     await user.click(await screen.findByRole('button', { name: 'Sign out' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('signed out locally');
@@ -265,7 +265,7 @@ describe('OIDC browser authentication', () => {
 
     queryClient.setQueryData(['me', 'followed-games'], { items: [{ gameId: 'private-game' }] });
     queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'private-rule' }] });
-    queryClient.setQueryData(['me', 'alerts'], { items: [{ id: 'private-alert' }] });
+    queryClient.setQueryData(['me', 'alerts'], { pages: [{ items: [{ id: 'private-alert' }] }], pageParams: [null] });
     act(() => { oidc.expired?.(); });
     expect(await screen.findByText(/session expired/i)).toBeVisible();
     expect(oidc.removeUser).toHaveBeenCalled();

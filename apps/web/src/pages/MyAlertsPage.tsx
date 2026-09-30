@@ -4,7 +4,7 @@ import { useDeliveryAttempts, useDeliveryHistory, useMyAlerts } from '../api/hoo
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
-import { formatDateTime } from '../lib/format';
+import { alertDetails, formatDateTime } from '../lib/format';
 
 export function MyAlertsPage() {
   const auth = useAuth();
@@ -16,6 +16,7 @@ export function MyAlertsPage() {
     for (const delivery of deliveries.data?.items ?? []) {
       const existing = byAlert.get(delivery.alertId) ?? [];
       existing.push(delivery);
+      existing.sort((left, right) => left.channel.localeCompare(right.channel) * -1);
       byAlert.set(delivery.alertId, existing);
     }
     return byAlert;
@@ -40,7 +41,7 @@ export function MyAlertsPage() {
         {alerts.map((alert) => (
           <article className="alert-card" key={alert.id}>
             <span className="alert-icon" aria-hidden="true">!</span>
-            <div><span className="rule-type">{alert.ruleType.replaceAll('_', ' ')}</span><h3>{alert.title}</h3><p>{Object.entries(alert.context).map(([key, value]) => `${key}: ${value}`).join(' · ')}</p><small>{alert.gameId} · {formatDateTime(alert.createdAt)}</small>
+            <div><span className="rule-type">{alert.ruleType.replaceAll('_', ' ')}</span><h3>{alert.title}</h3><p>{alertDetails(alert.context, alert.ruleType)}</p><small>{alert.gameLabel ?? alert.gameId} · {formatDateTime(alert.createdAt)}</small>
               {deliveryByAlert.get(alert.id)?.map((delivery) => (
                 <DeliveryState key={delivery.id} delivery={delivery} accessToken={auth.accessToken} />
               ))}

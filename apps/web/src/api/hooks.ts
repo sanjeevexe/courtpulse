@@ -25,6 +25,10 @@ import {
   type RulePage,
   type OwnedAlertPage,
   type DeliveryHistoryPage,
+  listMyReplays,
+  listReplayGames,
+  listReplaySessions,
+  type ReplayGamePage,
 } from './client';
 
 const snapshotEtags = new Map<string, string>();
@@ -195,5 +199,33 @@ function uniqueBy<T>(items: T[], identity: (item: T) => string): T[] {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
+  });
+}
+
+export function useReplayGames(team: string | null) {
+  return useInfiniteQuery({
+    queryKey: ['replays', 'games', team],
+    queryFn: ({ pageParam }) => listReplayGames(team, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page: ReplayGamePage) => page.nextAfter ?? undefined,
+  });
+}
+
+/** Public replay list; polled while any replay is running so progress stays current. */
+export function useReplaySessions() {
+  return useQuery({
+    queryKey: ['replays', 'sessions'],
+    queryFn: listReplaySessions,
+    refetchInterval: (query) =>
+      query.state.data?.items.some((session) => session.status !== 'FINISHED') ? 5_000 : 30_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
+export function useMyReplays(accessToken: string | null, authenticated: boolean) {
+  return useQuery({
+    queryKey: ['me', 'replays'],
+    queryFn: () => listMyReplays(accessToken ?? ''),
+    enabled: authenticated && accessToken !== null,
   });
 }

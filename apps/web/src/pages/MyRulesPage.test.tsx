@@ -92,19 +92,19 @@ describe('My Rules', () => {
     );
     const user = userEvent.setup();
     renderPrivate('rules');
-    expect(await screen.findByText('player_ace · 10 points')).toBeVisible();
+    expect(await screen.findByText('player_ace reaches 10 points')).toBeVisible();
     await user.type(screen.getByLabelText('Game ID'), 'game_synthetic_001');
     await user.type(screen.getByLabelText('Player ID'), 'player_new');
     await user.click(screen.getByRole('button', { name: 'Create rule' }));
-    expect(await screen.findByText('player_new · 10 points')).toBeVisible();
-    const firstCard = screen.getByText('player_ace · 10 points').closest('article');
+    expect(await screen.findByText('player_new reaches 10 points')).toBeVisible();
+    const firstCard = screen.getByText('player_ace reaches 10 points').closest('article');
     if (!firstCard) throw new Error('rule card missing');
     await user.click(within(firstCard).getByRole('button', { name: 'Disable' }));
-    await waitFor(() => expect(screen.getByText('player_ace · 10 points')).toBeVisible());
-    const refreshedCard = screen.getByText('player_ace · 10 points').closest('article');
+    await waitFor(() => expect(screen.getByText('player_ace reaches 10 points')).toBeVisible());
+    const refreshedCard = screen.getByText('player_ace reaches 10 points').closest('article');
     if (!refreshedCard) throw new Error('updated rule card missing');
     await user.click(within(refreshedCard).getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(screen.queryByText('player_ace · 10 points')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('player_ace reaches 10 points')).not.toBeInTheDocument());
   });
 
   it('reuses a create key after an uncertain response and starts a new key after success', async () => {
@@ -149,7 +149,7 @@ describe('My Alerts', () => {
     }));
     renderPrivate('alerts');
     expect(await screen.findByRole('heading', { name: 'player_ace reached 10 points' })).toBeVisible();
-    expect(screen.getByText(/threshold: 10/)).toBeVisible();
-    expect(screen.getByText(/verifiedTotal: 11/)).toBeVisible();
+    expect(screen.getByText('11 points · alert at 10')).toBeVisible();
+    expect(screen.queryByText(/verifiedTotal/)).not.toBeInTheDocument();
   });
 });

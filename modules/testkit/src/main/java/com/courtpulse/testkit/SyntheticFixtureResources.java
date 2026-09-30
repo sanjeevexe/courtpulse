@@ -9,6 +9,8 @@ public final class SyntheticFixtureResources {
     /** Fictional game in the documented BALLDONTLIE v1 response shapes (overtime + one correction). */
     public static final String BALLDONTLIE_OVERTIME_GAME =
             "/fixtures/providers/balldontlie/synthetic-overtime-game.json";
+    /** Fictional game in the NBA.com play-by-play CSV layout that replay imports (41 actions, 16-12). */
+    public static final String NBA_REPLAY_GAME = "/fixtures/providers/nba/fictional-playoff-game.csv";
 
     private SyntheticFixtureResources() {}
 
@@ -28,6 +30,17 @@ public final class SyntheticFixtureResources {
                 .getResourceAsStream(BALLDONTLIE_OVERTIME_GAME)) {
             if (inputStream == null) {
                 throw new IllegalStateException("Missing classpath fixture: " + BALLDONTLIE_OVERTIME_GAME);
+            }
+            return inputStream.readAllBytes();
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Unable to read fixture resource", exception);
+        }
+    }
+
+    public static byte[] nbaReplayGame() {
+        try (InputStream inputStream = SyntheticFixtureResources.class.getResourceAsStream(NBA_REPLAY_GAME)) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Missing classpath fixture: " + NBA_REPLAY_GAME);
             }
             return inputStream.readAllBytes();
         } catch (java.io.IOException exception) {

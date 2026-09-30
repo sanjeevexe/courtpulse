@@ -27,6 +27,8 @@ import com.courtpulse.persistence.JdbcInspectionRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.JdbcOutboxRepository;
 import com.courtpulse.persistence.JdbcProviderRepository;
+import com.courtpulse.persistence.JdbcReplayRepository;
+import com.courtpulse.persistence.NbaReplayProvider;
 import com.courtpulse.persistence.ProviderIngestionService;
 import com.courtpulse.providers.balldontlie.BallDontLieProvider;
 import com.courtpulse.providers.live.LiveGameProvider;
@@ -160,6 +162,18 @@ public class QueueReplayConfiguration {
     @Bean
     JdbcProviderRepository providerRepository(JdbcClient jdbc) {
         return new JdbcProviderRepository(jdbc);
+    }
+
+    @Bean
+    JdbcReplayRepository replayRepository(JdbcClient jdbc, ObjectMapper mapper) {
+        return new JdbcReplayRepository(jdbc, mapper);
+    }
+
+    /** Replays of imported real games, served as a provider; needs no credential or network. */
+    @Bean
+    @ConditionalOnProperty(name = "courtpulse.provider.name", havingValue = "nba-replay")
+    LiveGameProvider nbaReplayProvider(JdbcReplayRepository replays, ObjectMapper mapper, Clock clock) {
+        return new NbaReplayProvider(replays, mapper, clock);
     }
 
     @Bean

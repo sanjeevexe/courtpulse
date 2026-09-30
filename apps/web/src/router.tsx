@@ -8,6 +8,7 @@ import { MyGamesPage } from './pages/MyGamesPage';
 import { MyRulesPage } from './pages/MyRulesPage';
 import { MyAlertsPage } from './pages/MyAlertsPage';
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
+import { ReplaysPage } from './pages/ReplaysPage';
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <GameSlatePage /> },
       { path: '/games/:gameId', element: <GameDetailPage /> },
+      { path: '/replays', element: <ReplaysPage /> },
       { path: '/my-games', element: <MyGamesPage /> },
       { path: '/my-rules', element: <MyRulesPage /> },
       { path: '/my-alerts', element: <MyAlertsPage /> },

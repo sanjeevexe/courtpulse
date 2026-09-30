@@ -40,6 +40,9 @@ import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
 import com.courtpulse.persistence.JdbcUserOwnershipRepository;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
 import com.courtpulse.persistence.JdbcAlertDeliveryRepository;
+import com.courtpulse.persistence.JdbcReplayRepository;
+import com.courtpulse.persistence.JdbcDisplayNames;
+import com.courtpulse.api.replays.ReplayService;
 import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.JdbcProviderRepository;
 import com.courtpulse.persistence.JdbcReconciliationOperationsRepository;
@@ -115,6 +118,17 @@ public class ApiConfiguration {
     }
 
     @Bean
+    JdbcReplayRepository replayRepository(
+            JdbcClient jdbc, @Qualifier("queryObjectMapper") ObjectMapper objectMapper) {
+        return new JdbcReplayRepository(jdbc, objectMapper);
+    }
+
+    @Bean
+    ReplayService replayService(JdbcReplayRepository replays, TransactionTemplate apiTransactionTemplate, Clock clock) {
+        return new ReplayService(replays, apiTransactionTemplate, clock);
+    }
+
+    @Bean
     JdbcAlertDeliveryRepository alertDeliveryRepository(JdbcClient jdbc) {
         return new JdbcAlertDeliveryRepository(jdbc);
     }
@@ -185,8 +199,10 @@ public class ApiConfiguration {
             OpaqueCursorCodec cursors,
             TransactionTemplate transactions,
             Clock clock,
-            RuleEngineMetrics metrics) {
-        return new PersonalizedRuleService(rules, users, cursors, transactions, clock, metrics);
+            RuleEngineMetrics metrics,
+            JdbcClient jdbc) {
+        return new PersonalizedRuleService(rules, users, cursors, transactions, clock, metrics,
+                new JdbcDisplayNames(jdbc));
     }
 
     @Bean

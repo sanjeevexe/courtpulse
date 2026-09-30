@@ -9,6 +9,8 @@ import com.courtpulse.persistence.AlertRuleCreation;
 import com.courtpulse.persistence.JdbcAlertRuleRepository;
 import com.courtpulse.persistence.JdbcUserOwnershipRepository;
 import com.courtpulse.persistence.NewAlertRule;
+import com.courtpulse.persistence.AlertWording;
+import com.courtpulse.persistence.JdbcDisplayNames;
 import com.courtpulse.persistence.OwnedAlertRecord;
 import com.courtpulse.persistence.RuleEngineMetrics;
 import com.courtpulse.persistence.StoredAlertRule;
@@ -33,6 +35,7 @@ public final class PersonalizedRuleService {
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final RuleEngineMetrics metrics;
+    private final JdbcDisplayNames names;
 
     public PersonalizedRuleService(
             JdbcAlertRuleRepository rules,
@@ -40,7 +43,9 @@ public final class PersonalizedRuleService {
             OpaqueCursorCodec cursors,
             TransactionTemplate transactions,
             Clock clock,
-            RuleEngineMetrics metrics) {
+            RuleEngineMetrics metrics,
+            JdbcDisplayNames names) {
+        this.names = names;
         this.rules = rules;
         this.users = users;
         this.cursors = cursors;
@@ -106,7 +111,8 @@ public final class PersonalizedRuleService {
             boolean more = fetched.size() > limit;
             List<StoredAlertRule> page = more ? fetched.subList(0, limit) : fetched;
             String next = more ? encode("rules", owner, page.getLast().createdAt(), page.getLast().id()) : null;
-            return new RuleApiDto.RulePage(page.stream().map(this::map).toList(), next);
+            JdbcDisplayNames.Names known = namesFor(page);
+            return new RuleApiDto.RulePage(page.stream().map(rule -> map(rule, known)).toList(), next);
         });
     }
 
@@ -149,7 +155,11 @@ public final class PersonalizedRuleService {
             String next = more
                     ? encode("owned-alerts", owner, page.getLast().createdAt(), page.getLast().id())
                     : null;
-            return new RuleApiDto.OwnedAlertPage(page.stream().map(this::mapAlert).toList(), next);
+            JdbcDisplayNames.Names known = names.lookup(
+                    page.stream().map(alert -> alert.context().get("playerId")).toList(),
+                    page.stream().map(alert -> alert.context().get("teamId")).toList(),
+                    page.stream().map(OwnedAlertRecord::gameId).toList());
+            return new RuleApiDto.OwnedAlertPage(page.stream().map(alert -> mapAlert(alert, known)).toList(), next);
         });
     }
 
@@ -181,24 +191,38 @@ public final class PersonalizedRuleService {
     }
 
     private RuleApiDto.Rule map(StoredAlertRule rule) {
+        return map(rule, namesFor(List.of(rule)));
+    }
+
+    private JdbcDisplayNames.Names namesFor(List<StoredAlertRule> page) {
+        return names.lookup(page.stream().map(StoredAlertRule::playerId).toList(),
+                page.stream().map(StoredAlertRule::teamId).toList(),
+                page.stream().map(StoredAlertRule::gameId).toList());
+    }
+
+    private static RuleApiDto.Rule map(StoredAlertRule rule, JdbcDisplayNames.Names known) {
+        String game = known.games().get(rule.gameId());
         return switch (rule.type()) {
             case PLAYER_POINTS -> new RuleApiDto.PlayerPointsRule(
                     rule.id(), rule.type(), rule.gameId(), rule.enabled(), rule.playerId(),
-                    rule.pointsThreshold(), rule.version(), rule.createdAt(), rule.updatedAt());
+                    rule.pointsThreshold(), rule.version(), rule.createdAt(), rule.updatedAt(),
+                    known.players().get(rule.playerId()), game);
             case CLOSE_GAME -> new RuleApiDto.CloseGameRule(
                     rule.id(), rule.type(), rule.gameId(), rule.enabled(), rule.maximumMargin(),
                     rule.eligiblePeriod(), rule.maximumClockMillisRemaining(), rule.version(),
-                    rule.createdAt(), rule.updatedAt());
+                    rule.createdAt(), rule.updatedAt(), game);
             case SCORING_RUN -> new RuleApiDto.ScoringRunRule(
                     rule.id(), rule.type(), rule.gameId(), rule.enabled(), rule.teamId(),
-                    rule.pointsThreshold(), rule.version(), rule.createdAt(), rule.updatedAt());
+                    rule.pointsThreshold(), rule.version(), rule.createdAt(), rule.updatedAt(),
+                    known.teams().get(rule.teamId()), game);
         };
     }
 
-    private RuleApiDto.OwnedAlert mapAlert(OwnedAlertRecord alert) {
+    private static RuleApiDto.OwnedAlert mapAlert(OwnedAlertRecord alert, JdbcDisplayNames.Names known) {
         return new RuleApiDto.OwnedAlert(
-                alert.id(), alert.ruleId(), alert.ruleType(), alert.gameId(),
-                alert.triggeringEventId(), alert.title(), alert.context(), alert.status(), alert.createdAt());
+                alert.id(), alert.ruleId(), alert.ruleType(), alert.gameId(), alert.triggeringEventId(),
+                AlertWording.title(alert.ruleType(), alert.context(), alert.title(), known),
+                alert.context(), alert.status(), alert.createdAt(), known.games().get(alert.gameId()));
     }
 
     private static boolean sameDefinition(StoredAlertRule stored, NewAlertRule proposed) {

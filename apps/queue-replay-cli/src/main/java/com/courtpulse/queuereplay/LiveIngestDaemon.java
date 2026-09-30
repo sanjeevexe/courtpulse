@@ -5,6 +5,7 @@ import com.courtpulse.persistence.ProviderIngestionService;
 import com.courtpulse.providers.live.LiveGameProvider;
 import com.courtpulse.providers.live.ProviderException;
 import com.courtpulse.providers.live.ProviderGame;
+import com.courtpulse.providers.nba.NbaReplayPlayMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +40,7 @@ final class LiveIngestDaemon {
     private final Clock clock;
     private final Set<String> unresolvablePlayers = new HashSet<>();
     private String lastDiscoveryFailure;
+    private final String workerType;
 
     LiveIngestDaemon(LiveGameProvider provider, ProviderIngestionService ingestion,
             JdbcOperationalTelemetryRepository telemetry, Settings settings, Clock clock) {
@@ -47,6 +49,7 @@ final class LiveIngestDaemon {
         this.telemetry = telemetry;
         this.settings = settings;
         this.clock = clock;
+        this.workerType = NbaReplayPlayMapper.SOURCE.equals(provider.source()) ? "replay" : "ingestor";
     }
 
     void run() {
@@ -63,7 +66,7 @@ final class LiveIngestDaemon {
             Instant started = clock.instant();
             boolean healthy = cycle();
             ingestion.recordClientStats(provider.source(), provider.drainStats());
-            telemetry.heartbeat("ingestor", clock.instant(), healthy);
+            telemetry.heartbeat(workerType, clock.instant(), healthy);
             try {
                 Files.writeString(HEARTBEAT, clock.instant().toString(),
                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);

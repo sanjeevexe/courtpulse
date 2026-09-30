@@ -108,7 +108,10 @@ public final class RuleApiDto {
     public record PlayerPointsRule(
             UUID id, @Schema(allowableValues = "PLAYER_POINTS") RuleType type,
             String gameId, boolean enabled, String playerId,
-            int pointsThreshold, long version, Instant createdAt, Instant updatedAt) implements Rule {}
+            int pointsThreshold, long version, Instant createdAt, Instant updatedAt,
+            @Schema(nullable = true, description = "Player name when known") String playerName,
+            @Schema(nullable = true, description = "\"Away at Home\" when both teams are named") String gameLabel)
+            implements Rule {}
 
     @JsonTypeName("CLOSE_GAME")
     @Schema(requiredProperties = {
@@ -119,7 +122,9 @@ public final class RuleApiDto {
             UUID id, @Schema(allowableValues = "CLOSE_GAME") RuleType type,
             String gameId, boolean enabled, int maximumMargin,
             int eligiblePeriod, long maximumClockMillisRemaining, long version,
-            Instant createdAt, Instant updatedAt) implements Rule {}
+            Instant createdAt, Instant updatedAt,
+            @Schema(nullable = true, description = "\"Away at Home\" when both teams are named") String gameLabel)
+            implements Rule {}
 
     @JsonTypeName("SCORING_RUN")
     @Schema(requiredProperties = {
@@ -129,7 +134,10 @@ public final class RuleApiDto {
     public record ScoringRunRule(
             UUID id, @Schema(allowableValues = "SCORING_RUN") RuleType type,
             String gameId, boolean enabled, String teamId,
-            int pointsThreshold, long version, Instant createdAt, Instant updatedAt) implements Rule {}
+            int pointsThreshold, long version, Instant createdAt, Instant updatedAt,
+            @Schema(nullable = true, description = "Team name when known") String teamName,
+            @Schema(nullable = true, description = "\"Away at Home\" when both teams are named") String gameLabel)
+            implements Rule {}
 
     @Schema(requiredProperties = {"items"})
     public record RulePage(List<Rule> items, @Schema(nullable = true) String nextCursor) {}
@@ -151,7 +159,8 @@ public final class RuleApiDto {
             String title,
             Map<String, String> context,
             String status,
-            Instant createdAt) {}
+            Instant createdAt,
+            @Schema(nullable = true, description = "\"Away at Home\" when both teams are named") String gameLabel) {}
 
     @Schema(requiredProperties = {
         "ownedRules", "enabledOwnedRules", "disabledOwnedRules", "systemRules", "privateAlerts"

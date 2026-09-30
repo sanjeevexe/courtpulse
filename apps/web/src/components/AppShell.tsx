@@ -13,6 +13,7 @@ export function AppShell() {
           </span>
         </Link>
         <div className="header-actions">
+          <Link className="text-link" to="/replays">Replays</Link>
           <div className="live-key" aria-label="Data status key">
             <span className="pulse-dot" aria-hidden="true" /> Durable game feed
           </div>

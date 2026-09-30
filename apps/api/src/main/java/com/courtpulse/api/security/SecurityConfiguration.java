@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -72,6 +73,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/me", "/api/v1/me/**").authenticated()
                         .requestMatchers("/api/v1/auth/config").permitAll()
                         .requestMatchers("/api/v1/games", "/api/v1/games/**", "/ws/v1/games").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/replays/games", "/api/v1/replays/sessions")
+                            .permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/metrics", "/actuator/metrics/**")
                             .hasAuthority(properties.getOperationsAuthority())

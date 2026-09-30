@@ -3,6 +3,9 @@ package com.courtpulse.api.http;
 import com.courtpulse.query.GameNotFoundException;
 import com.courtpulse.query.InvalidCursorException;
 import com.courtpulse.api.rules.RuleConflictException;
+import com.courtpulse.api.replays.ReplayConflictException;
+import com.courtpulse.api.replays.ReplayNotFoundException;
+import com.courtpulse.api.replays.ReplayQuotaExceededException;
 import com.courtpulse.api.rules.RuleNotFoundException;
 import com.courtpulse.api.rules.RuleQuotaExceededException;
 import com.courtpulse.api.rules.RuleValidationException;
@@ -60,6 +63,22 @@ public final class ApiProblemHandler {
     ResponseEntity<ProblemDetail> unprocessable(
             RuleValidationException exception, HttpServletRequest request) {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, "invalid_rule", "Invalid alert rule",
+                exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(ReplayNotFoundException.class)
+    ResponseEntity<ProblemDetail> replayNotFound(ReplayNotFoundException exception, HttpServletRequest request) {
+        return problem(HttpStatus.NOT_FOUND, "replay_not_found", "Replay not found", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(ReplayConflictException.class)
+    ResponseEntity<ProblemDetail> replayConflict(ReplayConflictException exception, HttpServletRequest request) {
+        return problem(HttpStatus.CONFLICT, "replay_conflict", "Replay conflict", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(ReplayQuotaExceededException.class)
+    ResponseEntity<ProblemDetail> replayQuota(ReplayQuotaExceededException exception, HttpServletRequest request) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, "replay_quota_exceeded", "Replay quota exceeded",
                 exception.getMessage(), request);
     }
 

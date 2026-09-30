@@ -1,7 +1,9 @@
 package com.courtpulse.persistence;
 
+import com.courtpulse.domain.alert.RuleType;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -230,10 +232,16 @@ public final class JdbcDeliveryWorkRepository {
         if (claimed == null) {
             return null;
         }
-        return jdbc.sql("""
+        ClaimedEmailDelivery raw = jdbc.sql("""
                         SELECT delivery.id, delivery.address_snapshot AS address, alert.title, alert.game_id,
                                preference.email_enabled AND destination.enabled AS opted_in,
-                               delivery.attempts
+                               delivery.attempts, alert.rule_type,
+                               alert.context->>'playerId' AS player_id, alert.context->>'teamId' AS team_id,
+                               alert.context->>'threshold' AS threshold,
+                               alert.context->>'verifiedRunPoints' AS run_points,
+                               alert.context->>'verifiedMargin' AS margin,
+                               alert.context->>'clockMillisRemaining' AS clock,
+                               alert.context->>'period' AS period
                         FROM alert_deliveries delivery
                         JOIN alert_instances alert ON alert.id = delivery.alert_id
                         JOIN notification_destinations destination ON destination.id = delivery.destination_id
@@ -242,12 +250,35 @@ public final class JdbcDeliveryWorkRepository {
                         WHERE delivery.id = :id
                         """)
                 .param("id", deliveryId)
-                .query((row, number) -> new ClaimedEmailDelivery(
-                        row.getObject("id", UUID.class), row.getString("address"),
-                        row.getString("title"), row.getString("game_id"),
-                        row.getBoolean("opted_in"), row.getInt("attempts")))
+                .query((row, number) -> {
+                    Map<String, String> context = new HashMap<>();
+                    for (String[] field : WORDING_FIELDS) {
+                        String value = row.getString(field[1]);
+                        if (value != null) {
+                            context.put(field[0], value);
+                        }
+                    }
+                    RuleType type = RuleType.valueOf(row.getString("rule_type"));
+                    return new ClaimedEmailDelivery(
+                            row.getObject("id", UUID.class), row.getString("address"),
+                            // Raw ID-based wording until names are resolved below.
+                            row.getString("title"), row.getString("game_id"),
+                            row.getBoolean("opted_in"), row.getInt("attempts"), type, context);
+                })
                 .single();
+        JdbcDisplayNames.Names names = new JdbcDisplayNames(jdbc).lookup(
+                java.util.Collections.singleton(raw.context().get("playerId")),
+                java.util.Collections.singleton(raw.context().get("teamId")),
+                List.of(raw.gameId()));
+        return raw.worded(AlertWording.title(raw.ruleType(), raw.context(), raw.title(), names),
+                names.game(raw.gameId()));
     }
+
+    private static final String[][] WORDING_FIELDS = {
+        {"playerId", "player_id"}, {"teamId", "team_id"}, {"threshold", "threshold"},
+        {"verifiedRunPoints", "run_points"}, {"verifiedMargin", "margin"},
+        {"clockMillisRemaining", "clock"}, {"period", "period"},
+    };
 
     public String deliveryStatus(UUID deliveryId) {
         return jdbc.sql("SELECT status FROM alert_deliveries WHERE id = :id")

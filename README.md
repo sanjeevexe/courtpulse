@@ -6,11 +6,14 @@ to email. It is a portfolio project about the hard parts of real-time systems: o
 idempotency, corrections, failure recovery, and proving all of it with tests and measurements.
 
 > CourtPulse is an independent project with no affiliation to the NBA, any team, or any data
-> provider. The demo uses fictional games and players. Real data needs a BALLDONTLIE subscription,
-> and its terms apply.
+> provider. Real completed games are replayed from an unofficial public dataset for personal,
+> non-commercial demonstration; live real-time data needs a BALLDONTLIE subscription, and its
+> terms apply.
 
 ## What it does
 
+- **Replays real NBA games** from the 2026 playoffs (or any imported season) play by play, as if
+  live, at a speed you choose, with pause, resume, and skip-to-final in the browser.
 - **Ingests** a live provider (BALLDONTLIE, or a local simulator of it) or recorded fixtures,
   keeping raw evidence and turning provider corrections into new revisions, not overwrites.
 - **Processes** events in order per game through a PostgreSQL transactional outbox and SQS FIFO.
@@ -50,7 +53,7 @@ PostgreSQL is the source of truth. Queues carry work, not state, and WebSocket m
 hints: a client that misses one resynchronizes over HTTP. The domain model has no infrastructure
 dependencies, so the same events replay in memory, against PostgreSQL, or through SQS, and every
 path must reproduce the same final-state checksum. The reasoning behind each choice is recorded in
-[14 architecture decision records](docs/adr).
+[15 architecture decision records](docs/adr).
 
 ## Quick start
 
@@ -66,13 +69,26 @@ Compose project with generated local-only credentials (in the ignored `.env.demo
 | | |
 | --- | --- |
 | Dashboard | http://127.0.0.1:4173 (use `127.0.0.1`, not `localhost`, for sign-in) |
+| Replay real games | http://127.0.0.1:4173/replays |
 | Email inbox (Mailpit) | http://127.0.0.1:8025 |
 | API | http://127.0.0.1:8080/api/v1/games |
 
 `make demo-status` shows it again, `make demo-down` stops it, and `make demo-destroy` deletes it.
 Run `make` to see every workflow.
 
-## A walkthrough
+## Replay a real NBA game
+
+On first start the demo downloads the 2026 NBA playoffs (60 games, about 1 MB) from the open
+[nba_data](https://github.com/shufinskiy/nba_data) project. Sign in, open **Replays**, pick a game
+and a speed, and press **Replay**: CourtPulse feeds the real play-by-play through the same pipeline
+a live feed uses, so the scoreboard, box score, your alert rules, and email all react as they
+would on game night. On the game page you can pause, change speed, skip to the final, or replay it
+again. Import more with `make replay-import DATASET=cdnnba_2025` (the 2025-26 regular season).
+Replays are verified end to end: `REAL_DATA=1 scripts/verify-replay.sh` replays real games and
+checks that CourtPulse reproduces each official final score from the plays alone
+([ADR 0015](docs/adr/0015-real-game-replay.md)).
+
+## A walkthrough with the simulated live game
 
 1. Open the dashboard. The recorded game is final; the simulated game, Harbor City Herons vs
    Summit Valley Sentinels, tips off about two minutes after the demo starts.
@@ -97,7 +113,8 @@ with Grafana, Prometheus, and Tempo.
 
 | Area | Result | Details |
 | --- | --- | --- |
-| Tests | 180 backend tests against real PostgreSQL and LocalStack containers, 57 web unit tests, Playwright end-to-end runs | `make check`, [CI](.github/workflows/ci.yml) |
+| Tests | 200+ backend tests against real PostgreSQL and LocalStack containers, 60+ web unit tests, Playwright end-to-end runs, and 13 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
+| Real games | Replays of real 2026 playoff games (including two overtime games) reproduce each official final score and apply every play, with no rejected plays | `REAL_DATA=1 scripts/verify-replay.sh` |
 | Performance | Sustained 200 events/s across 50 games: p95 processing delay 82 ms (target 500 ms). 2,000 WebSocket clients see hints about 0.3 s after commit (target 2 s). 100,000 stored rules; a hot-game lookup takes 0.9 ms. | [Performance report](docs/verification/performance-report.md) |
 | Recovery | Processor SIGKILL, PostgreSQL restart, 20 s SQS partition, and SIGTERM mid-publication all recover with exactly-once state and one alert per rule | [Recovery report](docs/verification/recovery-report.md) |
 | Security | 0 fixable HIGH or CRITICAL image vulnerabilities, OWASP ZAP baseline with 0 warnings, no leaked secrets, OWASP API Top 10 mapping, per-client rate limits | [Scan report](docs/verification/security-scan-report.md), [threat model](docs/security/threat-model.md) |
@@ -156,8 +173,9 @@ which sets up a budget before anything billable.
 
 ## Status and limitations
 
-- Real play-by-play needs BALLDONTLIE's paid tier. The adapter is tested against its documented
-  schema and a simulator, not yet against live data.
+- Live real-time play-by-play needs BALLDONTLIE's paid tier; the adapter is tested against its
+  documented schema and a simulator. Completed real games can be replayed for free from an
+  unofficial dataset, which is not an official or live source.
 - Cognito, SES, RDS, and CloudFront are exercised through local equivalents and mocked plans
   until the environment is applied.
 - Realtime fanout runs on a single API instance; scaling out needs a shared fanout layer such as

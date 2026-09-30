@@ -480,6 +480,160 @@ paths:
         '429': {$ref: '#/components/responses/TooManyRequests'}
         '500': {$ref: '#/components/responses/InternalError'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/replays/games:
+    get:
+      summary: List completed real games available for replay, newest first
+      parameters:
+        - {name: team, in: query, required: false, schema: {type: string, pattern: '[A-Z]{2,5}'}}
+        - {name: after, in: query, required: false, schema: {type: string, pattern: '[0-9]{10}'}}
+        - {name: limit, in: query, required: false, schema: {type: integer, format: int32, minimum: 1, maximum: 100}}
+      responses:
+        '200':
+          description: Replay catalog page
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplayGamePage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/replays/sessions:
+    get:
+      summary: List running, paused, and recently finished replays
+      responses:
+        '200':
+          description: Replays
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySessionList'}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/replays:
+    get:
+      summary: List the replays the authenticated user started
+      security: [{oidcBearer: []}]
+      responses:
+        '200':
+          description: Owned replays
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySessionList'}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    post:
+      summary: Start replaying a real game as a live CourtPulse game
+      security: [{oidcBearer: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/StartReplay'}}}
+      responses:
+        '201':
+          description: Replay started
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySession'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/replays/{sessionId}/pause:
+    post:
+      summary: Pause an owned replay
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: sessionId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Replay paused
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySession'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/replays/{sessionId}/resume:
+    post:
+      summary: Resume an owned paused replay
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: sessionId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Replay resumed
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySession'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/replays/{sessionId}/finish:
+    post:
+      summary: Skip an owned replay to the final buzzer
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: sessionId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Replay finished
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySession'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/me/replays/{sessionId}/speed:
+    put:
+      summary: Change an owned replay's speed
+      security: [{oidcBearer: []}]
+      parameters:
+        - {name: sessionId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySpeed'}}}
+      responses:
+        '200':
+          description: Speed changed
+          headers: {X-Correlation-ID: {$ref: '#/components/headers/CorrelationId'}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReplaySession'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '406': {$ref: '#/components/responses/NotAcceptable'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
 components:
   securitySchemes:
     oidcBearer:
@@ -563,6 +717,60 @@ components:
       properties:
         emailEnabled: {type: boolean}
         emailAddress: {type: [string, 'null'], maxLength: 254}
+    ReplayGame:
+      type: object
+      description: A completed real game that can be replayed
+      required: [nbaGameId, gameDate, homeTeamName, homeTeamAbbreviation, awayTeamName, awayTeamAbbreviation, homeScore, awayScore, periods, plays, durationSeconds]
+      properties:
+        nbaGameId: {type: string}
+        gameDate: {type: string, format: date}
+        homeTeamName: {type: string}
+        homeTeamAbbreviation: {type: string}
+        awayTeamName: {type: string}
+        awayTeamAbbreviation: {type: string}
+        homeScore: {type: integer, format: int32}
+        awayScore: {type: integer, format: int32}
+        periods: {type: integer, format: int32}
+        plays: {type: integer, format: int32}
+        durationSeconds: {type: integer, format: int64, description: 'Replay length at 1x, with long breaks shortened'}
+    ReplayGamePage:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/ReplayGame'}}
+        nextAfter: {type: [string, 'null'], description: Pass as `after` to read the next page}
+    ReplaySession:
+      type: object
+      description: One replay of a real game, served as a live CourtPulse game
+      required: [sessionId, nbaGameId, gameId, speed, status, playsReleased, totalPlays, homeTeamName, awayTeamName, gameDate, startedAt]
+      properties:
+        sessionId: {type: string, format: uuid}
+        nbaGameId: {type: string}
+        gameId: {type: string, description: The CourtPulse game this replay feeds}
+        speed: {type: integer, format: int32}
+        status: {type: string, enum: [RUNNING, PAUSED, FINISHED]}
+        playsReleased: {type: integer, format: int32}
+        totalPlays: {type: integer, format: int32}
+        homeTeamName: {type: string}
+        awayTeamName: {type: string}
+        gameDate: {type: string, format: date}
+        startedAt: {type: string, format: date-time}
+    ReplaySessionList:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/ReplaySession'}}
+    StartReplay:
+      type: object
+      required: [nbaGameId, speed]
+      properties:
+        nbaGameId: {type: string, pattern: '[0-9]{10}'}
+        speed: {type: integer, format: int32, minimum: 1, maximum: 120}
+    ReplaySpeed:
+      type: object
+      required: [speed]
+      properties:
+        speed: {type: integer, format: int32, minimum: 1, maximum: 120}
     DeliveryHistoryPage:
       type: object
       required: [items]
@@ -817,6 +1025,8 @@ components:
         version: {type: integer, format: int64}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
+        playerName: {type: [string, 'null'], description: Player name when known}
+        gameLabel: {type: [string, 'null'], description: '"Away at Home" when both teams are named'}
     CloseGameRule:
       type: object
       additionalProperties: false
@@ -832,6 +1042,7 @@ components:
         version: {type: integer, format: int64}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
+        gameLabel: {type: [string, 'null'], description: '"Away at Home" when both teams are named'}
     ScoringRunRule:
       type: object
       additionalProperties: false
@@ -846,6 +1057,8 @@ components:
         version: {type: integer, format: int64}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
+        teamName: {type: [string, 'null'], description: Team name when known}
+        gameLabel: {type: [string, 'null'], description: '"Away at Home" when both teams are named'}
     RulePage:
       type: object
       additionalProperties: false
@@ -874,6 +1087,7 @@ components:
         context: {type: object, additionalProperties: {type: string}}
         status: {type: string}
         createdAt: {type: string, format: date-time}
+        gameLabel: {type: [string, 'null'], description: '"Away at Home" when both teams are named'}
     RuleOperations:
       type: object
       additionalProperties: false

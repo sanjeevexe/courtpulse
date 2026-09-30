@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 TERRAFORM := docker run --rm -v "$(CURDIR)":/w -w /w hashicorp/terraform:1.16.4
 TERRAFORM_OFFLINE := docker run --rm --network none -v "$(CURDIR)":/w -w /w hashicorp/terraform:1.16.4
-.PHONY: help demo demo-status demo-down demo-destroy test web-check check perf recovery security \
+.PHONY: help demo replay-import demo-status demo-down demo-destroy test web-check check perf recovery security \
 	observability acceptance terraform-check
 
 help: ## List targets
@@ -12,6 +12,9 @@ help: ## List targets
 
 demo: ## Start the full local demo (simulated live game, sign-in, alerts, email)
 	scripts/demo.sh up
+
+replay-import: ## Import real games for replay into the demo (DATASET=cdnnba_po_2025 by default)
+	scripts/demo.sh import $(or $(DATASET),cdnnba_po_2025)
 
 demo-status: ## Show demo services, URLs, and usernames
 	scripts/demo.sh status

@@ -685,6 +685,32 @@ browser view:
 ./scripts/verify-milestone-12.sh
 ```
 
+## Real-game replay
+
+`--replay-import` loads completed real games from the open nba_data project, which republishes
+NBA.com play-by-play by season as `.tar.xz` CSV archives. Only dataset names of the form
+`cdnnba_20YY` (regular season) or `cdnnba_po_20YY` (playoffs; `cdnnba_po_2025` is the 2026
+playoffs) are fetched, over HTTPS with a size limit; a local `.csv` or `.tar.xz` path works too.
+Each game is validated (scores add up play by play, one final action, two teams) and stored in
+`replay_catalog` and `replay_actions`; invalid games are skipped and counted.
+
+```bash
+docker compose --profile live --profile replay up -d --build
+docker compose run --rm processor-worker --replay-import=cdnnba_po_2025
+docker compose run --rm processor-worker --replay-start=0042500223 --replay-speed=60
+curl -sS http://localhost:8080/api/v1/replays/games?team=OKC | jq '.items[0]'
+```
+
+The `replay-worker` service is the ordinary ingest daemon with `COURTPULSE_PROVIDER=nba-replay`,
+polling every 2 s. Each run of a game becomes a separate game, `nba-replay-<id>-<run>`, whose
+plays are released as replay time reaches them; breaks longer than 45 s are shortened. Signed-in
+users start and control replays in the browser (`/replays` and the game page) or through
+`/api/v1/me/replays` (pause, resume, finish, speed from 1x to 120x); the catalog and the replay
+list are public. Each user may run 3 replays at once and the server 10. The data is unofficial,
+for personal non-commercial demonstration, and never committed to the repository. See
+[ADR 0015](adr/0015-real-game-replay.md). `scripts/verify-replay.sh` proves replays offline
+with a fictional fixture; `REAL_DATA=1` adds real playoff games and checks each official final.
+
 ## Failure and redelivery demonstrations
 
 SQS accepted the send, then the publisher failed before recording `SENT`:

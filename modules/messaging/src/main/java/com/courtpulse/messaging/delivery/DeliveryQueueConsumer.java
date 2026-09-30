@@ -51,7 +51,7 @@ public final class DeliveryQueueConsumer {
 
     String body(ClaimedEmailDelivery delivery) {
         StringBuilder body = new StringBuilder(delivery.title())
-                .append("\nGame: ").append(delivery.gameId());
+                .append("\nGame: ").append(delivery.gameLabel());
         if (publicBaseUrl != null) {
             body.append("\nOpen the game: ").append(publicBaseUrl).append("/games/")
                     .append(java.net.URLEncoder.encode(delivery.gameId(), java.nio.charset.StandardCharsets.UTF_8));

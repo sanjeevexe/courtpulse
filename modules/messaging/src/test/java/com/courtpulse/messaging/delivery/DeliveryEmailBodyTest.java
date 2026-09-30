@@ -4,21 +4,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.courtpulse.domain.alert.RuleType;
 import com.courtpulse.persistence.ClaimedEmailDelivery;
 import java.time.Clock;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class DeliveryEmailBodyTest {
     private static final ClaimedEmailDelivery DELIVERY = new ClaimedEmailDelivery(
-            UUID.randomUUID(), "fan@example.test", "Ada Lane reached 30 points", "bdl-game-990001", true, 1);
+            UUID.randomUUID(), "fan@example.test", "Ada Lane reached 30 points", "bdl-game-990001",
+            "Summit Valley Sentinels at Harbor City Herons", true, 1, RuleType.PLAYER_POINTS, Map.of());
 
     @Test
     void bodyNamesTheGameAndLinksToItOnlyWhenAPublicSiteIsConfigured() {
         String local = consumer(null).body(DELIVERY);
         assertEquals("""
                 Ada Lane reached 30 points
-                Game: bdl-game-990001
+                Game: Summit Valley Sentinels at Harbor City Herons
 
                 You receive this because email alerts are enabled in your CourtPulse notification settings.""",
                 local);

@@ -86,6 +86,8 @@ describe('game slate', () => {
     await user.tab();
     expect(screen.getByRole('link', { name: 'CourtPulse game slate' })).toHaveFocus();
     await user.tab();
+    expect(screen.getByRole('link', { name: 'Replays' })).toHaveFocus();
+    await user.tab();
     expect(screen.getByRole('button', { name: 'All games' })).toHaveFocus();
   });
 

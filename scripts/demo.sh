@@ -5,6 +5,7 @@
 #   scripts/demo.sh up        start or resume (first run builds images: several minutes)
 #   scripts/demo.sh status    show services, URLs, and the demo usernames
 #   scripts/demo.sh logs SVC  follow one service's logs
+#   scripts/demo.sh import DATASET  import more real games (e.g. cdnnba_2025, the 2025-26 season)
 #   scripts/demo.sh down      stop, keeping data
 #   scripts/demo.sh destroy   stop and delete the demo's data volumes and images
 #
@@ -20,10 +21,11 @@ export COURTPULSE_COMPOSE_PROJECT="${project}"
 
 compose=(docker compose --project-directory "${repository}" -f "${repository}/compose.yaml"
   --env-file "${env_file}" -p "${project}"
-  --profile auth --profile live --profile simulator --profile reconciliation --profile delivery)
+  --profile auth --profile live --profile simulator --profile reconciliation --profile delivery
+  --profile replay)
 
 usage() {
-  sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_docker() {
@@ -74,6 +76,7 @@ urls() {
 
 CourtPulse demo is running:
   Dashboard        http://127.0.0.1:4173   (use 127.0.0.1, not localhost, for sign-in)
+  Replay real games http://127.0.0.1:4173/replays
   API              http://127.0.0.1:8080/api/v1/games
   Mailpit (email)  http://127.0.0.1:8025
   Keycloak admin   http://127.0.0.1:8180   (user: admin)
@@ -101,6 +104,15 @@ up() {
   if [[ "${games}" == 0 ]]; then
     "${compose[@]}" run --rm -T --no-deps processor-worker --reset-import --publish >/dev/null
   fi
+  # Real games for replay: the 2026 playoffs (about 1 MB) on first start, if the network allows.
+  local catalog
+  catalog="$("${compose[@]}" exec -T postgres psql -At -U courtpulse -d courtpulse \
+    -c 'SELECT count(*) FROM replay_catalog')"
+  if [[ "${catalog}" == 0 ]]; then
+    echo 'Importing real NBA playoff games for replay...'
+    "${compose[@]}" run --rm -T --no-deps processor-worker --replay-import=cdnnba_po_2025 2>/dev/null \
+      | grep 'Replay catalog import' || echo 'Could not download replay games now; run: scripts/demo.sh import cdnnba_po_2025'
+  fi
   echo 'Starting services...'
   "${compose[@]}" up -d --wait >/dev/null
   if ! "${repository}/scripts/provision-local-identity.sh" >/dev/null 2>&1; then
@@ -118,6 +130,11 @@ case "${1:-}" in
     load_env
     "${compose[@]}" ps
     urls
+    ;;
+  import)
+    [[ -n "${2:-}" ]] || { echo 'Usage: scripts/demo.sh import DATASET (e.g. cdnnba_po_2025)' >&2; exit 2; }
+    load_env
+    "${compose[@]}" run --rm -T --no-deps processor-worker --replay-import="$2"
     ;;
   logs)
     [[ -n "${2:-}" ]] || { echo 'Usage: scripts/demo.sh logs SERVICE' >&2; exit 2; }

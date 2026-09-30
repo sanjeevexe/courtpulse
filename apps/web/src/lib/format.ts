@@ -38,5 +38,26 @@ export function teamLabel(teamId: string, name?: string | null): string {
 }
 
 export function playerLabel(playerId: string, names?: Record<string, string>): string {
-  return names?.[playerId] ?? playerId.replace(/^bdl-player-/, '#').replaceAll('_', ' ');
+  return names?.[playerId] ?? playerId.replace(/^(bdl|nba)-player-/, 'Player #').replaceAll('_', ' ');
+}
+
+/** The verified facts behind an alert, in words ("9 unanswered points · alert at 7"). */
+export function alertDetails(context: Record<string, string>, ruleType?: string): string {
+  const number = (key: string) => context[key];
+  if (ruleType === 'CLOSE_GAME' || (ruleType === undefined && number('verifiedMargin'))) {
+    const margin = number('verifiedMargin');
+    const left = number('clockMillisRemaining');
+    const period = number('period');
+    const parts = [margin === '0' ? 'Tied' : `${margin ?? '?'}-point margin`];
+    if (left && period) parts.push(`${formatClock(Number(left))} left in ${formatPeriod(Number(period))}`);
+    if (number('maximumMargin')) parts.push(`alert within ${number('maximumMargin') ?? ''}`);
+    return parts.join(' · ');
+  }
+  if (ruleType === 'SCORING_RUN' || (ruleType === undefined && number('verifiedRunPoints'))) {
+    return `${number('verifiedRunPoints') ?? '?'} unanswered points · alert at ${number('threshold') ?? '?'}`;
+  }
+  if (number('verifiedTotal')) {
+    return `${number('verifiedTotal') ?? '?'} points · alert at ${number('threshold') ?? '?'}`;
+  }
+  return '';
 }

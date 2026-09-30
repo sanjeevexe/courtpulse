@@ -1,13 +1,16 @@
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { uniqueAlerts, uniqueEvents, useAlerts, useEvents, useGameSnapshot } from '../api/hooks';
+import { uniqueAlerts, uniqueEvents, useAlerts, useEvents, useGameSnapshot, useMyAlerts } from '../api/hooks';
 import { ApiError, followGame, listFollowedGames, unfollowGame } from '../api/client';
 import { useAuth } from '../auth/useAuth';
 import { DataStatusBadge } from '../components/DataStatusBadge';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
-import { formatClock, formatDateTime, formatPeriod, playerLabel, readableEventType, teamLabel } from '../lib/format';
+import {
+  alertDetails, formatClock, formatDateTime, formatPeriod, playerLabel, readableEventType, teamLabel,
+} from '../lib/format';
 import { connectionLabel, useGameRealtime } from '../realtime/hooks';
+import { ReplayControls } from '../components/ReplayControls';
 
 export function GameDetailPage() {
   const { gameId = '' } = useParams();
@@ -19,6 +22,9 @@ export function GameDetailPage() {
   const alertsQuery = useAlerts(gameId);
   const events = uniqueEvents(eventsQuery.data);
   const alerts = uniqueAlerts(alertsQuery.data);
+  const myAlertsQuery = useMyAlerts(auth.accessToken, auth.status === 'AUTHENTICATED');
+  const myAlerts = (myAlertsQuery.data?.pages.flatMap((page) => page.items) ?? [])
+    .filter((alert) => alert.gameId === gameId);
   const eventsBusy = eventsQuery.isFetchingNextPage || eventsQuery.isRefetching;
   const followedQuery = useQuery({
     queryKey: ['me', 'followed-games'],
@@ -88,6 +94,7 @@ export function GameDetailPage() {
             : 'Your session expired or could not be verified. Sign in again and retry.'}
         </p>
       ) : null}
+      <ReplayControls gameId={gameId} />
 
       <header className="scoreboard">
         <div className="scoreboard__topline">
@@ -176,9 +183,7 @@ export function GameDetailPage() {
                     {event.teamId
                       ? teamLabel(event.teamId, event.teamId === game.homeTeamId ? game.homeTeamName : event.teamId === game.awayTeamId ? game.awayTeamName : null)
                       : 'Game'}
-                    {event.participantIds.length > 0
-                      ? ` · ${event.participantIds.map((id) => playerLabel(id, game.playerNames)).join(', ')}`
-                      : ''}
+                    {namedParticipants(event.participantIds, game.playerNames, Boolean(event.description))}
                     {event.points > 0 ? ` · ${String(event.points)} pts` : ''}
                   </span>
                 </div>
@@ -207,10 +212,25 @@ export function GameDetailPage() {
       <section className="panel panel--wide" aria-labelledby="alerts-title">
         <div className="panel-heading">
           <div><p className="eyebrow">Moments</p><h2 id="alerts-title">Triggered alerts</h2></div>
-          <span className="count-pill">{alerts.length}</span>
+          <span className="count-pill">{alerts.length + myAlerts.length}</span>
         </div>
         {alertsQuery.isError ? <ErrorPanel error={alertsQuery.error} onRetry={() => void alertsQuery.refetch()} /> : null}
-        {!alertsQuery.isPending && alerts.length === 0 ? (
+        {myAlerts.length > 0 ? (
+          <div className="alert-list" aria-label="Your alerts for this game">
+            {myAlerts.map((alert) => (
+              <article className="alert-card" key={alert.id}>
+                <span className="alert-icon" aria-hidden="true">!</span>
+                <div>
+                  <span className="rule-type">Your alert</span>
+                  <h3>{alert.title}</h3>
+                  <p>{alertDetails(alert.context, alert.ruleType)}</p>
+                  <small>{formatDateTime(alert.createdAt)} · <Link to="/my-alerts">Delivery status</Link></small>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+        {!alertsQuery.isPending && alerts.length === 0 && myAlerts.length === 0 ? (
           <div className="inline-empty"><strong>No alerts yet</strong><span>Notable moments will collect here.</span></div>
         ) : null}
         <div className="alert-list">
@@ -219,8 +239,8 @@ export function GameDetailPage() {
               <span className="alert-icon" aria-hidden="true">!</span>
               <div>
                 <h3>{alert.title}</h3>
-                <p>{Object.entries(alert.context).map(([key, value]) => `${key}: ${value}`).join(' · ')}</p>
-                <small>Rule {alert.ruleId} · Event {alert.triggeringEventId} · {formatDateTime(alert.createdAt)}</small>
+                <p>{alertDetails(alert.context)}</p>
+                <small>{formatDateTime(alert.createdAt)}</small>
               </div>
             </article>
           ))}
@@ -228,4 +248,10 @@ export function GameDetailPage() {
       </section>
     </article>
   );
+}
+
+/** Named players only; an unnamed ID adds nothing when the play's own text already names them. */
+function namedParticipants(ids: string[], names: Record<string, string>, described: boolean): string {
+  const labels = ids.filter((id) => !described || names[id]).map((id) => playerLabel(id, names));
+  return labels.length > 0 ? ` · ${labels.join(', ')}` : '';
 }

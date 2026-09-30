@@ -22,6 +22,9 @@ dependencies {
     implementation("software.amazon.awssdk:sqs")
     implementation("software.amazon.awssdk:ses")
     implementation("software.amazon.awssdk:url-connection-client")
+    // Real-game replay datasets are published as .tar.xz archives.
+    implementation("org.apache.commons:commons-compress:1.28.0")
+    implementation("org.tukaani:xz:1.12")
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

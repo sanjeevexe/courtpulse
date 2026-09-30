@@ -3,6 +3,19 @@
 CourtPulse was built in milestones, one commit each. Dates are commit dates. Design decisions
 are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capability in detail.
 
+## 1.1.0 — 2026-09-30 — Real-game replay
+
+- Replay completed real NBA games (the 2026 playoffs by default, or any imported season) as live
+  games, through the same ingestion, processing, alert, and realtime path as a live feed. Pause,
+  resume, change speed (1x to 120x), skip to the final, or replay again from the browser.
+- Alerts, rules, and emails use names ("Hal Quill reached 16 points", "3-point game with 0:06
+  left in Q4") instead of IDs; alert details are written in plain words; the game page shows
+  your own alerts for that game.
+- `scripts/verify-replay.sh` (weekly in CI) replays games end to end; with `REAL_DATA=1` it
+  checks real playoff games, including overtime, against their official final scores.
+- Local sign-in lasts 60 minutes, matching Cognito (it was Keycloak's 5-minute default).
+- The M7 harness's stale sign-in check is fixed, and every harness now runs weekly in CI.
+
 ## 1.0.0 — 2026-09-28 — Release polish (M16)
 
 - One-command local demo (`scripts/demo.sh`, `make demo`): the full stack with a simulated live

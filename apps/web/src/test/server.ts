@@ -16,6 +16,8 @@ export const handlers = [
     return HttpResponse.json(cursor ? eventPage(events.slice(8, 16), null) : eventPage(events.slice(0, 8), 'page-2'));
   }),
   http.get('*/api/v1/games/:gameId/alerts', () => HttpResponse.json(alertPage())),
+  http.get('*/api/v1/replays/sessions', () => HttpResponse.json({ items: [] })),
+  http.get('*/api/v1/me/alerts', () => HttpResponse.json({ items: [] })),
 ];
 
 export const server = setupServer(...handlers);

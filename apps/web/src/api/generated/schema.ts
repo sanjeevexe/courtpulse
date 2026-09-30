@@ -1101,6 +1101,373 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/replays/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List completed real games available for replay, newest first */
+        get: {
+            parameters: {
+                query?: {
+                    team?: string;
+                    after?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Replay catalog page */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplayGamePage"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/replays/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List running, paused, and recently finished replays */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Replays */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySessionList"];
+                    };
+                };
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/replays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the replays the authenticated user started */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Owned replays */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySessionList"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        put?: never;
+        /** Start replaying a real game as a live CourtPulse game */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartReplay"];
+                };
+            };
+            responses: {
+                /** @description Replay started */
+                201: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySession"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/replays/{sessionId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause an owned replay */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Replay paused */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySession"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/replays/{sessionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume an owned paused replay */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Replay resumed */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySession"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/replays/{sessionId}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skip an owned replay to the final buzzer */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Replay finished */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySession"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/replays/{sessionId}/speed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change an owned replay's speed */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReplaySpeed"];
+                };
+            };
+            responses: {
+                /** @description Speed changed */
+                200: {
+                    headers: {
+                        "X-Correlation-ID": components["headers"]["CorrelationId"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReplaySession"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                405: components["responses"]["MethodNotAllowed"];
+                406: components["responses"]["NotAcceptable"];
+                409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["InternalError"];
+                503: components["responses"]["Unavailable"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1113,6 +1480,68 @@ export interface components {
         UpdateNotificationSettings: {
             emailEnabled: boolean;
             emailAddress?: string | null;
+        };
+        /** @description A completed real game that can be replayed */
+        ReplayGame: {
+            nbaGameId: string;
+            /** Format: date */
+            gameDate: string;
+            homeTeamName: string;
+            homeTeamAbbreviation: string;
+            awayTeamName: string;
+            awayTeamAbbreviation: string;
+            /** Format: int32 */
+            homeScore: number;
+            /** Format: int32 */
+            awayScore: number;
+            /** Format: int32 */
+            periods: number;
+            /** Format: int32 */
+            plays: number;
+            /**
+             * Format: int64
+             * @description Replay length at 1x, with long breaks shortened
+             */
+            durationSeconds: number;
+        };
+        ReplayGamePage: {
+            items: components["schemas"]["ReplayGame"][];
+            /** @description Pass as `after` to read the next page */
+            nextAfter?: string | null;
+        };
+        /** @description One replay of a real game, served as a live CourtPulse game */
+        ReplaySession: {
+            /** Format: uuid */
+            sessionId: string;
+            nbaGameId: string;
+            /** @description The CourtPulse game this replay feeds */
+            gameId: string;
+            /** Format: int32 */
+            speed: number;
+            /** @enum {string} */
+            status: "RUNNING" | "PAUSED" | "FINISHED";
+            /** Format: int32 */
+            playsReleased: number;
+            /** Format: int32 */
+            totalPlays: number;
+            homeTeamName: string;
+            awayTeamName: string;
+            /** Format: date */
+            gameDate: string;
+            /** Format: date-time */
+            startedAt: string;
+        };
+        ReplaySessionList: {
+            items: components["schemas"]["ReplaySession"][];
+        };
+        StartReplay: {
+            nbaGameId: string;
+            /** Format: int32 */
+            speed: number;
+        };
+        ReplaySpeed: {
+            /** Format: int32 */
+            speed: number;
         };
         DeliveryHistoryPage: {
             items: components["schemas"]["DeliveryHistoryRecord"][];
@@ -1376,6 +1805,10 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description Player name when known */
+            playerName?: string | null;
+            /** @description "Away at Home" when both teams are named */
+            gameLabel?: string | null;
         };
         CloseGameRule: {
             /** Format: uuid */
@@ -1399,6 +1832,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description "Away at Home" when both teams are named */
+            gameLabel?: string | null;
         };
         ScoringRunRule: {
             /** Format: uuid */
@@ -1419,6 +1854,10 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description Team name when known */
+            teamName?: string | null;
+            /** @description "Away at Home" when both teams are named */
+            gameLabel?: string | null;
         };
         RulePage: {
             items: components["schemas"]["AlertRule"][];
@@ -1442,6 +1881,8 @@ export interface components {
             status: string;
             /** Format: date-time */
             createdAt: string;
+            /** @description "Away at Home" when both teams are named */
+            gameLabel?: string | null;
         };
         RuleOperations: {
             /** Format: int64 */

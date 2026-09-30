@@ -18,12 +18,13 @@ import com.courtpulse.persistence.DatabaseCounts;
 import com.courtpulse.persistence.FixtureIngestionService;
 import com.courtpulse.persistence.GameReconciliationService;
 import com.courtpulse.persistence.ImportResult;
+import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
 import com.courtpulse.persistence.JdbcFixtureRepository;
 import com.courtpulse.persistence.JdbcGameProcessingRepository;
-import com.courtpulse.persistence.JdbcDeliveryWorkRepository;
-import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
 import com.courtpulse.persistence.JdbcInspectionRepository;
+import com.courtpulse.persistence.JdbcOperationalTelemetryRepository;
 import com.courtpulse.persistence.JdbcOutboxPublicationRepository;
+import com.courtpulse.persistence.JdbcReplayRepository;
 import com.courtpulse.persistence.OutboxStatusCounts;
 import com.courtpulse.persistence.ProviderIngestionService;
 import com.courtpulse.providers.live.LiveGameProvider;
@@ -50,6 +51,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionTemplate;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 @Component
@@ -62,10 +64,13 @@ public final class QueueReplayCommand implements ApplicationRunner {
             "simulate-consumer-after-commit");
     /** Deployment modes: each runs alone and is what an orchestrator schedules. */
     private static final Set<String> SERVICE_OPTIONS = Set.of(
-            "processor-daemon", "ingest-daemon", "ingest-game", "migrate", "canary", "synthetic-load");
+            "processor-daemon", "ingest-daemon", "ingest-game", "migrate", "canary", "synthetic-load",
+            "replay-import", "replay-start");
     /** Companion settings accepted only with --synthetic-load. */
     private static final Set<String> SYNTHETIC_OPTIONS = Set.of(
             "synthetic-events", "synthetic-prefix", "synthetic-pace-ms", "synthetic-seed");
+    /** Companion setting accepted only with --replay-start. */
+    private static final Set<String> REPLAY_OPTIONS = Set.of("replay-speed");
     private static final Set<String> DELIVERY_OPTIONS = Set.of(
             "delivery-publish", "delivery-drain", "delivery-run", "delivery-daemon");
 
@@ -95,6 +100,8 @@ public final class QueueReplayCommand implements ApplicationRunner {
     private final JdbcClient jdbc;
     private final LiveIngestDaemon.Settings ingestSettings;
     private final Duration canaryTimeout;
+    private final JdbcReplayRepository replays;
+    private final TransactionTemplate transactions;
 
     public QueueReplayCommand(
             JdbcFixtureRepository fixtures,
@@ -125,7 +132,9 @@ public final class QueueReplayCommand implements ApplicationRunner {
             @Value("${courtpulse.ingest.maximum-live-games}") int maximumLiveGames,
             @Value("${courtpulse.ingest.player-lookups-per-cycle}") int playerLookups,
             @Value("${courtpulse.ingest.league-zone}") java.time.ZoneId leagueZone,
-            @Value("${courtpulse.canary.timeout}") Duration canaryTimeout) {
+            @Value("${courtpulse.canary.timeout}") Duration canaryTimeout,
+            JdbcReplayRepository replays,
+            TransactionTemplate transactions) {
         this.fixtures = fixtures;
         this.ingestion = ingestion;
         this.reconciliation = reconciliation;
@@ -156,6 +165,8 @@ public final class QueueReplayCommand implements ApplicationRunner {
         this.ingestSettings = new LiveIngestDaemon.Settings(
                 ingestPollInterval, maximumLiveGames, playerLookups, leagueZone);
         this.canaryTimeout = canaryTimeout;
+        this.replays = replays;
+        this.transactions = transactions;
     }
 
     @Override
@@ -275,9 +286,11 @@ public final class QueueReplayCommand implements ApplicationRunner {
             return false;
         }
         boolean synthetic = modes.contains("synthetic-load");
+        boolean replay = modes.contains("replay-start");
         List<String> other = arguments.getOptionNames().stream()
                 .filter(option -> !SERVICE_OPTIONS.contains(option))
                 .filter(option -> !(synthetic && SYNTHETIC_OPTIONS.contains(option)))
+                .filter(option -> !(replay && REPLAY_OPTIONS.contains(option)))
                 .filter(option -> !option.startsWith("spring.") && !option.startsWith("logging.")
                         && !option.startsWith("courtpulse."))
                 .toList();
@@ -304,9 +317,36 @@ public final class QueueReplayCommand implements ApplicationRunner {
                     Integer.parseInt(optional(arguments, "synthetic-events", "40")),
                     Long.parseLong(optional(arguments, "synthetic-seed", "7")),
                     Long.parseLong(optional(arguments, "synthetic-pace-ms", "0")));
+            case "replay-import" -> importReplays(Options.oneValue(arguments, "replay-import"));
+            case "replay-start" -> startReplay(Options.oneValue(arguments, "replay-start"),
+                    Integer.parseInt(optional(arguments, "replay-speed", "30")));
             default -> throw new IllegalStateException("Unhandled deployment mode");
         }
         return true;
+    }
+
+    private void importReplays(String target) {
+        try {
+            new ReplayDatasetImporter(replays, transactions,
+                    java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
+                            .followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build(),
+                    java.time.Clock.systemUTC()).run(target);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Replay import failed: " + exception.getMessage(), exception);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Replay import interrupted", exception);
+        }
+    }
+
+    private void startReplay(String nbaGameId, int speed) {
+        String padded = nbaGameId.matches("[0-9]{1,10}") ? "0".repeat(10 - nbaGameId.length()) + nbaGameId : nbaGameId;
+        var session = transactions.execute(status ->
+                replays.createSession(padded, speed, null, java.time.Instant.now()));
+        if (session == null || session.isEmpty()) {
+            throw new IllegalArgumentException("Game " + nbaGameId + " is not in the replay catalog; import it first");
+        }
+        System.out.printf("Replay started: gameId=%s speed=%dx%n", session.get().gameId(), speed);
     }
 
     private static String optional(ApplicationArguments arguments, String name, String fallback) {
@@ -501,6 +541,8 @@ public final class QueueReplayCommand implements ApplicationRunner {
         System.out.println("       [--reconciliation-run | --reconciliation-daemon]");
         System.out.println("Deployment modes (one at a time): --processor-daemon | --ingest-daemon");
         System.out.println("       | --ingest-game=<provider game id> | --migrate | --canary");
+        System.out.println("Real-game replay: --replay-import=<cdnnba_po_2025 | file.csv | file.tar.xz>");
+        System.out.println("       | --replay-start=<NBA game id> [--replay-speed=1..120, default 30]");
         System.out.println("Load tests: --synthetic-load=<games> [--synthetic-events=40] [--synthetic-prefix=load]");
         System.out.println("       [--synthetic-seed=7] [--synthetic-pace-ms=0 (burst) | 1..10000 (paced)]");
     }

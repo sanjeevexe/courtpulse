@@ -43,7 +43,7 @@ describe('game detail', () => {
     expect(screen.getByText('OT1')).toBeVisible();
     const players = requiredElement(screen.getByRole('heading', { name: 'Player totals' }).closest('section'));
     expect(within(players).getByText('Ada Lane')).toBeVisible();
-    expect(within(players).getByText('#9000204')).toBeVisible();
+    expect(within(players).getByText('Player #9000204')).toBeVisible();
     expect(screen.getByText('Ada Lane makes 25-foot three point jumper')).toBeVisible();
   });
 
@@ -126,7 +126,7 @@ describe('game detail', () => {
   it('shows exactly one milestone alert', async () => {
     renderApp('/games/game_synthetic_001');
     expect(await screen.findByRole('heading', { name: 'player_ace reached 10 points' })).toBeVisible();
-    expect(screen.getAllByText(/milestone-player-ace-10/)).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: 'player_ace reached 10 points' })).toHaveLength(1);
   });
 
   it('handles a game with no alerts', async () => {

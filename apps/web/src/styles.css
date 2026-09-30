@@ -147,3 +147,26 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Real-game replay */
+.replay-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin: 1.5rem 0 1rem; }
+.replay-toolbar label { display: grid; gap: .35rem; color: var(--muted); font-size: .78rem; font-weight: 800; }
+.replay-toolbar select { color: var(--ink); background: #091522; border: 1px solid #40536a; border-radius: .5rem; min-height: 44px; padding: .55rem .7rem; }
+.replay-card__teams { display: grid; gap: .55rem; padding: 1.1rem 0; }
+.replay-card__teams div { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.replay-card__teams span { font-weight: 800; }
+.replay-card__teams strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.replay-sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.replay-sessions li { display: grid; grid-template-columns: 1fr auto minmax(6rem, 12rem); align-items: center; gap: 1rem; padding: .6rem 0; border-top: 1px solid var(--line); }
+.replay-sessions a { color: var(--ink); font-weight: 800; }
+.replay-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: 1rem 1.15rem; border: 1px solid var(--lime); border-radius: 1rem; background: var(--panel); }
+.replay-bar__summary { display: grid; gap: .3rem; min-width: min(100%, 16rem); }
+.replay-bar__summary .eyebrow { margin: 0; }
+.replay-bar__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.speed-group { display: flex; flex-wrap: wrap; gap: .35rem; }
+.speed-group .filter-chip { min-height: 36px; padding: .35rem .7rem; }
+.replay-bar progress, .replay-sessions progress { width: 100%; accent-color: var(--lime); }
+.replay-provenance { margin-top: 1.5rem; font-size: .78rem; }
+.form-error { color: #ff9b8f; font-weight: 750; }
+@media (max-width: 640px) { .replay-sessions li { grid-template-columns: 1fr auto; } .replay-sessions progress { grid-column: 1 / -1; } }
+

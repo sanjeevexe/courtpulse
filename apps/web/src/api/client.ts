@@ -22,6 +22,11 @@ export type NotificationSettings = components['schemas']['NotificationSettings']
 export type UpdateNotificationSettings = components['schemas']['UpdateNotificationSettings'];
 export type DeliveryHistoryPage = components['schemas']['DeliveryHistoryPage'];
 export type DeliveryAttemptPage = components['schemas']['DeliveryAttemptPage'];
+export type ReplayGame = components['schemas']['ReplayGame'];
+export type ReplayGamePage = components['schemas']['ReplayGamePage'];
+export type ReplaySession = components['schemas']['ReplaySession'];
+export type ReplaySessionList = components['schemas']['ReplaySessionList'];
+export type ReplayAction = 'pause' | 'resume' | 'finish';
 
 type FailureKind = 'problem' | 'network' | 'timeout' | 'malformed';
 
@@ -271,4 +276,43 @@ export async function listDeliveryAttempts(
     `/api/v1/me/notifications/deliveries/${encodeURIComponent(deliveryId)}/attempts?limit=20`,
     bearer(accessToken),
   ));
+}
+
+export async function listReplayGames(team: string | null, after: string | null, limit = 24): Promise<ReplayGamePage> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  if (team) search.set('team', team);
+  if (after) search.set('after', after);
+  return expectOk<ReplayGamePage>(await apiFetch(`/api/v1/replays/games?${search.toString()}`));
+}
+
+export async function listReplaySessions(): Promise<ReplaySessionList> {
+  return expectOk<ReplaySessionList>(await apiFetch('/api/v1/replays/sessions'));
+}
+
+export async function listMyReplays(accessToken: string): Promise<ReplaySessionList> {
+  return expectOk<ReplaySessionList>(await apiFetch('/api/v1/me/replays', bearer(accessToken)));
+}
+
+export async function startReplay(accessToken: string, nbaGameId: string, speed: number): Promise<ReplaySession> {
+  return expectOk<ReplaySession>(await apiFetch('/api/v1/me/replays', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nbaGameId, speed }),
+  }));
+}
+
+export async function controlReplay(
+  accessToken: string, sessionId: string, action: ReplayAction,
+): Promise<ReplaySession> {
+  return expectOk<ReplaySession>(await apiFetch(
+    `/api/v1/me/replays/${encodeURIComponent(sessionId)}/${action}`, bearer(accessToken, 'POST'),
+  ));
+}
+
+export async function setReplaySpeed(accessToken: string, sessionId: string, speed: number): Promise<ReplaySession> {
+  return expectOk<ReplaySession>(await apiFetch(`/api/v1/me/replays/${encodeURIComponent(sessionId)}/speed`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ speed }),
+  }));
 }

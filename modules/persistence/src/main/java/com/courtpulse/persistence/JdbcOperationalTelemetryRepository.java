@@ -6,7 +6,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /** Fixed-label aggregate observations only. No payloads or personal data are stored. */
 public final class JdbcOperationalTelemetryRepository {
     public static final java.util.Set<String> WORKER_TYPES =
-            java.util.Set.of("delivery", "reconciliation", "processor", "ingestor");
+            java.util.Set.of("delivery", "reconciliation", "processor", "ingestor", "replay");
     private final JdbcClient jdbc;
 
     public JdbcOperationalTelemetryRepository(JdbcClient jdbc) {

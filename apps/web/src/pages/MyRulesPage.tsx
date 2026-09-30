@@ -13,7 +13,7 @@ import { useMyRules, useRuleTargets } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { LoadingState } from '../components/LoadingState';
-import { formatPeriod } from '../lib/format';
+import { formatClock, formatPeriod } from '../lib/format';
 
 type RuleKind = CreateAlertRule['type'];
 
@@ -169,7 +169,7 @@ export function MyRulesPage() {
         <div className="rule-list">
           {rules.map((rule) => (
             <article className="rule-card" key={rule.id}>
-              <div><span className="rule-type">{ruleLabel(rule.type)}</span><h3>{ruleSummary(rule)}</h3><p>{rule.gameId}</p></div>
+              <div><span className="rule-type">{ruleLabel(rule.type)}</span><h3>{ruleSummary(rule)}</h3><p>{rule.gameLabel ?? rule.gameId}</p></div>
               <div className="rule-actions">
                 <button className="button button--secondary" disabled={toggleMutation.isPending} onClick={() => toggleMutation.mutate(rule)}>{rule.enabled ? 'Disable' : 'Enable'}</button>
                 <button className="button button--quiet" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(rule.id)}>Delete</button>
@@ -197,7 +197,7 @@ function ruleLabel(type: AlertRule['type']) {
 }
 
 function ruleSummary(rule: AlertRule) {
-  if (rule.type === 'PLAYER_POINTS') return `${rule.playerId} · ${String(rule.pointsThreshold)} points`;
-  if (rule.type === 'SCORING_RUN') return `${rule.teamId} · ${String(rule.pointsThreshold)} unanswered`;
-  return `Within ${String(rule.maximumMargin)} points · ${formatPeriod(rule.eligiblePeriod)} · ${String(rule.maximumClockMillisRemaining / 1000)}s or less`;
+  if (rule.type === 'PLAYER_POINTS') return `${rule.playerName ?? rule.playerId} reaches ${String(rule.pointsThreshold)} points`;
+  if (rule.type === 'SCORING_RUN') return `${rule.teamName ?? rule.teamId} goes on a ${String(rule.pointsThreshold)}-0 run`;
+  return `Within ${String(rule.maximumMargin)} points in the last ${formatClock(rule.maximumClockMillisRemaining)} of ${formatPeriod(rule.eligiblePeriod)}`;
 }
