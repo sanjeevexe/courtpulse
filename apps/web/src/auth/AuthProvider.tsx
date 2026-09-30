@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
+import { ApiError } from '../api/client';
 import { AuthContext, type AuthContextValue } from './AuthContext';
 import { displayNameOf } from './displayName';
 
@@ -90,6 +91,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     return () => { active = false; };
   }, [queryClient]);
+
+  // A 401 from any private request means the token is no longer accepted (expired early, revoked,
+  // or issued by an identity provider that has since been reset). End the local session so the
+  // page offers sign-in instead of waiting on data that will never load.
+  useEffect(() => {
+    if (!manager || status !== 'AUTHENTICATED') return undefined;
+    const rejected = (failure: unknown) => failure instanceof ApiError && failure.status === 401;
+    const expire = () => {
+      void manager.removeUser().catch(() => undefined);
+      queryClient.removeQueries({ queryKey: ['me'] });
+      setUser(null);
+      setError('Your session expired. Sign in again to continue with private data.');
+      setStatus('ERROR');
+    };
+    const queries = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'error' && rejected(event.action.error)) expire();
+    });
+    const mutations = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'error' && rejected(event.action.error)) expire();
+    });
+    return () => { queries(); mutations(); };
+  }, [manager, queryClient, status]);
 
   const signIn = useCallback(async (returnPath = '/') => {
     if (!manager || signInActive.current) return;

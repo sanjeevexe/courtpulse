@@ -273,4 +273,24 @@ describe('OIDC browser authentication', () => {
     expect(queryClient.getQueryData(['me', 'rules'])).toBeUndefined();
     expect(queryClient.getQueryData(['me', 'alerts'])).toBeUndefined();
   });
+
+  it('ends the session when a private request is refused with 401 instead of loading forever', async () => {
+    enableAuthentication();
+    oidc.getUser.mockResolvedValue(authenticatedUser);
+    let requests = 0;
+    server.use(http.get('*/api/v1/me/rules', () => {
+      requests++;
+      return HttpResponse.json({
+        type: 'https://courtpulse.dev/problems/authentication_required', title: 'Authentication required',
+        status: 401, detail: 'A valid bearer token is required.', instance: '/api/v1/me/rules',
+        correlationId: 'safe-id', code: 'authentication_required',
+      }, { status: 401, headers: { 'Content-Type': 'application/problem+json' } });
+    }));
+    renderApp('/my-rules');
+
+    expect(await screen.findByText(/session expired/i)).toBeVisible();
+    expect(screen.getAllByRole('button', { name: 'Sign in' }).length).toBeGreaterThan(0);
+    expect(oidc.removeUser).toHaveBeenCalled();
+    expect(requests).toBe(1);
+  });
 });
