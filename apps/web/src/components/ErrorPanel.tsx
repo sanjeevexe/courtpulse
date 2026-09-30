@@ -18,7 +18,7 @@ export function ErrorPanel({ error, onRetry }: { error: unknown; onRetry?: () =>
       <h2 id="error-title">{errorMessage(error)}</h2>
       <p>Your place is safe. Retry when you are ready.</p>
       <div className="error-actions">
-        {onRetry ? <button className="button button--primary" onClick={onRetry}>Try again</button> : null}
+        {onRetry ? <button className="button button--secondary" onClick={onRetry}>Try again</button> : null}
         {apiError?.correlationId ? (
           <details>
             <summary>Technical details</summary>

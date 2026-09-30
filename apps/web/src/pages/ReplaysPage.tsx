@@ -5,18 +5,22 @@ import { startReplay, type ReplayGame, type ReplaySession } from '../api/client'
 import { useReplayGames, useReplaySessions } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
+import { EmptyState } from '../components/EmptyState';
+import { Icon } from '../components/Icons';
 import { LoadingState } from '../components/LoadingState';
-import { REPLAY_SPEEDS, formatReplayDate, replayLength, replayProgress, waitForReplayGame } from '../lib/replay';
-
-const TEAMS = ['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GSW', 'HOU', 'IND', 'LAC', 'LAL',
-  'MEM', 'MIA', 'MIL', 'MIN', 'NOP', 'NYK', 'OKC', 'ORL', 'PHI', 'PHX', 'POR', 'SAC', 'SAS', 'TOR', 'UTA', 'WAS'];
+import { PageHeader } from '../components/PageHeader';
+import { ProgressBar } from '../components/ProgressBar';
+import { SegmentedControl } from '../components/SegmentedControl';
+import { TeamBadge } from '../components/TeamBadge';
+import { NBA_TEAM_CODES } from '../lib/teams';
+import { REPLAY_SPEEDS, formatReplayDate, replayLength, waitForReplayGame } from '../lib/replay';
 
 export function ReplaysPage() {
   const auth = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [team, setTeam] = useState<string | null>(null);
-  const [speed, setSpeed] = useState(30);
+  const [speed, setSpeed] = useState<number>(30);
   const games = useReplayGames(team);
   const sessions = useReplaySessions();
   const start = useMutation({
@@ -36,85 +40,94 @@ export function ReplaysPage() {
 
   return (
     <>
-      <section className="slate-heading">
-        <div>
-          <p className="eyebrow">Real games</p>
-          <h1>Replay a real game</h1>
-          <p>
-            Pick a finished NBA game and CourtPulse plays it back play by play as if it were live: the scoreboard,
-            your alert rules, and email all react exactly as they would tonight. Choose a speed, then pause or
-            skip ahead whenever you like.
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Real games"
+        title="Replays"
+        lede="Pick a finished NBA game and CourtPulse plays it back play by play, as if it were live. The scoreboard, your alert rules, and email all react just as they would tonight."
+      />
 
       {active.length > 0 ? (
-        <section className="panel panel--wide" aria-labelledby="now-replaying">
-          <div className="panel-heading"><h2 id="now-replaying">Now replaying</h2>
-            <span className="count-pill">{active.length}</span></div>
+        <section className="panel now-replaying" aria-labelledby="now-replaying">
+          <div className="panel-heading">
+            <h2 id="now-replaying"><span className="live-dot" aria-hidden="true" />Now replaying</h2>
+            <span className="count-pill">{active.length}</span>
+          </div>
           <ul className="replay-sessions">
             {active.map((session) => <SessionRow key={session.sessionId} session={session} />)}
           </ul>
         </section>
       ) : null}
 
-      <div className="replay-toolbar">
-        <label>Team
+      <div className="toolbar">
+        <label className="field field--inline">
+          <span>Team</span>
           <select value={team ?? ''} onChange={(event) => setTeam(event.target.value || null)}>
             <option value="">All teams</option>
-            {TEAMS.map((code) => <option key={code} value={code}>{code}</option>)}
+            {NBA_TEAM_CODES.map((code) => <option key={code} value={code}>{code}</option>)}
           </select>
         </label>
-        <label>Speed
-          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>
-            {REPLAY_SPEEDS.map((value) => <option key={value} value={value}>{value}× </option>)}
-          </select>
-        </label>
-        {!auth.enabled ? <p className="muted">Starting a replay needs sign-in, which is off in this setup.</p> : null}
+        <div className="field field--inline">
+          <span aria-hidden="true">Speed</span>
+          <SegmentedControl label="Speed" value={speed} onChange={setSpeed}
+            options={REPLAY_SPEEDS.map((value) => ({ value, label: `${String(value)}×` }))} />
+        </div>
+        {!auth.enabled ? <p className="muted">Starting a replay needs sign-in.</p> : null}
       </div>
       {start.isError ? <p className="form-error" role="alert">{start.error.message}</p> : null}
 
       {games.isPending ? <LoadingState label="Loading real games" /> : null}
       {games.isError ? <ErrorPanel error={games.error} onRetry={() => void games.refetch()} /> : null}
       {!games.isPending && !games.isError && items.length === 0 ? (
-        <section className="empty-state">
-          <h2>No real games imported{team ? ` for ${team}` : ''}</h2>
-          <p>The demo imports the 2026 playoffs on first start; otherwise run <code>make replay-import</code>.</p>
-        </section>
+        <EmptyState
+          title={`No replays available${team ? ` for ${team}` : ''} yet`}
+          body={<>The demo imports the 2026 playoffs on first start; otherwise run <code>make replay-import</code>.</>}
+        />
       ) : null}
       {items.length > 0 ? (
         <section className="game-grid" aria-label="Real games available for replay">
-          {items.map((game) => (
-            <article key={game.nbaGameId} className="game-card replay-card">
-              <div className="game-card__meta">
-                <span>{formatReplayDate(game.gameDate)}</span>
-                <span>{game.periods > 4 ? `Final/${game.periods === 5 ? 'OT' : `${String(game.periods - 4)}OT`}` : 'Final'}</span>
-              </div>
-              <div className="replay-card__teams">
-                <div><span>{game.awayTeamName}</span><strong>{game.awayScore}</strong></div>
-                <div><span>{game.homeTeamName}</span><strong>{game.homeScore}</strong></div>
-              </div>
-              <div className="game-card__footer">
-                <span>{game.plays} plays · {replayLength(game.durationSeconds, speed)} at {speed}×</span>
-                {auth.status === 'AUTHENTICATED' ? (
-                  <button className="button button--primary" disabled={start.isPending}
-                    onClick={() => start.mutate(game)}>
-                    {start.isPending && start.variables.nbaGameId === game.nbaGameId ? 'Starting replay…' : 'Replay'}
-                  </button>
-                ) : auth.enabled ? (
-                  <button className="button button--secondary" disabled={auth.signInPending}
-                    onClick={() => void auth.signIn('/replays')}>Sign in to replay</button>
-                ) : null}
-              </div>
-            </article>
-          ))}
+          {items.map((game) => {
+            const starting = start.isPending && start.variables.nbaGameId === game.nbaGameId;
+            const awayWon = game.awayScore > game.homeScore;
+            return (
+              <article key={game.nbaGameId} className={`game-card replay-card${starting ? ' is-starting' : ''}`}>
+                <div className="game-card__meta">
+                  <span className="game-status game-status--final">
+                    <span className="final-label">
+                      {game.periods > 4 ? `Final/${game.periods === 5 ? 'OT' : `${String(game.periods - 4)}OT`}` : 'Final'}
+                    </span>
+                  </span>
+                  <span className="muted">{formatReplayDate(game.gameDate)}</span>
+                </div>
+                <div className="matchup">
+                  <ReplayTeam name={game.awayTeamName} abbreviation={game.awayTeamAbbreviation}
+                    score={game.awayScore} dim={!awayWon} />
+                  <ReplayTeam name={game.homeTeamName} abbreviation={game.homeTeamAbbreviation}
+                    score={game.homeScore} dim={awayWon} />
+                </div>
+                <div className="game-card__footer">
+                  <span>{game.plays} plays · {replayLength(game.durationSeconds, speed)} at {speed}×</span>
+                  {auth.status === 'AUTHENTICATED' ? (
+                    <button className="button button--secondary button--sm" disabled={start.isPending}
+                      onClick={() => start.mutate(game)}>
+                      {starting ? 'Starting replay…' : <><Icon name="play" size={12} />Replay</>}
+                    </button>
+                  ) : auth.enabled ? (
+                    <button className="button button--secondary button--sm" disabled={auth.signInPending}
+                      onClick={() => void auth.signIn('/replays')}>Sign in to replay</button>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
         </section>
       ) : null}
       {games.hasNextPage ? (
-        <button className="button button--secondary button--full" disabled={games.isFetchingNextPage}
-          onClick={() => void games.fetchNextPage()}>
-          {games.isFetchingNextPage ? 'Loading…' : 'Load more games'}
-        </button>
+        <div className="load-more-row">
+          <button className="button button--secondary" disabled={games.isFetchingNextPage}
+            onClick={() => void games.fetchNextPage()}>
+            {games.isFetchingNextPage ? 'Loading…' : 'Load more games'}
+          </button>
+        </div>
       ) : null}
       <p className="muted replay-provenance">
         Play-by-play from NBA.com as republished by the open nba_data project. Unofficial and used for personal,
@@ -124,16 +137,28 @@ export function ReplaysPage() {
   );
 }
 
+function ReplayTeam({ name, abbreviation, score, dim }: {
+  name: string; abbreviation: string; score: number; dim: boolean;
+}) {
+  return (
+    <div className={`team-line${dim ? ' team-line--dim' : ''}`}>
+      <TeamBadge name={name} abbreviation={abbreviation} />
+      <span className="team-line__names"><strong>{name}</strong></span>
+      <strong className="score">{score}</strong>
+    </div>
+  );
+}
+
 function SessionRow({ session }: { session: ReplaySession }) {
   return (
     <li>
       <Link to={`/games/${encodeURIComponent(session.gameId)}`}>
-        {session.awayTeamName} at {session.homeTeamName}
+        <TeamBadge name={session.awayTeamName} size="sm" />
+        <TeamBadge name={session.homeTeamName} size="sm" />
+        <span>{session.awayTeamName} at {session.homeTeamName}</span>
       </Link>
       <span className="muted">{session.status === 'PAUSED' ? 'Paused' : `${String(session.speed)}×`}</span>
-      <progress max={session.totalPlays} value={session.playsReleased} aria-label="Replay progress">
-        {replayProgress(session)}
-      </progress>
+      <ProgressBar max={session.totalPlays} value={session.playsReleased} label="Replay progress" />
     </li>
   );
 }

@@ -83,7 +83,7 @@ describe('Replays', () => {
     const user = userEvent.setup();
     renderAt('/replays', auth(true));
 
-    await user.selectOptions(await screen.findByLabelText('Speed'), '60');
+    await user.click(await screen.findByRole('button', { name: '60×' }));
     await user.click(screen.getByRole('button', { name: 'Replay' }));
 
     expect(await screen.findByRole('heading', { name: `Game ${session.gameId}` })).toBeVisible();

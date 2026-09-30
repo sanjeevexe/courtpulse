@@ -5,6 +5,9 @@ import { RouterProvider } from 'react-router-dom';
 import { ApiError } from './api/client';
 import { router } from './router';
 import { AuthProvider } from './auth/AuthProvider';
+import '@fontsource-variable/inter';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
 import './styles.css';
 
 const queryClient = new QueryClient({

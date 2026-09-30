@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
 
 export function NotFoundPage() {
   return (
-    <section className="empty-state" role="status">
-      <span aria-hidden="true">404</span>
-      <h1>This route is off the court</h1>
-      <p>The page does not exist, but the game slate is ready.</p>
-      <Link className="button button--primary" to="/">Return to game slate</Link>
-    </section>
+    <EmptyState
+      heading="h1"
+      role="status"
+      mark={<span className="empty-state__code">404</span>}
+      title="Out of bounds"
+      body="This page does not exist, but the scores are ready."
+      action={<Link className="button button--primary" to="/">Back to scores</Link>}
+    />
   );
 }

@@ -61,3 +61,12 @@ export function alertDetails(context: Record<string, string>, ruleType?: string)
   }
   return '';
 }
+
+/** Tip-off in a scoreboard style: "7:30 PM" today, otherwise "Oct 2 · 7:30 PM". */
+export function formatTipoff(value: string, now = new Date()): string {
+  const date = new Date(value);
+  const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+  if (date.toDateString() === now.toDateString()) return time;
+  const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date);
+  return `${day} · ${time}`;
+}

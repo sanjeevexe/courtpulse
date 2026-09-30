@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('slate opens the seeded game and reaches all durable detail data', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scores', exact: true })).toBeVisible();
   await expect(page.getByRole('article')).toContainText('18');
   await expect(page.getByRole('article')).toContainText('14');
 
@@ -45,7 +45,7 @@ test('unknown games render a safe not-found state', async ({ page }) => {
   await page.goto('/games/not-a-real-game');
   await expect(page.getByRole('heading', { name: 'That game is not available.' })).toBeVisible();
   await expect(page.getByText(/exception|select |stack trace/i)).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /back to game slate/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /back to scores/i })).toBeVisible();
 });
 
 test('backend network outage presents a recoverable error', async ({ page }) => {
@@ -56,7 +56,7 @@ test('backend network outage presents a recoverable error', async ({ page }) => 
   await expect(retry).toBeVisible();
   await page.unroute('**/api/**');
   await retry.click();
-  await expect(page.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scores', exact: true })).toBeVisible();
 });
 
 test('responsive game flow keeps controls and score usable', async ({ page }) => {

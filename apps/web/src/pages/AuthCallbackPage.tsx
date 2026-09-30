@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { EmptyState } from '../components/EmptyState';
 
 export function AuthCallbackPage() {
   const { completeCallback, status } = useAuth();
@@ -20,12 +21,23 @@ export function AuthCallbackPage() {
 
   if (failed) {
     return (
-      <section className="empty-state" role="alert">
-        <h1>Sign-in did not complete</h1>
-        <p>No credentials were saved. Return to the public game slate and try again.</p>
-        <button className="button" onClick={() => void navigate('/', { replace: true })}>Return to games</button>
-      </section>
+      <EmptyState
+        heading="h1"
+        role="alert"
+        title="Sign-in did not complete"
+        body="No credentials were saved. Return to the scores and try again."
+        action={
+          <button className="button button--primary" onClick={() => void navigate('/', { replace: true })}>
+            Return to scores
+          </button>
+        }
+      />
     );
   }
-  return <div className="loading-state" role="status">Completing secure sign-in…</div>;
+  return (
+    <div className="callback-state" role="status">
+      <span className="spinner" aria-hidden="true" />
+      Completing secure sign-in…
+    </div>
+  );
 }

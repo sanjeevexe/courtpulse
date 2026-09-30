@@ -3,14 +3,15 @@ import type { DataStatus } from '../api/client';
 const statusCopy: Record<DataStatus, { label: string; detail: string }> = {
   SCHEDULED: { label: 'Scheduled', detail: 'Game updates begin at tipoff.' },
   LIVE: { label: 'Live', detail: 'Game data is current.' },
-  FINAL: { label: 'Final', detail: 'The final result is durable.' },
+  FINAL: { label: 'Final', detail: 'Final score.' },
   STALE: { label: 'Updates delayed', detail: 'The game is live, but updates may be delayed.' },
   PROCESSING_BLOCKED: {
     label: 'Processing attention',
-    detail: 'Game processing needs attention. The latest durable score remains available.',
+    detail: 'Game processing needs attention. The latest confirmed score remains available.',
   },
 };
 
+/** Data freshness, in words and never by color alone. */
 export function DataStatusBadge({ status, explain = false }: { status: DataStatus; explain?: boolean }) {
   const copy = statusCopy[status];
   return (

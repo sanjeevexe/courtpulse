@@ -3,6 +3,22 @@
 CourtPulse was built in milestones, one commit each. Dates are commit dates. Design decisions
 are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capability in detail.
 
+## 1.2.0 — 2026-09-30 — Web redesign
+
+- A new design system for the web app: spacing, type, color, radius, and motion tokens; self-hosted
+  Inter and Barlow Condensed fonts; one page-header, card, panel, and empty-state pattern.
+- Navigation: Scores, Replays, Alerts, and Rules in the header with an active indicator, an
+  account menu for personal pages and sign-out, and a bottom tab bar on phones.
+- Game cards and the scoreboard show team badges in team colors, a pulsing LIVE pill with the
+  period and clock, and dimmed losing teams on finals. The game page puts alerts beside the
+  play-by-play and adds a player-leader chart; the duplicate "Recent possessions" list is gone.
+- Subtle motion: scores tick when they change, cards and rows ease in, a sliding indicator on
+  segmented controls, skeleton shimmer, and a toast whenever one of your alerts fires anywhere
+  in the app. All motion is transform/opacity only and respects reduced-motion settings.
+- My Games shows live score cards instead of raw game IDs; the rule form suggests games from the
+  slate; My Alerts shows delivery as status chips; notification email is a switch.
+- Fan-facing copy replaces internal wording ("Durable game feed", "PostgreSQL-backed").
+
 ## 1.1.0 — 2026-09-30 — Real-game replay
 
 - Replay completed real NBA games (the 2026 playoffs by default, or any imported season) as live

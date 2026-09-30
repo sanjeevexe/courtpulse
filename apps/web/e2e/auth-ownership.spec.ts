@@ -17,7 +17,7 @@ async function login(page: Page, username: string, password: string) {
   await page.locator('#username').fill(username);
   await page.locator('#password').fill(password);
   await page.locator('#kc-login').click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Account menu/ })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('body')).not.toContainText('access_token');
   expect(page.url()).not.toContain('code=');
 }
@@ -37,6 +37,7 @@ async function logout(page: Page) {
   const configuration = await configurationResponse.json() as { issuer: string };
   const logoutRequest = page.waitForRequest((request) =>
     request.url().startsWith(`${configuration.issuer}/protocol/openid-connect/logout`));
+  await page.getByRole('button', { name: /^Account menu/ }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await logoutRequest;
   await page.waitForURL((url) => url.origin === applicationOrigin && url.pathname === '/');
@@ -63,7 +64,7 @@ test('two browser identities keep owned games isolated and preserve public logou
   test.setTimeout(90_000);
   const browserFailures = captureBrowserFailures(page);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scores', exact: true })).toBeVisible();
   if (!authAcceptance) {
     await expect(page.getByText('Public browsing')).toBeVisible();
     return;
@@ -100,9 +101,10 @@ test('two browser identities keep owned games isolated and preserve public logou
 
   await login(page, userA, passwordA);
   await page.goto('/my-games');
-  await expect(page.getByRole('link', { name: 'game_synthetic_001' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Followed games' }).getByRole('article')).toHaveCount(1);
+  await expect(page.getByRole('region', { name: 'Followed games' })).toContainText('18');
   await logout(page);
-  await expect(page.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scores', exact: true })).toBeVisible();
   expect(browserFailures).toEqual([]);
 });
 
@@ -111,7 +113,7 @@ test('operational browser identity can read the protected operations resource', 
   const browserFailures = captureBrowserFailures(page);
   await page.goto('/');
   if (!authAcceptance) {
-    await expect(page.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Scores', exact: true })).toBeVisible();
     return;
   }
   const username = process.env.COURTPULSE_TEST_OPS_USER ?? '';

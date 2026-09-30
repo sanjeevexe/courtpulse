@@ -9,6 +9,9 @@ import {
 } from '../api/client';
 import { useMyReplays, useReplaySessions } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
+import { Icon } from './Icons';
+import { ProgressBar } from './ProgressBar';
+import { SegmentedControl } from './SegmentedControl';
 import { REPLAY_SPEEDS, formatReplayDate, replayProgress, waitForReplayGame } from '../lib/replay';
 
 /** Shown on a game that is a replay: its progress, and controls for the fan who started it. */
@@ -50,36 +53,32 @@ export function ReplayControls({ gameId }: { gameId: string }) {
   if (!session) return null;
   const busy = control.isPending || again.isPending;
   const finished = session.status === 'FINISHED';
+  const paused = session.status === 'PAUSED';
   return (
-    <section className="replay-bar" aria-label="Replay controls">
+    <section className={`replay-bar${finished ? ' replay-bar--finished' : ''}`} aria-label="Replay controls">
       <div className="replay-bar__summary">
-        <span className="eyebrow">Replay · {formatReplayDate(session.gameDate)}</span>
-        <strong>
-          {finished ? 'Replay finished' : session.status === 'PAUSED' ? 'Paused' : `Replaying at ${String(session.speed)}×`}
-        </strong>
-        <progress max={session.totalPlays} value={session.playsReleased} aria-label="Replay progress" />
+        <span className="eyebrow"><Icon name="replay" size={14} />Replay · {formatReplayDate(session.gameDate)}</span>
+        <strong>{finished ? 'Replay finished' : paused ? 'Paused' : `Replaying at ${String(session.speed)}×`}</strong>
+        <ProgressBar max={session.totalPlays} value={session.playsReleased} label="Replay progress" />
         <span className="muted">{session.playsReleased} of {session.totalPlays} plays ({replayProgress(session)})</span>
       </div>
       {authenticated ? (
         <div className="replay-bar__actions">
           {owned && !finished ? (
             <>
-              <button className="button button--secondary" disabled={busy}
-                onClick={() => control.mutate({ action: session.status === 'PAUSED' ? 'resume' : 'pause' })}>
-                {session.status === 'PAUSED' ? 'Resume' : 'Pause'}
+              <button className="icon-button icon-button--filled" disabled={busy}
+                aria-label={paused ? 'Resume' : 'Pause'}
+                onClick={() => control.mutate({ action: paused ? 'resume' : 'pause' })}>
+                <Icon name={paused ? 'play' : 'pause'} />
               </button>
-              <div className="speed-group" role="group" aria-label="Replay speed">
-                {REPLAY_SPEEDS.map((speed) => (
-                  <button key={speed} disabled={busy} aria-pressed={session.speed === speed}
-                    className={session.speed === speed ? 'filter-chip filter-chip--active' : 'filter-chip'}
-                    onClick={() => control.mutate({ speed })}>{speed}×</button>
-                ))}
-              </div>
-              <button className="button button--quiet" disabled={busy}
-                onClick={() => control.mutate({ action: 'finish' })}>Skip to final</button>
+              <SegmentedControl size="sm" label="Replay speed" disabled={busy} value={session.speed}
+                options={REPLAY_SPEEDS.map((speed) => ({ value: speed, label: `${String(speed)}×` }))}
+                onChange={(speed) => control.mutate({ speed })} />
+              <button className="button button--quiet button--sm" disabled={busy}
+                onClick={() => control.mutate({ action: 'finish' })}><Icon name="skip" size={14} />Skip to final</button>
             </>
           ) : null}
-          <button className="button button--quiet" disabled={busy} onClick={() => again.mutate(session)}>
+          <button className="button button--secondary button--sm" disabled={busy} onClick={() => again.mutate(session)}>
             {again.isPending ? 'Starting replay…' : owned ? 'Replay again' : 'Replay this game yourself'}
           </button>
         </div>

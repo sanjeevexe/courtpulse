@@ -83,7 +83,7 @@ describe('OIDC browser authentication', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Sign-in could not be started');
     expect(document.body).not.toHaveTextContent('internal.example');
-    expect(screen.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Scores' })).toBeVisible();
   });
 
   it('prevents concurrent authorization requests', async () => {
@@ -108,7 +108,7 @@ describe('OIDC browser authentication', () => {
     enableAuthentication();
     oidc.signinRedirectCallback.mockResolvedValue(authenticatedUser);
     renderApp('/auth/callback?code=sensitive-code');
-    expect(await screen.findByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Scores' })).toBeVisible();
     expect(document.body).not.toHaveTextContent('test-access-token');
     expect(document.body).not.toHaveTextContent('sensitive-code');
   });
@@ -131,7 +131,7 @@ describe('OIDC browser authentication', () => {
     expect(screen.getByText('Completing secure sign-in…')).toBeVisible();
     expect(oidc.signinRedirectCallback).not.toHaveBeenCalled();
     releaseConfiguration();
-    expect(await screen.findByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Scores' })).toBeVisible();
     expect(oidc.signinRedirectCallback).toHaveBeenCalledOnce();
   });
 
@@ -157,10 +157,11 @@ describe('OIDC browser authentication', () => {
 
     await vi.waitFor(() => expect(oidc.signinRedirectCallback).toHaveBeenCalledOnce());
     complete({ ...authenticatedUser, profile: { sub: 'user-b' } });
-    expect(await screen.findByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Scores' })).toBeVisible();
     expect(queryClient.getQueryData(['me', 'followed-games'])).toBeUndefined();
     expect(queryClient.getQueryData(['me', 'rules'])).toBeUndefined();
-    expect(queryClient.getQueryData(['me', 'alerts'])).toBeUndefined();
+    // The new identity may already have fetched its own alerts; none of the previous user's remain.
+    expect(JSON.stringify(queryClient.getQueryData(['me', 'alerts']) ?? null)).not.toContain('user-a-alert');
   });
 
   it('shows authenticated state, follows and unfollows, and logs out', async () => {
@@ -184,11 +185,14 @@ describe('OIDC browser authentication', () => {
     );
     const user = userEvent.setup();
     renderApp('/games/game_synthetic_001');
+    await user.click(await screen.findByRole('button', { name: 'Account menu for user-a' }));
     expect(await screen.findByText('Signed in as user-a')).toBeVisible();
+    await user.keyboard('{Escape}');
     await user.click(await screen.findByRole('button', { name: 'Follow game' }));
     expect(await screen.findByRole('button', { name: 'Unfollow game' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Unfollow game' }));
     expect(await screen.findByRole('button', { name: 'Follow game' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /^Account menu/ }));
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
     expect(oidc.signoutRedirect).toHaveBeenCalledOnce();
   });
@@ -205,7 +209,8 @@ describe('OIDC browser authentication', () => {
     const user = userEvent.setup();
     renderApp('/');
 
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await user.click(await screen.findByRole('button', { name: /^Account menu/ }));
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
     expect(oidc.settings?.metadataSeed).toEqual({
       end_session_endpoint: 'https://courtpulse-staging.auth.us-east-1.amazoncognito.com/logout',
@@ -220,7 +225,8 @@ describe('OIDC browser authentication', () => {
     oidc.getUser.mockResolvedValue(authenticatedUser);
     const user = userEvent.setup();
     renderApp('/');
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await user.click(await screen.findByRole('button', { name: /^Account menu/ }));
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
     expect(oidc.settings?.metadataSeed).toBeUndefined();
     expect(oidc.signoutRedirect).toHaveBeenCalledWith(undefined);
   });
@@ -235,7 +241,8 @@ describe('OIDC browser authentication', () => {
     queryClient.setQueryData(['me', 'rules'], { items: [{ id: 'private-rule' }] });
     queryClient.setQueryData(['me', 'alerts'], { pages: [{ items: [{ id: 'private-alert' }] }], pageParams: [null] });
 
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await user.click(await screen.findByRole('button', { name: /^Account menu/ }));
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('signed out locally');
     expect(document.body).not.toHaveTextContent('provider logout details');
     expect(queryClient.getQueryData(['me', 'followed-games'])).toBeUndefined();

@@ -9,7 +9,7 @@ import { renderApp } from '../test/render';
 describe('game slate', () => {
   it('renders the seeded game and score', async () => {
     renderApp();
-    expect(await screen.findByRole('heading', { name: "Today’s pulse" })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Scores' })).toBeVisible();
     expect(await screen.findByText('AWAY')).toBeVisible();
     const card = screen.getByRole('article');
     expect(within(card).getByText('18')).toBeVisible();
@@ -86,6 +86,9 @@ describe('game slate', () => {
     await user.tab();
     expect(screen.getByRole('link', { name: 'CourtPulse game slate' })).toHaveFocus();
     await user.tab();
+    expect(screen.getByRole('link', { name: 'Scores' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Scores' })).toHaveAttribute('aria-current', 'page');
+    await user.tab();
     expect(screen.getByRole('link', { name: 'Replays' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'All games' })).toHaveFocus();
@@ -93,8 +96,8 @@ describe('game slate', () => {
 
   it('provides a safe route-level not-found state and a compact mobile-ready shell', () => {
     renderApp('/missing-route');
-    expect(screen.getByRole('heading', { name: 'This route is off the court' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Return to game slate' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('heading', { name: 'Out of bounds' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Back to scores' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('banner')).toHaveClass('site-header');
   });
 });

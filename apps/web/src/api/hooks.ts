@@ -136,13 +136,15 @@ export function useMyRules(accessToken: string | null, authenticated: boolean) {
   });
 }
 
-export function useMyAlerts(accessToken: string | null, authenticated: boolean) {
+export function useMyAlerts(accessToken: string | null, authenticated: boolean, refetchInterval: number | false = false) {
   return useInfiniteQuery({
     queryKey: ['me', 'alerts'],
     queryFn: ({ pageParam }) => listMyAlerts(accessToken ?? '', pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (page: OwnedAlertPage) => page.nextCursor ?? undefined,
     enabled: authenticated && accessToken !== null,
+    refetchInterval,
+    refetchIntervalInBackground: false,
   });
 }
 

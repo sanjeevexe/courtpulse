@@ -19,11 +19,12 @@ async function login(page: Page, username: string, password: string) {
   await page.locator('#username').fill(username);
   await page.locator('#password').fill(password);
   await page.locator('#kc-login').click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Account menu/ })).toBeVisible({ timeout: 20_000 });
 }
 
 async function logout(page: Page) {
   const origin = new URL(page.url()).origin;
+  await page.getByRole('button', { name: /^Account menu/ }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.waitForURL((url) => url.origin === origin && url.pathname === '/');
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
@@ -115,7 +116,7 @@ async function createRuleAndVerify(page: Page, ordinal: number, confirmation: Lo
 test('two real OIDC users create private rules before queue replay and see isolated alerts', async ({ page }) => {
   test.setTimeout(360_000);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Today’s pulse' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scores', exact: true })).toBeVisible();
   if (!acceptance) {
     await expect(page.getByText('Public browsing')).toBeVisible();
     return;
@@ -147,7 +148,7 @@ test('two real OIDC users create private rules before queue replay and see isola
   if (deliveryAcceptance) {
     await page.goto('/notification-settings');
     await page.getByLabel('Email address').fill('recipient@example.test');
-    await page.getByLabel('Enable local email alerts').check();
+    await page.getByLabel('Email me when an alert fires').check();
     await page.getByRole('button', { name: 'Save settings' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Settings saved.' })).toBeVisible();
   }

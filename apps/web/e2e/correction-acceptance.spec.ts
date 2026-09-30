@@ -11,7 +11,7 @@ async function login(page: Page, username: string, password: string) {
   await page.locator('#username').fill(username);
   await page.locator('#password').fill(password);
   await page.locator('#kc-login').click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Account menu/ })).toBeVisible({ timeout: 20_000 });
 }
 
 async function token(page: Page): Promise<string> {
@@ -92,6 +92,7 @@ test('connected browser receives correction resync and reloads selected history'
     headers: { Authorization: `Bearer ${await token(page)}` },
   })).json() as { items: { id: string; status: string }[] };
   expect(ownedA.items.filter((item) => item.status === 'CORRECTED')).toHaveLength(1);
+  await page.getByRole('button', { name: /^Account menu/ }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
 

@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { type DeliveryHistoryPage } from '../api/client';
 import { useDeliveryAttempts, useDeliveryHistory, useMyAlerts } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
+import { EmptyState } from '../components/EmptyState';
+import { Icon } from '../components/Icons';
 import { LoadingState } from '../components/LoadingState';
-import { alertDetails, formatDateTime } from '../lib/format';
+import { PageHeader } from '../components/PageHeader';
+import { SignedOut } from '../components/SignedOut';
+import { alertDetails, formatDateTime, readableEventType } from '../lib/format';
 
 export function MyAlertsPage() {
   const auth = useAuth();
@@ -24,33 +29,55 @@ export function MyAlertsPage() {
 
   if (auth.status !== 'AUTHENTICATED') {
     return (
-      <section className="empty-state">
-        <h1>My Alerts</h1>
-        <p>Sign in to see your private alert history. Personalized alerts never appear on public game channels.</p>
-        {auth.enabled ? <button className="button" onClick={() => void auth.signIn('/my-alerts')}>Sign in</button> : null}
-      </section>
+      <SignedOut title="My Alerts" returnPath="/my-alerts"
+        body="Sign in to see your private alert history. Personalized alerts never appear on public game channels." />
     );
   }
-  if (query.isPending) return <LoadingState label="Loading private alerts" />;
-  if (query.isError) return <ErrorPanel error={query.error} onRetry={() => void query.refetch()} />;
   return (
-    <section className="panel panel--wide">
-      <div className="panel-heading"><div><p className="eyebrow">Private history</p><h1>My Alerts</h1></div><span className="count-pill">{alerts.length}</span></div>
-      {alerts.length === 0 ? <p className="muted">No personalized alerts have fired yet.</p> : null}
-      <div className="alert-list">
-        {alerts.map((alert) => (
-          <article className="alert-card" key={alert.id}>
-            <span className="alert-icon" aria-hidden="true">!</span>
-            <div><span className="rule-type">{alert.ruleType.replaceAll('_', ' ')}</span><h3>{alert.title}</h3><p>{alertDetails(alert.context, alert.ruleType)}</p><small>{alert.gameLabel ?? alert.gameId} · {formatDateTime(alert.createdAt)}</small>
-              {deliveryByAlert.get(alert.id)?.map((delivery) => (
-                <DeliveryState key={delivery.id} delivery={delivery} accessToken={auth.accessToken} />
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-      {query.hasNextPage ? <button className="button button--secondary button--full" onClick={() => void query.fetchNextPage()}>Load more alerts</button> : null}
-    </section>
+    <>
+      <PageHeader eyebrow="Alerts" title="My Alerts" lede="Every alert your rules have fired, and how it reached you."
+        actions={<Link className="button button--secondary button--sm" to="/my-rules"><Icon name="rules" size={16} />Manage rules</Link>} />
+      {query.isPending ? <LoadingState label="Loading private alerts" variant="list" /> : null}
+      {query.isError ? <ErrorPanel error={query.error} onRetry={() => void query.refetch()} /> : null}
+      {query.isSuccess && alerts.length === 0 ? (
+        <EmptyState
+          mark={<Icon name="bell" size={32} />}
+          title="No personalized alerts have fired yet."
+          body="Create a rule on a live game or a replay, and alerts will collect here."
+          action={<Link className="button button--secondary" to="/my-rules">Create a rule</Link>}
+        />
+      ) : null}
+      {alerts.length > 0 ? (
+        <div className="alert-list alert-list--page">
+          {alerts.map((alert) => (
+            <article className="alert-card alert-card--mine" key={alert.id}>
+              <span className="alert-icon" aria-hidden="true"><Icon name="bell" size={16} /></span>
+              <div className="alert-card__body">
+                <span className="tag">{readableEventType(alert.ruleType)}</span>
+                <h3>{alert.title}</h3>
+                <p>{alertDetails(alert.context, alert.ruleType)}</p>
+                <small>
+                  <Link to={`/games/${encodeURIComponent(alert.gameId)}`}>{alert.gameLabel ?? alert.gameId}</Link>
+                  {' · '}{formatDateTime(alert.createdAt)}
+                </small>
+                {deliveryByAlert.get(alert.id)?.length ? (
+                  <div className="delivery-list">
+                    {deliveryByAlert.get(alert.id)?.map((delivery) => (
+                      <DeliveryState key={delivery.id} delivery={delivery} accessToken={auth.accessToken} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+      {query.hasNextPage ? (
+        <button className="button button--secondary button--full" onClick={() => void query.fetchNextPage()}>
+          Load more alerts
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -61,8 +88,8 @@ function DeliveryState({
   const attempts = useDeliveryAttempts(accessToken, accessToken !== null, delivery.id, expanded);
   const label = delivery.channel === 'IN_APP' ? 'In app' : 'Email';
   return (
-    <div className="delivery-state">
-      <p className="muted">{label}: {delivery.status.replaceAll('_', ' ').toLowerCase()}
+    <div className={`delivery-state delivery-state--${delivery.status.toLowerCase()}`}>
+      <p className="delivery-chip"><span className="delivery-chip__dot" aria-hidden="true" />{label}: {delivery.status.replaceAll('_', ' ').toLowerCase()}
         {delivery.channel === 'EMAIL' ? ` · ${String(delivery.attempts)} attempt${delivery.attempts === 1 ? '' : 's'}` : ''}
         {delivery.lastErrorCode ? ` · ${delivery.lastErrorCode.replaceAll('_', ' ')}` : ''}
         {delivery.nextAttemptAt && delivery.status === 'RETRY_SCHEDULED'

@@ -36,15 +36,24 @@ describe('game detail', () => {
   });
 
   it('shows provider team and player names, overtime, and play text when known', async () => {
-    server.use(http.get('*/api/v1/games/:gameId', () => HttpResponse.json(providerSnapshot)));
+    server.use(
+      http.get('*/api/v1/games/:gameId', () => HttpResponse.json(providerSnapshot)),
+      http.get('*/api/v1/games/:gameId/events', () => HttpResponse.json({
+        items: [{
+          ...events[0], eventId: 'bdl-990001-160-r1', gameId: 'bdl-game-990001', sequence: 160, period: 5,
+          description: 'Ada Lane makes 25-foot three point jumper',
+        }],
+        nextCursor: null,
+      })),
+    );
     renderApp('/games/bdl-game-990001');
     const home = await screen.findByLabelText('Home team score');
     expect(within(home).getByRole('heading', { name: 'Harbor City Herons' })).toBeVisible();
-    expect(screen.getByText('OT1')).toBeVisible();
+    expect(screen.getAllByText('OT1')[0]).toBeVisible();
     const players = requiredElement(screen.getByRole('heading', { name: 'Player totals' }).closest('section'));
     expect(within(players).getByText('Ada Lane')).toBeVisible();
     expect(within(players).getByText('Player #9000204')).toBeVisible();
-    expect(screen.getByText('Ada Lane makes 25-foot three point jumper')).toBeVisible();
+    expect(await screen.findByText('Ada Lane makes 25-foot three point jumper')).toBeVisible();
   });
 
   it('renders events in API sequence order', async () => {
@@ -57,9 +66,9 @@ describe('game detail', () => {
   it('loads another event page', async () => {
     const user = userEvent.setup();
     renderApp('/games/game_synthetic_001');
-    await screen.findByText('8 loaded');
+    await screen.findByText('Showing 8');
     await user.click(screen.getByRole('button', { name: 'Load more possessions' }));
-    expect(await screen.findByText('16 loaded')).toBeVisible();
+    expect(await screen.findByText('Showing 16')).toBeVisible();
     expect(screen.getByText('16', { selector: '.event-sequence' })).toBeVisible();
   });
 
@@ -91,24 +100,24 @@ describe('game detail', () => {
     }));
 
     const { queryClient } = renderApp('/games/game_synthetic_001');
-    await screen.findByText('8 loaded');
+    await screen.findByText('Showing 8');
     await user.click(screen.getByRole('button', { name: 'Load more possessions' }));
-    await screen.findByText('16 loaded');
+    await screen.findByText('Showing 16');
 
     const invalidation = queryClient.invalidateQueries({
       queryKey: ['game', 'game_synthetic_001', 'events'],
     });
     const refreshButton = await screen.findByRole('button', { name: 'Refreshing possessions…' });
     expect(refreshButton).toBeDisabled();
-    expect(screen.getByText('16 loaded')).toBeVisible();
+    expect(screen.getByText('Showing 16')).toBeVisible();
     expect(screen.getAllByText('8', { selector: '.event-sequence' })).toHaveLength(1);
 
     releaseRefresh?.();
     await invalidation;
     await waitFor(() => expect(screen.getByRole('button', { name: 'Load more possessions' })).toBeEnabled());
-    expect(screen.getByText('16 loaded')).toBeVisible();
+    expect(screen.getByText('Showing 16')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Load more possessions' }));
-    await screen.findByText('20 loaded');
+    await screen.findByText('Showing 20');
     expect(screen.queryByRole('button', { name: 'Load more possessions' })).not.toBeInTheDocument();
     expect(concurrentSameCursor).toBe(false);
   });

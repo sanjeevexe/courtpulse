@@ -39,7 +39,7 @@ describe('My Rules', () => {
     const user = userEvent.setup();
     renderPrivate('rules');
     expect(await screen.findByRole('heading', { name: 'Create a rule' })).toBeVisible();
-    expect(screen.getByText(/never executes user-authored expressions/i)).toBeVisible();
+    expect(screen.getByText(/never run as code/i)).toBeVisible();
     expect(screen.queryByLabelText(/expression/i)).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Template'), 'SCORING_RUN');
     expect(screen.getByText(/opponent score ends the run/i)).toBeVisible();

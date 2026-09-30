@@ -8,12 +8,16 @@ import {
   updateRule,
   type AlertRule,
   type CreateAlertRule,
+  type GameSummary,
 } from '../api/client';
-import { useMyRules, useRuleTargets } from '../api/hooks';
+import { uniqueGames, useGames, useMyRules, useRuleTargets } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
 import { ErrorPanel } from '../components/ErrorPanel';
+import { Icon } from '../components/Icons';
 import { LoadingState } from '../components/LoadingState';
-import { formatClock, formatPeriod } from '../lib/format';
+import { PageHeader } from '../components/PageHeader';
+import { SignedOut } from '../components/SignedOut';
+import { formatClock, formatPeriod, teamLabel } from '../lib/format';
 
 type RuleKind = CreateAlertRule['type'];
 
@@ -41,6 +45,8 @@ export function MyRulesPage() {
   const [period, setPeriod] = useState('4');
   const [clockSeconds, setClockSeconds] = useState('180');
   const [validation, setValidation] = useState<string | null>(null);
+  // Suggest games from the slate so a rule can be aimed without knowing an ID.
+  const gameOptions = uniqueGames(useGames('ALL').data);
   const pendingCreate = useRef<{ body: string; key: string } | null>(null);
 
   const rules = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
@@ -72,11 +78,8 @@ export function MyRulesPage() {
 
   if (auth.status !== 'AUTHENTICATED') {
     return (
-      <section className="empty-state">
-        <h1>My Rules</h1>
-        <p>Sign in to create private alert rules. Public game browsing remains available.</p>
-        {auth.enabled ? <button className="button" onClick={() => void auth.signIn('/my-rules')}>Sign in</button> : null}
-      </section>
+      <SignedOut title="My Rules" returnPath="/my-rules"
+        body="Sign in to create private alert rules. Public game browsing remains available." />
     );
   }
 
@@ -115,81 +118,138 @@ export function MyRulesPage() {
     setValidation(null);
   }
 
+  const chosenGame = gameOptions.find((game) => game.gameId === gameId.trim());
   return (
-    <div className="rules-layout">
-      <section className="panel rule-builder" aria-labelledby="create-rule-title">
-        <div className="panel-heading"><div><p className="eyebrow">Private alerts</p><h1 id="create-rule-title">Create a rule</h1></div></div>
-        <p className="muted">Choose a validated template. CourtPulse never executes user-authored expressions.</p>
-        <form className="rule-form" onSubmit={submit}>
-          <label>Template
-            <select value={type} onChange={(event) => setType(event.target.value as RuleKind)}>
-              <option value="PLAYER_POINTS">Player points</option>
-              <option value="CLOSE_GAME">Close game</option>
-              <option value="SCORING_RUN">Scoring run</option>
-            </select>
-          </label>
-          <p className="template-description">{descriptions[type]}</p>
-          <label>Game ID<input value={gameId} maxLength={200} onChange={(event) => setGameId(event.target.value)} /></label>
-          {type !== 'CLOSE_GAME' ? (
-            <label>{type === 'PLAYER_POINTS' ? 'Player ID' : 'Team ID'}
-              <input value={targetId} maxLength={200} list={suggestions.length > 0 ? 'rule-targets' : undefined}
-                onChange={(event) => setTargetId(event.target.value)} />
-              {suggestions.length > 0 ? (
-                <datalist id="rule-targets" data-testid="rule-targets">
-                  {suggestions.map((target) => <option key={target.id} value={target.id} label={target.label} />)}
-                </datalist>
-              ) : null}
+    <>
+      <PageHeader eyebrow="Alerts" title="My Rules"
+        lede="Rules watch games for you and alert you the moment something happens." />
+      <div className="rules-layout">
+        <section className="panel rule-builder" aria-labelledby="create-rule-title">
+          <div className="panel-heading"><h2 id="create-rule-title">Create a rule</h2></div>
+          <p className="muted panel-intro">Pick a template. Rules are checked on the server and never run as code.</p>
+          <form className="form" onSubmit={submit}>
+            <label className="field">
+              <span>Template</span>
+              <select value={type} onChange={(event) => setType(event.target.value as RuleKind)}>
+                <option value="PLAYER_POINTS">Player points</option>
+                <option value="CLOSE_GAME">Close game</option>
+                <option value="SCORING_RUN">Scoring run</option>
+              </select>
             </label>
-          ) : null}
-          {type !== 'CLOSE_GAME' ? (
-            <label>{type === 'PLAYER_POINTS' ? 'Points threshold' : 'Unanswered points'}
-              <input type="number" min="1" max={type === 'PLAYER_POINTS' ? '200' : '100'} value={threshold} onChange={(event) => setThreshold(event.target.value)} />
-            </label>
-          ) : (
-            <div className="rule-form__row">
-              <label>Maximum margin<input type="number" min="1" max="20" value={margin} onChange={(event) => setMargin(event.target.value)} /></label>
-              <label>Eligible period (1–4, OT1 = 5)<input type="number" min="1" max="10" value={period} onChange={(event) => setPeriod(event.target.value)} /></label>
-              <label>Clock seconds remaining<input type="number" min="0" max="720" value={clockSeconds} onChange={(event) => setClockSeconds(event.target.value)} /></label>
+            <p className="template-description">{descriptions[type]}</p>
+            <div className="field">
+              <label htmlFor="rule-game">Game ID</label>
+              <input id="rule-game" value={gameId} maxLength={200} list="rule-games" autoComplete="off"
+                aria-describedby="rule-game-hint" onChange={(event) => setGameId(event.target.value)} />
+              <datalist id="rule-games">
+                {gameOptions.map((game) => (
+                  <option key={game.gameId} value={game.gameId} label={gameOptionLabel(game)} />
+                ))}
+              </datalist>
+              <small id="rule-game-hint" className="field__hint">
+                {chosenGame ? gameOptionLabel(chosenGame) : 'Start typing to pick a game, or open a game and choose Create alert.'}
+              </small>
             </div>
-          )}
-          {validation ? <p className="auth-error" role="alert">{validation}</p> : null}
-          {createMutation.isError ? <MutationError error={createMutation.error} /> : null}
-          {createMutation.isSuccess ? <p className="success-message" role="status">Rule saved.</p> : null}
-          <button className="button button--primary" disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Creating…' : 'Create rule'}
-          </button>
-        </form>
-      </section>
-
-      <section className="panel" aria-labelledby="my-rules-title">
-        <div className="panel-heading"><div><p className="eyebrow">Owned by you</p><h2 id="my-rules-title">My Rules</h2></div><span className="count-pill">{rules.length}</span></div>
-        {query.isPending ? <LoadingState label="Loading alert rules" /> : null}
-        {query.isError ? <ErrorPanel error={query.error} onRetry={() => void query.refetch()} /> : null}
-        {!query.isPending && rules.length === 0 ? <p className="muted">No rules yet. Create your first structured alert.</p> : null}
-        <div className="rule-list">
-          {rules.map((rule) => (
-            <article className="rule-card" key={rule.id}>
-              <div><span className="rule-type">{ruleLabel(rule.type)}</span><h3>{ruleSummary(rule)}</h3><p>{rule.gameLabel ?? rule.gameId}</p></div>
-              <div className="rule-actions">
-                <button className="button button--secondary" disabled={toggleMutation.isPending} onClick={() => toggleMutation.mutate(rule)}>{rule.enabled ? 'Disable' : 'Enable'}</button>
-                <button className="button button--quiet" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(rule.id)}>Delete</button>
+            {type !== 'CLOSE_GAME' ? (
+              <label className="field">
+                <span>{type === 'PLAYER_POINTS' ? 'Player ID' : 'Team ID'}</span>
+                <input value={targetId} maxLength={200} list={suggestions.length > 0 ? 'rule-targets' : undefined}
+                  autoComplete="off" onChange={(event) => setTargetId(event.target.value)} />
+                {suggestions.length > 0 ? (
+                  <datalist id="rule-targets" data-testid="rule-targets">
+                    {suggestions.map((target) => <option key={target.id} value={target.id} label={target.label} />)}
+                  </datalist>
+                ) : null}
+              </label>
+            ) : null}
+            {type !== 'CLOSE_GAME' ? (
+              <label className="field">
+                <span>{type === 'PLAYER_POINTS' ? 'Points threshold' : 'Unanswered points'}</span>
+                <input type="number" inputMode="numeric" min="1" max={type === 'PLAYER_POINTS' ? '200' : '100'}
+                  value={threshold} onChange={(event) => setThreshold(event.target.value)} />
+              </label>
+            ) : (
+              <div className="form__row">
+                <label className="field"><span>Maximum margin</span>
+                  <input type="number" inputMode="numeric" min="1" max="20" value={margin}
+                    onChange={(event) => setMargin(event.target.value)} /></label>
+                <label className="field"><span>Eligible period <small>1–4 · OT1 = 5</small></span>
+                  <input type="number" inputMode="numeric" min="1" max="10" value={period}
+                    onChange={(event) => setPeriod(event.target.value)} /></label>
+                <label className="field"><span>Clock seconds remaining</span>
+                  <input type="number" inputMode="numeric" min="0" max="720" value={clockSeconds}
+                    onChange={(event) => setClockSeconds(event.target.value)} /></label>
               </div>
-            </article>
-          ))}
-        </div>
-        {toggleMutation.isError ? <MutationError error={toggleMutation.error} /> : null}
-        {deleteMutation.isError ? <MutationError error={deleteMutation.error} /> : null}
-        {query.hasNextPage ? <button className="button button--secondary button--full" onClick={() => void query.fetchNextPage()}>Load more rules</button> : null}
-      </section>
-    </div>
+            )}
+            {validation ? <p className="form-error" role="alert">{validation}</p> : null}
+            {createMutation.isError ? <MutationError error={createMutation.error} /> : null}
+            {createMutation.isSuccess ? (
+              <p className="success-message" role="status"><Icon name="check" size={16} />Rule saved.</p>
+            ) : null}
+            <button className="button button--primary" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Creating…' : 'Create rule'}
+            </button>
+          </form>
+        </section>
+
+        <section className="panel" aria-labelledby="my-rules-title">
+          <div className="panel-heading">
+            <h2 id="my-rules-title">Your rules</h2>
+            {rules.length > 0 ? <span className="count-pill">{rules.length}</span> : null}
+          </div>
+          {query.isPending ? <LoadingState label="Loading alert rules" variant="list" /> : null}
+          {query.isError ? <ErrorPanel error={query.error} onRetry={() => void query.refetch()} /> : null}
+          {!query.isPending && rules.length === 0 ? (
+            <div className="inline-empty">
+              <strong>No rules yet. Create your first structured alert.</strong>
+              <span>Try a player points rule on a live game.</span>
+            </div>
+          ) : null}
+          <div className="rule-list">
+            {rules.map((rule) => (
+              <article className={`rule-card${rule.enabled ? '' : ' rule-card--off'}`} key={rule.id}>
+                <div className="rule-card__text">
+                  <span className="rule-card__meta">
+                    <span className="tag">{ruleLabel(rule.type)}</span>
+                    <span className={`rule-state${rule.enabled ? ' rule-state--on' : ''}`}>{rule.enabled ? 'On' : 'Off'}</span>
+                  </span>
+                  <h3>{ruleSummary(rule)}</h3>
+                  <p>{rule.gameLabel ?? rule.gameId}</p>
+                </div>
+                <div className="rule-actions">
+                  <button className="button button--secondary button--sm" disabled={toggleMutation.isPending}
+                    onClick={() => toggleMutation.mutate(rule)}>{rule.enabled ? 'Disable' : 'Enable'}</button>
+                  <button className="button button--danger button--sm" disabled={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate(rule.id)}>Delete</button>
+                </div>
+              </article>
+            ))}
+          </div>
+          {toggleMutation.isError ? <MutationError error={toggleMutation.error} /> : null}
+          {deleteMutation.isError ? <MutationError error={deleteMutation.error} /> : null}
+          {query.hasNextPage ? (
+            <button className="button button--secondary button--full" onClick={() => void query.fetchNextPage()}>
+              Load more rules
+            </button>
+          ) : null}
+        </section>
+      </div>
+    </>
   );
+}
+
+function gameOptionLabel(game: GameSummary): string {
+  const away = game.awayTeamAbbreviation ?? teamLabel(game.awayTeamId, game.awayTeamName);
+  const home = game.homeTeamAbbreviation ?? teamLabel(game.homeTeamId, game.homeTeamName);
+  const state = game.status === 'LIVE' ? 'Live' : game.status === 'FINAL' ? 'Final' : 'Upcoming';
+  return `${away} at ${home} · ${state}`;
 }
 
 function MutationError({ error }: { error: Error }) {
   const message = error instanceof ApiError && error.status === 401
     ? 'Your session expired. Sign in again before retrying.'
     : error.message;
-  return <p className="auth-error" role="alert">{message}</p>;
+  return <p className="form-error" role="alert">{message}</p>;
 }
 
 function ruleLabel(type: AlertRule['type']) {
