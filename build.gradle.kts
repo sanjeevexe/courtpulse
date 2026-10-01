@@ -33,7 +33,7 @@ subprojects {
         "implementation"(platform("com.fasterxml.jackson:jackson-bom:2.22.3"))
         "implementation"(platform("tools.jackson:jackson-bom:3.1.7"))
         "testImplementation"("org.junit.jupiter:junit-jupiter:5.12.2")
-        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher:1.12.2")
+        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher:6.1.3")
     }
 
     tasks.withType<Test>().configureEach {
