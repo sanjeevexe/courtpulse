@@ -12,6 +12,8 @@ are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capabili
   live provider (both remain in the test harnesses), and it imports the full playoffs.
 - LocalStack reports healthy only after its queues exist, which fixes a startup race that could
   crash the replay worker and stop `make demo` early.
+- The web container's nginx re-resolves the API through Docker DNS, so recreating the API (for
+  example on `make demo` after a rebuild) no longer leaves the dashboard failing with 502s.
 
 ## 1.2.0 — 2026-09-30 — Web redesign
 
