@@ -2,6 +2,7 @@
   "realm": "courtpulse",
   "enabled": true,
   "displayName": "CourtPulse Local Identity",
+  "loginTheme": "courtpulse",
   "accessTokenLifespan": 3600,
   "ssoSessionIdleTimeout": 7200,
   "registrationAllowed": false,
@@ -16,6 +17,7 @@
     {
       "clientId": "courtpulse-web",
       "name": "CourtPulse browser",
+      "baseUrl": "http://127.0.0.1:4173/",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,

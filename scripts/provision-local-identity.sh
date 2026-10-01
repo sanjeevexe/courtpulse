@@ -26,6 +26,13 @@ kcadm=("${compose[@]}" --profile auth exec -T identity /opt/keycloak/bin/kcadm.s
   --server http://127.0.0.1:8080 --realm master \
   --user "${COURTPULSE_IDP_ADMIN_USERNAME}" --password "${COURTPULSE_IDP_ADMIN_PASSWORD}"
 
+# The realm file is imported only into a new realm, so apply its sign-in page settings here too:
+# the CourtPulse login theme, and the app address its "Back to CourtPulse" link points to.
+"${kcadm[@]}" update realms/courtpulse -s loginTheme=courtpulse >/dev/null
+client_id="$("${kcadm[@]}" get clients -r courtpulse -q clientId=courtpulse-web --fields id --format csv --noquotes)"
+"${kcadm[@]}" update "clients/${client_id}" -r courtpulse \
+  -s "baseUrl=http://127.0.0.1:${COURTPULSE_WEB_HOST_PORT:-4173}/" >/dev/null
+
 # Idempotent: an existing user keeps its ID and only has its password reset.
 provision_user() {
   local username="$1"

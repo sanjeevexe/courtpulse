@@ -17,6 +17,8 @@ are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capabili
   alerts, rules, and toasts.
 - Team badges use each franchise's color (team labels are the one exception to the three-color
   scheme).
+- The local sign-in page (Keycloak) has a "Back to CourtPulse" link, through a small login theme
+  that extends Keycloak's default.
 - The Scores page loads 12 games at a time, so every page fills whole rows in one-, two-, and
   three-column layouts.
 - The web container's nginx re-resolves the API through Docker DNS, so recreating the API (for

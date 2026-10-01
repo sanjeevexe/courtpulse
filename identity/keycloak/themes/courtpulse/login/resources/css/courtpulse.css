@@ -1,0 +1,18 @@
+/* The way back to CourtPulse, under the sign-in form. */
+#kc-back-to-app {
+  margin-top: var(--pf-v5-global--spacer--lg, 1.5rem);
+  text-align: center;
+}
+
+#kc-back-to-app a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#kc-back-to-app a:hover,
+#kc-back-to-app a:focus-visible {
+  text-decoration: underline;
+}
