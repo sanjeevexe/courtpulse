@@ -1,9 +1,20 @@
 # CourtPulse
 
-CourtPulse turns a basketball play-by-play feed into a durable event stream, keeps every game's
-state current, evaluates each fan's alert rules exactly once, and pushes updates to the browser and
-to email. It is a portfolio project about the hard parts of real-time systems: ordering,
+[![CI](https://github.com/sanjeevexe/courtpulse/actions/workflows/ci.yml/badge.svg)](https://github.com/sanjeevexe/courtpulse/actions/workflows/ci.yml)
+[![Security](https://github.com/sanjeevexe/courtpulse/actions/workflows/security.yml/badge.svg)](https://github.com/sanjeevexe/courtpulse/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**Real-time basketball alerts, built like a production system.** Set a rule ("Brunson reaches 30",
+"a 10-0 run", "within 3 points in the last two minutes") and CourtPulse tells you the moment it
+happens, in the app and by email. Replay any of the 85 games of the 2026 NBA playoffs and watch
+the scoreboard, play-by-play, and your alerts react as if it were game night.
+
+Under the hood, CourtPulse turns a play-by-play feed into a durable event stream, keeps every
+game's state current, evaluates each fan's rules exactly once, and pushes updates to the browser
+and to email. It is a portfolio project about the hard parts of real-time systems: ordering,
 idempotency, corrections, failure recovery, and proving all of it with tests and measurements.
+
+![A live replay of the 2026 NBA Finals, Game 5, with an alert firing](docs/images/game-live-alert.jpg)
 
 > CourtPulse is an independent project with no affiliation to the NBA, any team, or any data
 > provider. Real completed games are replayed from an unofficial public dataset for personal,
@@ -12,9 +23,9 @@ idempotency, corrections, failure recovery, and proving all of it with tests and
 
 ## What it does
 
-- **Replays real NBA games** from the 2026 playoffs (or any imported season) play by play, as if
-  live, at a speed you choose, with pause, resume, and skip-to-final in the browser.
-- **Ingests** a live provider (BALLDONTLIE, or a local simulator of it) or recorded fixtures,
+- **Replays real NBA games**: all 85 games of the 2026 playoffs (or any imported season), play by
+  play, as if live, at 1x to 120x, with pause, resume, and skip-to-final in the browser.
+- **Ingests** a live provider (a BALLDONTLIE adapter, or a local simulator of it) or recorded fixtures,
   keeping raw evidence and turning provider corrections into new revisions, not overwrites.
 - **Processes** events in order per game through a PostgreSQL transactional outbox and SQS FIFO.
   Crashes and redeliveries can repeat work but never duplicate state or alerts.
@@ -27,6 +38,16 @@ idempotency, corrections, failure recovery, and proving all of it with tests and
   corrections deterministically.
 - **Ships** with CI, security scanning, local observability (traces across processes, alerts,
   dashboards), and Terraform for an AWS staging environment (written and validated, not applied).
+
+## Screenshots
+
+| Scores | Replays |
+| --- | --- |
+| ![Scores page with a live game and the NBA Finals](docs/images/scores.jpg) | ![Replays catalog of the 2026 playoffs](docs/images/replays.jpg) |
+| **Game page** | **My Alerts, with delivery status** |
+| ![Game page with scoreboard, play-by-play, and leaders](docs/images/game-detail.jpg) | ![Alert history with in-app and email delivery](docs/images/my-alerts.jpg) |
+
+<p align="center"><img src="docs/images/mobile-game.jpg" alt="The game page on a phone" width="300"></p>
 
 ## Architecture
 
@@ -86,9 +107,10 @@ and a speed, and press **Replay**: CourtPulse feeds the real play-by-play throug
 a live feed uses, so the scoreboard, box score, your alert rules, and email all react as they
 would on game night. On the game page you can pause, change speed, skip to the final, or replay it
 again. Import more with `make replay-import DATASET=cdnnba_2025` (the 2025-26 regular season).
-Replays are verified end to end: `REAL_DATA=1 scripts/verify-replay.sh` replays real games and
-checks that CourtPulse reproduces each official final score from the plays alone
-([ADR 0015](docs/adr/0015-real-game-replay.md)).
+Every one of the 85 games has been replayed through the full pipeline and reproduces its recorded
+final score from the plays alone, with every play applied and none rejected;
+`REAL_DATA=1 scripts/verify-replay.sh` re-checks a sample, including a double-overtime game and the
+Finals clincher ([ADR 0015](docs/adr/0015-real-game-replay.md)).
 
 ## A walkthrough
 
@@ -118,8 +140,8 @@ with Grafana, Prometheus, and Tempo.
 
 | Area | Result | Details |
 | --- | --- | --- |
-| Tests | 199 backend tests against real PostgreSQL and LocalStack containers, 66 web unit tests, Playwright end-to-end runs, and 11 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
-| Real games | Replays of real 2026 playoff games (including two overtime games) reproduce each official final score and apply every play, with no rejected plays | `REAL_DATA=1 scripts/verify-replay.sh` |
+| Tests | 206 backend tests against real PostgreSQL and LocalStack containers, 70 web unit tests, Playwright end-to-end runs on desktop and mobile, and 11 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
+| Real games | All 85 games of the 2026 playoffs (five in overtime) replay to their recorded final scores with every play applied and no rejected plays | `REAL_DATA=1 scripts/verify-replay.sh` |
 | Performance | Sustained 200 events/s across 50 games: p95 processing delay 82 ms (target 500 ms). 2,000 WebSocket clients see hints about 0.3 s after commit (target 2 s). 100,000 stored rules; a hot-game lookup takes 0.9 ms. | [Performance report](docs/verification/performance-report.md) |
 | Recovery | Processor SIGKILL, PostgreSQL restart, 20 s SQS partition, and SIGTERM mid-publication all recover with exactly-once state and one alert per rule | [Recovery report](docs/verification/recovery-report.md) |
 | Security | 0 fixable HIGH or CRITICAL image vulnerabilities, OWASP ZAP baseline with 0 warnings, no leaked secrets, OWASP API Top 10 mapping, per-client rate limits | [Scan report](docs/verification/security-scan-report.md), [threat model](docs/security/threat-model.md) |
@@ -127,6 +149,28 @@ with Grafana, Prometheus, and Tempo.
 Load testing found a real bottleneck (the publisher sent one message per call), and the failure
 drills found five ways a brief outage could permanently stall a game. Both are fixed and written
 up in [ADR 0014](docs/adr/0014-batched-publication-and-transient-retry.md).
+
+## Live games: the BALLDONTLIE API
+
+CourtPulse is live-ready. It ships with an adapter for the [BALLDONTLIE](https://www.balldontlie.io)
+API, and following tonight's games is a configuration change, not new code: set
+`COURTPULSE_PROVIDER_BASE_URL` and `COURTPULSE_BALLDONTLIE_API_KEY`, and the same pipeline that
+runs the replays ingests live play-by-play ([guide](docs/guide.md#live-provider-ingestion-and-overtime),
+[ADR 0013](docs/adr/0013-live-provider-ingestion.md)). Live play-by-play is part of BALLDONTLIE's
+paid tier, so bring your own key and follow their terms. The adapter is built to their documented
+API and tested against a local simulator that reproduces it, including outages, rate limits,
+overtime, and scorer corrections; it has not yet been run against the paid live service.
+
+## AWS hosting
+
+`infra/terraform` describes a complete AWS staging environment: ECS Fargate services, RDS
+PostgreSQL, SQS FIFO queues, Cognito sign-in, SES email, and the dashboard on S3 and CloudFront,
+with GitHub OIDC deploys (no stored AWS keys), alarms, and a budget. `scripts/aws` builds,
+deploys, smoke-tests, rolls back, and tears it down. It is validated offline
+(`make terraform-check`, including mocked plan tests) and has not been applied yet, because
+running it costs money: roughly USD 85-110 per month if left on, or well under a dollar for a
+few-hour create-demo-destroy session, by the guide's estimates. The
+[deployment guide](docs/deployment/aws-staging.md) sets up the budget before anything billable.
 
 ## Technology
 
@@ -167,25 +211,18 @@ scripts                demo, verification harnesses, and AWS deployment helpers
   [security scans](docs/verification/security-scan-report.md)
 - [Changelog](CHANGELOG.md) and [retrospective](docs/retrospective.md)
 
-## Deploying to AWS
-
-`infra/terraform` describes a complete staging environment, and `scripts/aws` builds, deploys,
-smoke-tests, rolls back, and tears it down. It has been validated offline only
-(`make terraform-check`); **it has never been applied, and running it costs money**: roughly
-USD 85-110 per month if left on, or well under a dollar for a four-hour create-demo-destroy
-session, by the guide's estimates. Follow [the deployment guide](docs/deployment/aws-staging.md),
-which sets up a budget before anything billable.
-
 ## Status and limitations
 
-- Live real-time play-by-play needs BALLDONTLIE's paid tier; the adapter is tested against its
-  documented schema and a simulator. Completed real games can be replayed for free from an
-  unofficial dataset, which is not an official or live source.
+- Replays use an unofficial public dataset of completed games; they are not an official or live
+  source.
 - Cognito, SES, RDS, and CloudFront are exercised through local equivalents and mocked plans
-  until the environment is applied.
+  until the AWS environment is applied.
 - Realtime fanout runs on a single API instance; scaling out needs a shared fanout layer such as
   Redis.
 - One scoring event evaluates at most 1,000 owned rules for its game, a deliberate cap explained
   in the performance report.
 
-No license has been chosen yet.
+## License
+
+[MIT](LICENSE). The NBA play-by-play used for replays is not part of this repository: it is
+downloaded on demand from the nba_data project, for personal, non-commercial demonstration.

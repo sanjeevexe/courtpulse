@@ -5,6 +5,8 @@ are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capabili
 
 ## 1.3.0 — 2026-10-01 — The complete 2026 playoffs
 
+- Published under the MIT license, with README screenshots of the running app and notes on live
+  data (BALLDONTLIE) and AWS hosting.
 - Replays cover all 85 games of the 2026 NBA playoffs, first round through the Finals. The
   importer now also reads stats.nba.com play-by-play (`nbastatsv3_*`), dated from the matching
   shot-detail dataset and paced from the game clock; games with real timestamps are kept.

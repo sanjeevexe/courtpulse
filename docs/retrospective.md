@@ -1,8 +1,8 @@
 # Retrospective
 
-CourtPulse was built in sixteen milestones between 2026-09-20 and 2026-09-28, following the
-product and engineering plan: replay-first foundations, then durability, queues, the API and
-dashboard, realtime updates, identity, alert rules and delivery, corrections, observability, a
+CourtPulse was built in sixteen milestones between 2026-09-20 and 2026-09-28, following a
+product and engineering plan (not published): replay-first foundations, then durability, queues,
+the API and dashboard, realtime updates, identity, alert rules and delivery, corrections, observability, a
 live provider, cloud infrastructure, CI and security, performance and recovery, and release
 polish. This page records what worked, what the plan did not anticipate, and where the finished
 system deliberately differs from the plan.
@@ -50,6 +50,21 @@ until a harness has tried to break it.
 | Redis or Valkey for realtime fanout | Single-instance WebSocket hub with HTTP resynchronization | Enough for a portfolio deployment; shared fanout is only needed to run more than one API instance |
 | 10,000 alert evaluations from one scoring event | At most 1,000 owned rules per game; 130,000 evaluations across ten hot games in 5 s | Keeps rule evaluation inside the checkpoint transaction and under the 500 ms processing budget ([performance report](verification/performance-report.md)) |
 | Operations dashboard | Operations API endpoints and Grafana dashboards; no operations screen in the web app | Grafana covers the operator's needs locally |
+
+## After 1.0
+
+Three releases followed on 2026-09-30 and 2026-10-01 ([changelog](../CHANGELOG.md)):
+
+- **Real games.** Completed NBA games replay through the same provider path as a live feed
+  ([ADR 0015](adr/0015-real-game-replay.md)). When the first playoff dataset stopped after 60
+  games, a second layout without timestamps was added; its pacing was calibrated against the 60
+  games present in both, and all 85 games of the 2026 playoffs were replayed to their recorded
+  finals.
+- **A redesigned dashboard.** Three independent UI reviews (visual, design-system, and UX
+  structure) drove a token-based design system, new navigation, team-colored badges, playoff
+  game titles, and restrained motion.
+- **Demo fixes found by using it.** Replays exposed a LocalStack startup race and an Nginx proxy
+  that cached the API's address; both now recover on their own.
 
 ## What comes next
 
