@@ -328,6 +328,11 @@ class MessagingPostgresLocalStackIntegrationTest {
     @Test
     void fullFifoReplayIsOrderedIdempotentAndLeavesDeferredNotificationsUntouched() {
         LoadedFixture fixture = importFixture();
+        // This test is about order and idempotency, not redelivery: with the shared 1 s visibility
+        // timeout, a slow batch (a busy CI runner) would see its messages redelivered until the
+        // redrive policy moved them to the dead-letter queue.
+        sqs.setQueueAttributes(builder -> builder.queueUrl(queueUrl)
+                .attributes(Map.of(QueueAttributeName.VISIBILITY_TIMEOUT, "30")));
         SqsQueueAdapter queue = new SqsQueueAdapter(sqs, queueUrl);
         OutboxPublisher publisher = publisher(services, queue, "publisher-full");
         long sent = 0;
@@ -339,7 +344,8 @@ class MessagingPostgresLocalStackIntegrationTest {
 
         GameEventQueueConsumer consumer = consumer(services, queue);
         ConsumerBatchResult total = ConsumerBatchResult.empty();
-        for (int attempt = 0; attempt < 25 && total.accepted() < 20; attempt++) {
+        long deadline = System.nanoTime() + Duration.ofSeconds(60).toNanos();
+        while (total.accepted() < 20 && System.nanoTime() < deadline) {
             total = total.plus(consumer.pollOnce());
         }
 
