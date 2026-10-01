@@ -23,6 +23,6 @@ dependencies {
     testImplementation("org.flywaydb:flyway-database-postgresql")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
-    testImplementation(enforcedPlatform("io.zonky.test.postgres:embedded-postgres-binaries-bom:17.10.0"))
+    testImplementation(enforcedPlatform("io.zonky.test.postgres:embedded-postgres-binaries-bom:18.6.0"))
     testImplementation("io.zonky.test:embedded-postgres:2.2.2")
 }
