@@ -10,7 +10,7 @@ USER gradle
 RUN --mount=type=cache,id=courtpulse-gradle,target=/home/gradle/.gradle/caches,uid=1000,gid=1000 \
     gradle :apps:queue-replay-cli:bootJar --no-daemon --console=plain
 
-FROM eclipse-temurin:21.0.12_8-jre-alpine
+FROM eclipse-temurin:21.0.12.1_1-jre-alpine
 
 # Alpine security fixes often land before the next base-image release; take them at build time.
 RUN apk upgrade --no-cache && addgroup -S courtpulse && adduser -S -G courtpulse courtpulse
