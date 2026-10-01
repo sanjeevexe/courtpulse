@@ -1,5 +1,7 @@
 # Weekly, grouped update pull requests. CI must pass before any merge; security updates open
-# immediately regardless of this schedule.
+# immediately regardless of this schedule. Major versions (a new Java or PostgreSQL release, Gradle
+# 9, JUnit 6, TypeScript 7) need deliberate migrations, so they are upgraded by hand, not proposed
+# here: the project stays on Java 21 (LTS) and PostgreSQL 17.
 version: 2
 updates:
   - package-ecosystem: gradle
@@ -10,6 +12,13 @@ updates:
     groups:
       gradle-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+      # Jackson 3 stays on the minor line Spring Boot is built against (3.1.x for Boot 4.1);
+      # patch releases still arrive. Revisit when Spring Boot moves.
+      - dependency-name: 'tools.jackson*'
+        update-types: ['version-update:semver-minor']
 
   - package-ecosystem: npm
     directory: /apps/web
@@ -19,6 +28,9 @@ updates:
     groups:
       web-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker
     directories:
@@ -28,6 +40,9 @@ updates:
       - /apps/provider-simulator
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
@@ -36,6 +51,9 @@ updates:
     groups:
       actions:
         patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: terraform
     directories:
@@ -43,3 +61,6 @@ updates:
       - /infra/terraform/environments/staging
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
