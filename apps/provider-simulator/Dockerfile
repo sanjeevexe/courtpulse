@@ -1,4 +1,4 @@
-FROM gradle:8.14.4-jdk21-alpine AS build
+FROM gradle:9.8.0-jdk21-alpine AS build
 
 WORKDIR /workspace
 RUN chown gradle:gradle /workspace
