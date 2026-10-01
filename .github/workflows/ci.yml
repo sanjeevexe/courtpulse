@@ -179,6 +179,10 @@ jobs:
       - uses: terraform-linters/setup-tflint@1cf010d3c7aef302051ccdb68c14c5dc2efa34ef # v6.3.1
       - name: TFLint with the AWS ruleset
         working-directory: infra/terraform
+        env:
+          # Plugin downloads use the GitHub API; authenticated requests avoid the shared-runner
+          # anonymous rate limit.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           tflint --init --config="${PWD}/.tflint.hcl"
           tflint --recursive --config="${PWD}/.tflint.hcl"
