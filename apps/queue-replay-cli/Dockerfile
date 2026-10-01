@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM gradle:8.14.4-jdk21-alpine AS build
+FROM gradle:8.14.5-jdk21-alpine AS build
 
 WORKDIR /workspace
 RUN chown gradle:gradle /workspace
