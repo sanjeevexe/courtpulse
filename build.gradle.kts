@@ -28,6 +28,10 @@ subprojects {
     }
 
     dependencies {
+        // Security floor for Jackson (CVE-2026-68497, CVE-2026-91776, CVE-2026-91777): newer than
+        // the versions in Spring Boot 4.1.1's dependency set. Remove once Boot ships them.
+        "implementation"(platform("com.fasterxml.jackson:jackson-bom:2.22.3"))
+        "implementation"(platform("tools.jackson:jackson-bom:3.1.7"))
         "testImplementation"("org.junit.jupiter:junit-jupiter:5.12.2")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher:1.12.2")
     }
