@@ -3,6 +3,16 @@
 CourtPulse was built in milestones, one commit each. Dates are commit dates. Design decisions
 are in [docs/adr](docs/adr); the [guide](docs/guide.md) documents every capability in detail.
 
+## 1.3.0 — 2026-10-01 — The complete 2026 playoffs
+
+- Replays cover all 85 games of the 2026 NBA playoffs, first round through the Finals. The
+  importer now also reads stats.nba.com play-by-play (`nbastatsv3_*`), dated from the matching
+  shot-detail dataset and paced from the game clock; games with real timestamps are kept.
+- The demo shows only real games: it no longer seeds the synthetic game or runs the simulated
+  live provider (both remain in the test harnesses), and it imports the full playoffs.
+- LocalStack reports healthy only after its queues exist, which fixes a startup race that could
+  crash the replay worker and stop `make demo` early.
+
 ## 1.2.0 — 2026-09-30 — Web redesign
 
 - A new design system for the web app: spacing, type, color, radius, and motion tokens; self-hosted

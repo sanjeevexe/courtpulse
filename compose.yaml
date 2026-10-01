@@ -26,7 +26,8 @@ services:
     ports:
       - "${COURTPULSE_LOCALSTACK_HOST_PORT:-4566}:4566"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health | grep -q '\"sqs\": \"running\"'"]
+      # Healthy once the ready.d hook has created the queues, not merely when SQS answers.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/init/ready | grep -q '\"completed\": true'"]
       interval: 2s
       timeout: 3s
       retries: 30

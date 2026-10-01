@@ -78,8 +78,10 @@ Run `make` to see every workflow.
 
 ## Replay a real NBA game
 
-On first start the demo downloads the 2026 NBA playoffs (60 games, about 1 MB) from the open
-[nba_data](https://github.com/shufinskiy/nba_data) project. Sign in, open **Replays**, pick a game
+On first start the demo downloads all 85 games of the 2026 NBA playoffs, first round through the
+Finals (about 2 MB), from the open [nba_data](https://github.com/shufinskiy/nba_data) project.
+Games through May 9 come from NBA.com live data with real timestamps; the rest come from
+stats.nba.com play-by-play and are paced from the game clock. Sign in, open **Replays**, pick a game
 and a speed, and press **Replay**: CourtPulse feeds the real play-by-play through the same pipeline
 a live feed uses, so the scoreboard, box score, your alert rules, and email all react as they
 would on game night. On the game page you can pause, change speed, skip to the final, or replay it
@@ -88,22 +90,25 @@ Replays are verified end to end: `REAL_DATA=1 scripts/verify-replay.sh` replays 
 checks that CourtPulse reproduces each official final score from the plays alone
 ([ADR 0015](docs/adr/0015-real-game-replay.md)).
 
-## A walkthrough with the simulated live game
+## A walkthrough
 
-1. Open the dashboard. The recorded game is final; the simulated game, Harbor City Herons vs
-   Summit Valley Sentinels, tips off about two minutes after the demo starts.
+1. Open the dashboard. Every game in the demo is a real 2026 playoff game; the Scores page fills
+   as you replay them.
 2. **Sign in** as `fan-a` (the password is in `.env.demo`). Sign-in is Authorization Code with
    PKCE against a local Keycloak; the API validates the token independently. Access tokens are
    short-lived by design; if you are signed out, **Sign in** returns you in one click.
 3. On **Notifications**, add any address and enable email before your alerts fire. Nothing
    leaves your machine: Mailpit catches it.
-4. Open the live game, **Follow** it, and choose **Create an alert**. Pick *Close game* (margin 5,
-   Q4, 180 s) or pick a player or team from the suggestions.
-5. Watch the score update live. The game goes to overtime, so the close-game alert fires late in
-   the fourth quarter: it appears in **My Alerts** with its delivery status, and the email arrives
-   in Mailpit.
-6. Near the end, the simulator issues a scorer correction that moves a basket between players.
-   CourtPulse stores it as a new revision and reconciles the game's state and alerts.
+4. On **Replays**, start a game at 10x or 30x. On its game page, **Follow** it and choose
+   **Create alert**: pick a player from the suggestions and a points total they have not reached,
+   or a *Close game* or *Scoring run* rule.
+5. Watch the score update live. When the moment comes, a toast pops up wherever you are in the
+   app, the alert appears in **My Alerts** with its delivery status, and the email arrives in
+   Mailpit.
+
+Scorer corrections, provider outages, and the live-provider path are exercised by the acceptance
+harnesses (`scripts/verify-milestone-10.sh`, `scripts/verify-milestone-12.sh`), which use a
+fictional game served by a local simulator; the demo itself shows only real games.
 
 The `ops` user can read the operations API (provider health, delivery backlog); there is no
 operations screen yet. For dashboards and traces, `make observability` starts a separate stack
@@ -113,7 +118,7 @@ with Grafana, Prometheus, and Tempo.
 
 | Area | Result | Details |
 | --- | --- | --- |
-| Tests | 199 backend tests against real PostgreSQL and LocalStack containers, 64 web unit tests, Playwright end-to-end runs, and 11 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
+| Tests | 199 backend tests against real PostgreSQL and LocalStack containers, 66 web unit tests, Playwright end-to-end runs, and 11 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
 | Real games | Replays of real 2026 playoff games (including two overtime games) reproduce each official final score and apply every play, with no rejected plays | `REAL_DATA=1 scripts/verify-replay.sh` |
 | Performance | Sustained 200 events/s across 50 games: p95 processing delay 82 ms (target 500 ms). 2,000 WebSocket clients see hints about 0.3 s after commit (target 2 s). 100,000 stored rules; a hot-game lookup takes 0.9 ms. | [Performance report](docs/verification/performance-report.md) |
 | Recovery | Processor SIGKILL, PostgreSQL restart, 20 s SQS partition, and SIGTERM mid-publication all recover with exactly-once state and one alert per rule | [Recovery report](docs/verification/recovery-report.md) |

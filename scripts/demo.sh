@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# One-command local demo: the full stack with a simulated live provider, sign-in, personalized
-# alerts, and email captured by Mailpit. Everything runs locally; nothing is sent anywhere.
+# One-command local demo: the full stack replaying real 2026 NBA playoff games as live games, with
+# sign-in, personalized alerts, and email captured by Mailpit. Everything runs locally; nothing is
+# sent anywhere except the one-time download of the public play-by-play datasets.
 #
 #   scripts/demo.sh up        start or resume (first run builds images: several minutes)
 #   scripts/demo.sh status    show services, URLs, and the demo usernames
@@ -19,10 +20,12 @@ env_file="${repository}/.env.demo"
 project='courtpulse-demo'
 export COURTPULSE_COMPOSE_PROJECT="${project}"
 
+# The live profile supplies the processor; its provider ingestor stays off (scaled to zero), so the
+# demo shows only real replayed games. The live provider path is covered by verify-milestone-12.
 compose=(docker compose --project-directory "${repository}" -f "${repository}/compose.yaml"
   --env-file "${env_file}" -p "${project}"
-  --profile auth --profile live --profile simulator --profile reconciliation --profile delivery
-  --profile replay)
+  --profile auth --profile live --profile reconciliation --profile delivery --profile replay)
+up_args=(up -d --wait --scale ingestor-worker=0)
 
 usage() {
   sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -54,10 +57,6 @@ ensure_env() {
     echo
     echo '# Demo database password (local only).'
     echo "COURTPULSE_DB_PASSWORD=$(secret)"
-    echo '# Demo pacing: tip-off two minutes after start (time to sign in and add a rule), then'
-    echo '# about 13 minutes of simulated play at 20x.'
-    echo 'COURTPULSE_SIMULATOR_SPEED=20'
-    echo 'COURTPULSE_SIMULATOR_START_DELAY_SECONDS=120'
   } >"${env_file}"
   echo "Created ${env_file} with local-only demo credentials."
 }
@@ -76,15 +75,14 @@ urls() {
 
 CourtPulse demo is running:
   Dashboard        http://127.0.0.1:4173   (use 127.0.0.1, not localhost, for sign-in)
-  Replay real games http://127.0.0.1:4173/replays
+  Replay real games http://127.0.0.1:4173/replays   (all 85 games of the 2026 playoffs)
   API              http://127.0.0.1:8080/api/v1/games
   Mailpit (email)  http://127.0.0.1:8025
   Keycloak admin   http://127.0.0.1:8180   (user: admin)
 
 Sign in as ${COURTPULSE_TEST_USER_A} or ${COURTPULSE_TEST_USER_B} (fans) or ${COURTPULSE_TEST_OPS_USER} (operations).
-Passwords are in .env.demo. The simulated game (Harbor City Herons vs Summit Valley Sentinels)
-tips off about two minutes after the first start, plays through overtime, and receives a scorer
-correction. Each demo plays it once; for a fresh one: scripts/demo.sh destroy, then up.
+Passwords are in .env.demo. Sign in, open Replays, and start any game: it plays out live on the
+scoreboard, and alert rules you create for it fire in the app and by email.
 EOF
 }
 
@@ -96,25 +94,20 @@ up() {
   "${compose[@]}" build --quiet
   "${compose[@]}" up -d --wait postgres localstack >/dev/null
   "${compose[@]}" run --rm -T --no-deps processor-worker --migrate >/dev/null
-  # Seed the recorded replay fixture (a finished game) only into an empty database, before the
-  # ingestor starts: --reset-import truncates game data, so it must never run on a used demo.
-  local games
-  games="$("${compose[@]}" exec -T postgres psql -At -U courtpulse -d courtpulse \
-    -c 'SELECT count(*) FROM games')"
-  if [[ "${games}" == 0 ]]; then
-    "${compose[@]}" run --rm -T --no-deps processor-worker --reset-import --publish >/dev/null
-  fi
-  # Real games for replay: the 2026 playoffs (about 1 MB) on first start, if the network allows.
-  local catalog
-  catalog="$("${compose[@]}" exec -T postgres psql -At -U courtpulse -d courtpulse \
-    -c 'SELECT count(*) FROM replay_catalog')"
-  if [[ "${catalog}" == 0 ]]; then
-    echo 'Importing real NBA playoff games for replay...'
-    "${compose[@]}" run --rm -T --no-deps processor-worker --replay-import=cdnnba_po_2025 2>/dev/null \
-      | grep 'Replay catalog import' || echo 'Could not download replay games now; run: scripts/demo.sh import cdnnba_po_2025'
-  fi
+  # Real games for replay, once each (about 2 MB): the 2026 playoffs from NBA.com live data (real
+  # timestamps, through May 9), then stats.nba.com play-by-play for the rest through the Finals.
+  local dataset count
+  for dataset in cdnnba_po_2025 nbastatsv3_po_2025; do
+    count="$("${compose[@]}" exec -T postgres psql -At -U courtpulse -d courtpulse \
+      -c "SELECT count(*) FROM replay_catalog WHERE dataset = '${dataset}'")"
+    if [[ "${count}" == 0 ]]; then
+      echo "Importing real NBA playoff games for replay (${dataset})..."
+      "${compose[@]}" run --rm -T --no-deps processor-worker --replay-import="${dataset}" 2>/dev/null \
+        | grep 'Replay catalog import' || echo "Could not download ${dataset} now; run: scripts/demo.sh import ${dataset}"
+    fi
+  done
   echo 'Starting services...'
-  "${compose[@]}" up -d --wait >/dev/null
+  "${compose[@]}" "${up_args[@]}" >/dev/null
   if ! "${repository}/scripts/provision-local-identity.sh" >/dev/null 2>&1; then
     echo 'Provisioning the demo users failed; run scripts/demo.sh up again.' >&2
     exit 1

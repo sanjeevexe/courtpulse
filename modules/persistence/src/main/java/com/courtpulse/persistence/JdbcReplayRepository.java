@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -126,6 +127,12 @@ public final class JdbcReplayRepository {
     public Optional<CatalogGame> catalogGame(String nbaGameId) {
         return jdbc.sql("SELECT * FROM replay_catalog WHERE nba_game_id = :id")
                 .param("id", nbaGameId).query(JdbcReplayRepository::catalogGame).optional();
+    }
+
+    /** Catalog games that were imported from a dataset other than this one. */
+    public Set<String> gamesFromOtherDatasets(String dataset) {
+        return Set.copyOf(jdbc.sql("SELECT nba_game_id FROM replay_catalog WHERE dataset <> :dataset")
+                .param("dataset", dataset).query(String.class).list());
     }
 
     public int catalogSize() {

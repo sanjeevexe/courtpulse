@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Real-game replay acceptance in an isolated Compose project. Imports the fictional fixture (and,
-# with REAL_DATA=1, the 2026 playoffs from the public nba_data project), replays games at high
-# speed through the real ingestion, queue, and processing path, and proves every replay reaches
-# FINAL with exactly the recorded final score, every play applied, and no rejected plays.
+# with REAL_DATA=1, all 85 games of the 2026 playoffs from the public nba_data project, in both of
+# its layouts), replays games at high speed through the real ingestion, queue, and processing
+# path, and proves every replay reaches FINAL with exactly the recorded final score, every play
+# applied, and no rejected plays.
 set -Eeuo pipefail
 
 repository="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -83,6 +84,15 @@ if [[ "${REAL_DATA:-0}" == 1 ]]; then
              ORDER BY started_at DESC LIMIT 1)"); do
     replay_and_verify "${game}"
   done
+  # The rest of the playoffs come from the clock-paced stats layout; it must keep the 60 timed games.
+  worker --replay-import=nbastatsv3_po_2025 | tee "${artifact_dir}/import-stats.txt"
+  catalog="$(database -c "SELECT count(*) || '|' || count(*) FILTER (WHERE dataset = 'cdnnba_po_2025')
+    FROM replay_catalog WHERE nba_game_id NOT LIKE '00499%'")"
+  echo "2026 playoff catalog (games|timed games): ${catalog}" | tee -a "${artifact_dir}/results.txt"
+  [[ "${catalog}" == "85|60" ]]
+  # The double-overtime conference final and the deciding game of the Finals.
+  replay_and_verify 0042500311
+  replay_and_verify 0042500405
 fi
 
 echo "Replay acceptance passed: $(wc -l <"${artifact_dir}/results.txt" | tr -d ' ') checks in ${artifact_dir}/results.txt"

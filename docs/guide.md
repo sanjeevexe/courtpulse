@@ -7,8 +7,8 @@ repository root unless a section says otherwise.
 
 ## One-command demo
 
-`scripts/demo.sh up` (or `make demo`) builds and starts everything below with a simulated live
-provider, local sign-in, alerts, and email capture, in its own `courtpulse-demo` Compose project
+`scripts/demo.sh up` (or `make demo`) builds and starts everything below with real 2026 playoff
+games to replay, local sign-in, alerts, and email capture, in its own `courtpulse-demo` Compose project
 with generated local-only credentials in the ignored `.env.demo`. `scripts/demo.sh status`,
 `logs SERVICE`, `down`, and `destroy` manage it. The rest of this guide covers each piece
 separately.
@@ -688,15 +688,27 @@ browser view:
 ## Real-game replay
 
 `--replay-import` loads completed real games from the open nba_data project, which republishes
-NBA.com play-by-play by season as `.tar.xz` CSV archives. Only dataset names of the form
-`cdnnba_20YY` (regular season) or `cdnnba_po_20YY` (playoffs; `cdnnba_po_2025` is the 2026
-playoffs) are fetched, over HTTPS with a size limit; a local `.csv` or `.tar.xz` path works too.
-Each game is validated (scores add up play by play, one final action, two teams) and stored in
-`replay_catalog` and `replay_actions`; invalid games are skipped and counted.
+NBA play-by-play by season as `.tar.xz` CSV archives, in two layouts:
+
+- `cdnnba_20YY` / `cdnnba_po_20YY`: NBA.com live data with a real timestamp on every action.
+  `cdnnba_po_2025` (the 2026 playoffs) stops on May 9, after 60 games.
+- `nbastatsv3_20YY` / `nbastatsv3_po_20YY`: stats.nba.com play-by-play. `nbastatsv3_po_2025` has
+  all 85 games through the Finals. It has no action timestamps, so the importer dates each game
+  from the matching `shotdetail_*` dataset and spreads each period's actions between its
+  reported start and end times by game clock plus a short allowance per stoppage. Scores come
+  from scoring rows only (instant-replay rows can carry stale ones), and a clock-paced game never
+  replaces one already imported with real timestamps.
+
+Only those dataset names are fetched, over HTTPS with a size limit; a local `.csv` or `.tar.xz`
+path works too (a local stats-layout file has no dates, so its games are skipped). Each game is
+validated (scores add up play by play, one final action, two teams) and stored in
+`replay_catalog` and `replay_actions`; invalid games are skipped and counted. The demo imports
+`cdnnba_po_2025` and then `nbastatsv3_po_2025`.
 
 ```bash
 docker compose --profile live --profile replay up -d --build
 docker compose run --rm processor-worker --replay-import=cdnnba_po_2025
+docker compose run --rm processor-worker --replay-import=nbastatsv3_po_2025
 docker compose run --rm processor-worker --replay-start=0042500223 --replay-speed=60
 curl -sS http://localhost:8080/api/v1/replays/games?team=OKC | jq '.items[0]'
 ```

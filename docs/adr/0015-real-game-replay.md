@@ -65,3 +65,24 @@ fires. Stored titles are unchanged and remain the fallback.
 - Replays cover only completed games; live games still need the BALLDONTLIE adapter.
 - A regular-season import holds about 1,230 games; the database grows accordingly
   (roughly 150 KB per game).
+
+## Update (2026-10-01): the complete 2026 playoffs
+
+The live-data playoff export (`cdnnba_po_2025`) stopped on May 9, after 60 games. The same
+project's stats.nba.com export (`nbastatsv3_po_2025`, updated July 17) has all 85 games through
+the Finals, so the importer now reads that layout too (`NbaStatsPlayByPlayCsv`) and normalizes it
+into the same actions, leaving the provider, mapping, and pipeline unchanged. Its differences:
+
+- Actions are ordered by `actionId`; `actionNumber` repeats within a game.
+- Scores appear only on some rows, and instant-replay rows can carry a stale score, so the running
+  score is taken from scoring and period rows only. With that rule all 85 games add up, and the
+  60 games present in both layouts have identical final scores.
+- There are no action timestamps. Each game is dated from the matching `shotdetail_*` dataset (its
+  dates agreed with all 60 timestamped games), and each period starts at its reported wall-clock
+  time and advances by game clock plus 6.5 s per action. That allowance makes these games replay
+  as long as the timestamped ones on average (about 106 vs 104 minutes of game time).
+- A clock-paced game never replaces a game already imported with real timestamps.
+
+All 85 games were replayed through the demo stack and each reached its recorded final score with
+every play applied and no rejected plays. `REAL_DATA=1 scripts/verify-replay.sh` now also checks
+the 85-game catalog, a double-overtime conference final, and the last game of the Finals.

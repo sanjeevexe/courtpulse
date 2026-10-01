@@ -10,11 +10,11 @@ TERRAFORM_OFFLINE := docker run --rm --network none -v "$(CURDIR)":/w -w /w hash
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{ printf "  %-17s %s\n", $$1, $$2 }'
 
-demo: ## Start the full local demo (simulated live game, sign-in, alerts, email)
+demo: ## Start the full local demo (real 2026 playoff replays, sign-in, alerts, email)
 	scripts/demo.sh up
 
-replay-import: ## Import real games for replay into the demo (DATASET=cdnnba_po_2025 by default)
-	scripts/demo.sh import $(or $(DATASET),cdnnba_po_2025)
+replay-import: ## Import real games for replay into the demo (DATASET=nbastatsv3_po_2025 by default)
+	scripts/demo.sh import $(or $(DATASET),nbastatsv3_po_2025)
 
 demo-status: ## Show demo services, URLs, and usernames
 	scripts/demo.sh status

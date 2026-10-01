@@ -541,7 +541,7 @@ public final class QueueReplayCommand implements ApplicationRunner {
         System.out.println("       [--reconciliation-run | --reconciliation-daemon]");
         System.out.println("Deployment modes (one at a time): --processor-daemon | --ingest-daemon");
         System.out.println("       | --ingest-game=<provider game id> | --migrate | --canary");
-        System.out.println("Real-game replay: --replay-import=<cdnnba_po_2025 | file.csv | file.tar.xz>");
+        System.out.println("Real-game replay: --replay-import=<cdnnba_po_2025 | nbastatsv3_po_2025 | file.csv | file.tar.xz>");
         System.out.println("       | --replay-start=<NBA game id> [--replay-speed=1..120, default 30]");
         System.out.println("Load tests: --synthetic-load=<games> [--synthetic-events=40] [--synthetic-prefix=load]");
         System.out.println("       [--synthetic-seed=7] [--synthetic-pace-ms=0 (burst) | 1..10000 (paced)]");
