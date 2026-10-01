@@ -12,6 +12,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ProgressBar } from '../components/ProgressBar';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { TeamBadge } from '../components/TeamBadge';
+import { playoffTitle } from '../lib/playoffs';
 import { NBA_TEAM_CODES } from '../lib/teams';
 import { REPLAY_SPEEDS, formatReplayDate, replayLength, waitForReplayGame } from '../lib/replay';
 
@@ -88,6 +89,7 @@ export function ReplaysPage() {
           {items.map((game) => {
             const starting = start.isPending && start.variables.nbaGameId === game.nbaGameId;
             const awayWon = game.awayScore > game.homeScore;
+            const title = playoffTitle(game.nbaGameId, game.homeTeamAbbreviation);
             return (
               <article key={game.nbaGameId} className={`game-card replay-card${starting ? ' is-starting' : ''}`}>
                 <div className="game-card__meta">
@@ -96,7 +98,7 @@ export function ReplaysPage() {
                       {game.periods > 4 ? `Final/${game.periods === 5 ? 'OT' : `${String(game.periods - 4)}OT`}` : 'Final'}
                     </span>
                   </span>
-                  <span className="muted">{formatReplayDate(game.gameDate)}</span>
+                  {title ? <span className="game-card__title">{title}</span> : null}
                 </div>
                 <div className="matchup">
                   <ReplayTeam name={game.awayTeamName} abbreviation={game.awayTeamAbbreviation}
@@ -105,7 +107,9 @@ export function ReplaysPage() {
                     score={game.homeScore} dim={awayWon} />
                 </div>
                 <div className="game-card__footer">
-                  <span>{game.plays} plays · {replayLength(game.durationSeconds, speed)} at {speed}×</span>
+                  <span>
+                    {formatReplayDate(game.gameDate)} · {game.plays} plays · {replayLength(game.durationSeconds, speed)} at {speed}×
+                  </span>
                   {auth.status === 'AUTHENTICATED' ? (
                     <button className="button button--secondary button--sm" disabled={start.isPending}
                       onClick={() => start.mutate(game)}>
@@ -150,12 +154,16 @@ function ReplayTeam({ name, abbreviation, score, dim }: {
 }
 
 function SessionRow({ session }: { session: ReplaySession }) {
+  const title = playoffTitle(session.nbaGameId, session.homeTeamName);
   return (
     <li>
       <Link to={`/games/${encodeURIComponent(session.gameId)}`}>
         <TeamBadge name={session.awayTeamName} size="sm" />
         <TeamBadge name={session.homeTeamName} size="sm" />
-        <span>{session.awayTeamName} at {session.homeTeamName}</span>
+        <span className="replay-sessions__text">
+          <span>{session.awayTeamName} at {session.homeTeamName}</span>
+          {title ? <small>{title}</small> : null}
+        </span>
       </Link>
       <span className="muted">{session.status === 'PAUSED' ? 'Paused' : `${String(session.speed)}×`}</span>
       <ProgressBar max={session.totalPlays} value={session.playsReleased} label="Replay progress" />

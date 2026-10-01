@@ -18,6 +18,7 @@ import { LoadingState } from '../components/LoadingState';
 import { PageHeader } from '../components/PageHeader';
 import { SignedOut } from '../components/SignedOut';
 import { formatClock, formatPeriod, teamLabel } from '../lib/format';
+import { playoffTitle, playoffTitleForLabel } from '../lib/playoffs';
 
 type RuleKind = CreateAlertRule['type'];
 
@@ -214,7 +215,7 @@ export function MyRulesPage() {
                     <span className={`rule-state${rule.enabled ? ' rule-state--on' : ''}`}>{rule.enabled ? 'On' : 'Off'}</span>
                   </span>
                   <h3>{ruleSummary(rule)}</h3>
-                  <p>{rule.gameLabel ?? rule.gameId}</p>
+                  <p>{[rule.gameLabel ?? rule.gameId, playoffTitleForLabel(rule.gameId, rule.gameLabel)].filter(Boolean).join(' · ')}</p>
                 </div>
                 <div className="rule-actions">
                   <button className="button button--secondary button--sm" disabled={toggleMutation.isPending}
@@ -242,7 +243,8 @@ function gameOptionLabel(game: GameSummary): string {
   const away = game.awayTeamAbbreviation ?? teamLabel(game.awayTeamId, game.awayTeamName);
   const home = game.homeTeamAbbreviation ?? teamLabel(game.homeTeamId, game.homeTeamName);
   const state = game.status === 'LIVE' ? 'Live' : game.status === 'FINAL' ? 'Final' : 'Upcoming';
-  return `${away} at ${home} · ${state}`;
+  const title = playoffTitle(game.gameId, game.homeTeamAbbreviation ?? game.homeTeamName);
+  return [`${away} at ${home}`, title, state].filter(Boolean).join(' · ');
 }
 
 function MutationError({ error }: { error: Error }) {

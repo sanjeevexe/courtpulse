@@ -4,6 +4,7 @@ import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import type { OwnedAlert, OwnedAlertPage } from '../api/client';
 import { useMyAlerts } from '../api/hooks';
 import { useAuth } from '../auth/useAuth';
+import { playoffTitleForLabel } from '../lib/playoffs';
 import { Icon } from './Icons';
 
 const TOAST_MS = 7_000;
@@ -64,12 +65,14 @@ function Toast({ alert, onDismiss }: { alert: OwnedAlert; onDismiss: (id: string
     const timer = window.setTimeout(() => onDismiss(alert.id), TOAST_MS);
     return () => window.clearTimeout(timer);
   }, [alert.id, onDismiss]);
+  const title = playoffTitleForLabel(alert.gameId, alert.gameLabel);
   return (
     <div className="toast">
       <span className="toast__icon" aria-hidden="true"><Icon name="bell" size={16} /></span>
       <div className="toast__body">
         <strong>{alert.title}</strong>
         <span>{alert.gameLabel ?? 'Your alert fired'}</span>
+        {title ? <span>{title}</span> : null}
         <Link to={`/games/${encodeURIComponent(alert.gameId)}`} onClick={() => onDismiss(alert.id)}>Open game</Link>
       </div>
       <button className="icon-button icon-button--sm" aria-label="Dismiss alert" onClick={() => onDismiss(alert.id)}>

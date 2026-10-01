@@ -15,6 +15,7 @@ import { LoadingState } from '../components/LoadingState';
 import {
   alertDetails, formatClock, formatDateTime, formatPeriod, playerLabel, readableEventType, teamLabel,
 } from '../lib/format';
+import { playoffTitle } from '../lib/playoffs';
 import { connectionLabel, useGameRealtime } from '../realtime/hooks';
 import { ReplayControls } from '../components/ReplayControls';
 
@@ -71,6 +72,7 @@ export function GameDetailPage() {
   const awayName = teamLabel(game.awayTeamId, game.awayTeamName);
   const homeName = teamLabel(game.homeTeamId, game.homeTeamName);
   const alertCount = alerts.length + myAlerts.length;
+  const title = playoffTitle(game.gameId, game.homeTeamAbbreviation ?? game.homeTeamName);
 
   return (
     <article className="game-detail">
@@ -118,6 +120,7 @@ export function GameDetailPage() {
 
       <header className={`scoreboard scoreboard--${game.status.toLowerCase()}`}>
         <div className="scoreboard__topline">
+          {title ? <p className="scoreboard__title">{title}</p> : null}
           <GameStatus game={game} />
           {isDataWarning(game.dataStatus) ? <DataStatusBadge status={game.dataStatus} explain /> : null}
         </div>

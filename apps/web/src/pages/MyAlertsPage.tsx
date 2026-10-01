@@ -10,6 +10,7 @@ import { LoadingState } from '../components/LoadingState';
 import { PageHeader } from '../components/PageHeader';
 import { SignedOut } from '../components/SignedOut';
 import { alertDetails, formatDateTime, readableEventType } from '../lib/format';
+import { playoffTitleForLabel } from '../lib/playoffs';
 
 export function MyAlertsPage() {
   const auth = useAuth();
@@ -58,6 +59,7 @@ export function MyAlertsPage() {
                 <p>{alertDetails(alert.context, alert.ruleType)}</p>
                 <small>
                   <Link to={`/games/${encodeURIComponent(alert.gameId)}`}>{alert.gameLabel ?? alert.gameId}</Link>
+                  {withTitle(alert.gameId, alert.gameLabel)}
                   {' · '}{formatDateTime(alert.createdAt)}
                 </small>
                 {deliveryByAlert.get(alert.id)?.length ? (
@@ -79,6 +81,12 @@ export function MyAlertsPage() {
       ) : null}
     </>
   );
+}
+
+/** " · Western Conference Finals · Game 1" for a playoff game, otherwise nothing. */
+function withTitle(gameId: string, label?: string | null): string {
+  const title = playoffTitleForLabel(gameId, label);
+  return title ? ` · ${title}` : '';
 }
 
 function DeliveryState({

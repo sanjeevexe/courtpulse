@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { GameSummary } from '../api/client';
 import { formatDateTime, teamLabel } from '../lib/format';
+import { playoffTitle } from '../lib/playoffs';
 import { isDataWarning } from '../lib/status';
 import { DataStatusBadge } from './DataStatusBadge';
 import { GameStatus } from './GameStatus';
@@ -13,10 +14,12 @@ export function GameCard({ game }: { game: GameSummary }) {
   const final = game.status === 'FINAL';
   const awayWon = final && game.awayScore > game.homeScore;
   const homeWon = final && game.homeScore > game.awayScore;
+  const title = playoffTitle(game.gameId, game.homeTeamAbbreviation ?? game.homeTeamName);
   return (
     <article className={`game-card game-card--${game.status.toLowerCase()}`}>
       <div className="game-card__meta">
         <GameStatus game={game} />
+        {title ? <span className="game-card__title">{title}</span> : null}
         {isDataWarning(game.dataStatus) ? <DataStatusBadge status={game.dataStatus} /> : null}
       </div>
       <div className="matchup" aria-label={`${awayLabel} at ${homeLabel}`}>

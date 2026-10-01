@@ -129,7 +129,8 @@ async function expectOk<T>(response: Response): Promise<T> {
 export async function listGames(
   status: GameSummary['status'] | 'ALL',
   cursor: string | null,
-  limit = 8,
+  // A multiple of the 1-, 2-, and 3-column grid widths, so each page fills whole rows.
+  limit = 12,
 ): Promise<GamePage> {
   const search = new URLSearchParams({ limit: String(limit) });
   if (status !== 'ALL') search.set('status', status);
