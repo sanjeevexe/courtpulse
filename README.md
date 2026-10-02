@@ -142,7 +142,7 @@ with Grafana, Prometheus, and Tempo.
 | --- | --- | --- |
 | Tests | 206 backend tests against real PostgreSQL and LocalStack containers, 70 web unit tests, Playwright end-to-end runs on desktop and mobile, and 11 acceptance harnesses | `make check`, [CI](.github/workflows/ci.yml) |
 | Real games | All 85 games of the 2026 playoffs (five in overtime) replay to their recorded final scores with every play applied and no rejected plays | `REAL_DATA=1 scripts/verify-replay.sh` |
-| Performance | Sustained 200 events/s across 50 games: p95 processing delay 82 ms (target 500 ms). 2,000 WebSocket clients see hints about 0.3 s after commit (target 2 s). 100,000 stored rules; a hot-game lookup takes 0.9 ms. | [Performance report](docs/verification/performance-report.md) |
+| Performance | Sustained 200 events/s across 50 games: p95 processing delay 89 ms (target 500 ms). 8,000 WebSocket clients see hints about 0.3 s after commit (target 2 s). 2,000,000 stored rules; a hot-game lookup takes 0.57 ms (median). | [Performance report](docs/verification/performance-report.md) |
 | Recovery | Processor SIGKILL, PostgreSQL restart, 20 s SQS partition, and SIGTERM mid-publication all recover with exactly-once state and one alert per rule | [Recovery report](docs/verification/recovery-report.md) |
 | Security | 0 fixable HIGH or CRITICAL image vulnerabilities, OWASP ZAP baseline with 0 warnings, no leaked secrets, OWASP API Top 10 mapping, per-client rate limits | [Scan report](docs/verification/security-scan-report.md), [threat model](docs/security/threat-model.md) |
 

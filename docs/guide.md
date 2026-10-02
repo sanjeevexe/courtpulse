@@ -922,8 +922,8 @@ themselves:
 ./scripts/verify-recovery.sh         # about 8 minutes: four failure drills with integrity checks
 ```
 
-On one laptop, a sustained 200 events/s across 50 games gives a p95 processing delay of 82 ms
-(target 500 ms), and 2,000 WebSocket subscribers see hints about 0.3 s after the checkpoint
+On one laptop, a sustained 200 events/s across 50 games gives a p95 processing delay of 89 ms
+(target 500 ms), and 8,000 WebSocket subscribers see hints about 0.3 s after the checkpoint
 commits (target 2 s). A processor SIGKILL, a PostgreSQL restart, a 20 s SQS partition, and a
 SIGTERM mid-publication each recover with no operator action, exactly-once state, and one alert
 per rule. The drills found five ways a transient failure could permanently stall a game; all are
