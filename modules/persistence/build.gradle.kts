@@ -9,14 +9,14 @@ dependencies {
     api(project(":modules:providers"))
     implementation(project(":modules:observability"))
 
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation("org.springframework:spring-jdbc")
     implementation("org.springframework:spring-tx")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("io.micrometer:micrometer-core")
 
-    testImplementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
+    testImplementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     testImplementation(project(":modules:testkit"))
     testImplementation("org.postgresql:postgresql")
     testImplementation("org.flywaydb:flyway-core")

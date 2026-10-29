@@ -1,12 +1,12 @@
 plugins {
     application
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
 }
 
 description = "Spring Boot command-line durable PostgreSQL replay demonstration"
 
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation(project(":modules:domain"))
     implementation(project(":modules:providers"))
     implementation(project(":modules:persistence"))
