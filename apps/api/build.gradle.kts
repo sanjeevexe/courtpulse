@@ -1,12 +1,12 @@
 plugins {
     application
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
 }
 
 description = "Production-oriented read-only CourtPulse HTTP API"
 
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation(project(":modules:query"))
     implementation(project(":modules:persistence"))
     implementation(project(":modules:observability"))
@@ -20,7 +20,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.1.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
     implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
@@ -38,9 +38,9 @@ dependencies {
     constraints {
         // Spring Boot 4.1.1 manages Tomcat 11.0.24 (CVE-2026-65182, CVE-2026-65905, CVE-2026-68525).
         // Remove once a Spring Boot release manages 11.0.26 or later.
-        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.26")
-        implementation("org.apache.tomcat.embed:tomcat-embed-websocket:11.0.26")
-        implementation("org.apache.tomcat.embed:tomcat-embed-el:11.0.26")
+        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.27")
+        implementation("org.apache.tomcat.embed:tomcat-embed-websocket:11.0.27")
+        implementation("org.apache.tomcat.embed:tomcat-embed-el:11.0.27")
     }
 }
 

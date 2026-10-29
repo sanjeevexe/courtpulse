@@ -1,13 +1,13 @@
 plugins {
     application
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
 }
 
 description = "Bounded PostgreSQL outbox to SQS FIFO replay demonstration"
 
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
-    implementation(platform("software.amazon.awssdk:bom:2.55.6"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
+    implementation(platform("software.amazon.awssdk:bom:2.57.3"))
     implementation(project(":modules:messaging"))
     implementation(project(":modules:observability"))
     implementation(project(":modules:testkit"))
