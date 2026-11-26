@@ -8,8 +8,8 @@ dependencies {
     api(project(":modules:persistence"))
     implementation(project(":modules:observability"))
 
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
-    implementation(platform("software.amazon.awssdk:bom:2.55.6"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.2.0"))
+    implementation(platform("software.amazon.awssdk:bom:2.59.7"))
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("org.slf4j:slf4j-api")
