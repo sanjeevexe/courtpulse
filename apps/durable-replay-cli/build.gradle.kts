@@ -1,12 +1,12 @@
 plugins {
     application
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.2.0"
 }
 
 description = "Spring Boot command-line durable PostgreSQL replay demonstration"
 
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.2.0"))
     implementation(project(":modules:domain"))
     implementation(project(":modules:providers"))
     implementation(project(":modules:persistence"))
@@ -21,8 +21,8 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation(enforcedPlatform("io.zonky.test.postgres:embedded-postgres-binaries-bom:17.11.0"))
-    testImplementation("io.zonky.test:embedded-postgres:2.2.2")
+    testImplementation(enforcedPlatform("io.zonky.test.postgres:embedded-postgres-binaries-bom:17.12.0"))
+    testImplementation("io.zonky.test:embedded-postgres:2.2.3")
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
 }
 
